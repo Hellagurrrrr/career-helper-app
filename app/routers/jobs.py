@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Query
+
+from app.core.deps import get_current_user
+from app.core.errors import not_found
+from app.core.pagination import paginate
+from app.schemas.jobs import JobDetail, JobListPage
+from app.services import mock_match
+from app.services.store import UserRecord, store
+
+router = APIRouter(prefix="/jobs", tags=["jobs"])
+
+
+@router.get("", response_model=JobListPage)
+def list_jobs(
+    catalog_goal_id: str | None = Query(default=None, alias="catalogGoalId"),
+    partner: bool | None = Query(default=None),
+    exclusive: bool | None = Query(default=None),
+    q: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(default=None),
+    user: UserRecord = Depends(get_current_user),
+) -> dict:
+    jobs = list(store.jobs)
+    if catalog_goal_id is not None:
+        jobs = [j for j in jobs if j["catalogGoalId"] == catalog_goal_id]
+    if partner is not None:
+        jobs = [j for j in jobs if j.get("partner", False) == partner]
+    if exclusive is not None:
+        jobs = [j for j in jobs if j.get("exclusive", False) == exclusive]
+    if q:
+        needle = q.strip().lower()
+        jobs = [
+            j
+            for j in jobs
+            if needle in j["title"].lower()
+            or needle in j["company"].lower()
+            or any(needle in s.lower() for s in j.get("skills", []))
+        ]
+    return paginate(jobs, limit, cursor)
+
+
+@router.get("/{job_id}", response_model=JobDetail)
+def get_job(job_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    job = store.get_job(job_id)
+    if not job:
+        raise not_found("Job not found.")
+    profile = store.profiles.get(user.id) or {}
+    score = mock_match.match_score(profile.get("skills", []), job.get("skills", []))
+    return {**job, "matchScore": score}
