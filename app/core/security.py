@@ -5,7 +5,8 @@ import uuid
 from typing import Any
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 
 from app.core.config import settings
 from app.core.errors import unauthorized
@@ -61,7 +62,7 @@ def create_refresh_token(user_id: str, jti: str) -> str:
 def decode_token(token: str, expected_type: str) -> dict[str, Any]:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError:
+    except InvalidTokenError:
         raise unauthorized("Invalid or expired token.")
     if payload.get("type") != expected_type:
         raise unauthorized("Invalid token type.")

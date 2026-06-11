@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     app_name: str = "AI Career Helper API"
     api_prefix: str = "/v1"
 
-    # JWT
-    jwt_secret: str = "dev-secret-change-me"
+    # JWT (>= 32 bytes to satisfy HS256 / RFC 7518; override in production)
+    jwt_secret: str = "dev-secret-change-me-in-production-min-32-bytes"
     jwt_algorithm: str = "HS256"
     access_token_ttl_seconds: int = 30 * 60          # 30 minutes (api-design 2.1)
     refresh_token_ttl_seconds: int = 30 * 24 * 3600  # 30 days

@@ -36,7 +36,7 @@ to swap for a real implementation later.
 | Area | Decision |
 | --- | --- |
 | Storage | Process-wide **in-memory** store ([`app/services/store.py`](app/services/store.py)). Data resets on restart. |
-| Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation; passwords hashed with `bcrypt`. |
+| Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation, via `PyJWT`; passwords hashed with `bcrypt`. |
 | Async tasks | CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (first 2 polls `processing`, 3rd `complete`). Controlled by `CAREER_ASYNC_PROCESSING_POLLS`. |
 | Public catalogs | Mock seed data for goal catalog / jobs / alumni in [`app/data/`](app/data). |
 | matchScore / ranking | Simple **skill-overlap** rule ([`app/services/mock_match.py`](app/services/mock_match.py)). |
@@ -61,7 +61,7 @@ file. See [`app/core/config.py`](app/core/config.py). Common ones:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `CAREER_JWT_SECRET` | `dev-secret-change-me` | JWT signing secret |
+| `CAREER_JWT_SECRET` | `dev-secret-change-me-in-production-min-32-bytes` | JWT signing secret (use >= 32 bytes) |
 | `CAREER_ACCESS_TOKEN_TTL_SECONDS` | `1800` | Access token lifetime |
 | `CAREER_REFRESH_TOKEN_TTL_SECONDS` | `2592000` | Refresh token lifetime |
 | `CAREER_ASYNC_PROCESSING_POLLS` | `2` | Polls returning `processing` before `complete` |
