@@ -22,6 +22,17 @@ def list_jobs(
     cursor: str | None = Query(default=None),
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    List jobs.
+
+    **Args**:
+        - catalog_goal_id: str | None: The ID of the catalog goal to filter by.
+        - partner: bool | None: Whether to filter by partner.
+        - exclusive: bool | None: Whether to filter by exclusive.
+        - q: str | None: The query to filter by.
+    **Returns**:
+        - list[Job]: The list of jobs.
+    '''
     jobs = list(store.jobs)
     if catalog_goal_id is not None:
         jobs = [j for j in jobs if j["catalogGoalId"] == catalog_goal_id]
@@ -43,6 +54,15 @@ def list_jobs(
 
 @router.get("/{job_id}", response_model=JobDetail)
 def get_job(job_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Get a job.
+
+    **Args**:
+        - job_id: str: The ID of the job to get.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - JobDetail: The job.
+    '''
     job = store.get_job(job_id)
     if not job:
         raise not_found("Job not found.")
