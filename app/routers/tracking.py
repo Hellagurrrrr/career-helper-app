@@ -54,6 +54,15 @@ def _catalog_skill(goal: dict[str, Any], skill_id: str) -> dict[str, Any]:
 
 @router.get("", response_model=GoalTracking)
 def get_tracking(goal_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Get the tracking for a goal.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to get tracking for.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - GoalTracking: The tracking for the goal.
+    '''
     _get_goal_or_404(user.id, goal_id)
     return _get_tracking(user.id, goal_id)
 
@@ -66,6 +75,18 @@ def toggle_step(
     body: StepToggleRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Toggle a step for a goal.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to toggle the step for.
+        - skill_id: str: The ID of the skill to toggle the step for.
+        - step_index: int: The index of the step to toggle.
+        - body: StepToggleRequest: The request body containing the completed status of the step.
+        - user: UserRecord: The current user. 
+    **Returns**:
+        - GoalTracking: The tracking for the goal.
+    '''
     goal = _get_goal_or_404(user.id, goal_id)
     skill = _catalog_skill(goal, skill_id)
     if not 0 <= step_index < len(skill.get("whatToDo", [])):
@@ -94,6 +115,18 @@ def toggle_resource(
     body: ResourceToggleRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Toggle a resource for a goal.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to toggle the resource for.
+        - skill_id: str: The ID of the skill to toggle the resource for.
+        - resource_index: int: The index of the resource to toggle.
+        - body: ResourceToggleRequest: The request body containing the consumed status of the resource.
+        - user: UserRecord: The current user. 
+    **Returns**:
+        - GoalTracking: The tracking for the goal.
+    '''
     goal = _get_goal_or_404(user.id, goal_id)
     skill = _catalog_skill(goal, skill_id)
     if not 0 <= resource_index < len(skill.get("resources", [])):
@@ -116,6 +149,16 @@ def rerate_dismiss(
     skill_id: str,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Dismiss the rerate for a goal.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to dismiss the rerate for.
+        - skill_id: str: The ID of the skill to dismiss the rerate for.
+        - user: UserRecord: The current user. 
+    **Returns**:
+        - GoalTracking: The tracking for the goal.
+    '''
     goal = _get_goal_or_404(user.id, goal_id)
     _catalog_skill(goal, skill_id)
     tracking = _get_tracking(user.id, goal_id)
@@ -131,6 +174,16 @@ def set_week_focus(
     body: WeekFocusRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Set the week focus for a goal.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to set the week focus for.
+        - body: WeekFocusRequest: The request body containing the week focus.
+        - user: UserRecord: The current user. 
+    **Returns**:
+        - GoalTracking: The tracking for the goal.
+    '''
     _get_goal_or_404(user.id, goal_id)
     tracking = _get_tracking(user.id, goal_id)
     tracking["weekFocus"] = body.week_focus
