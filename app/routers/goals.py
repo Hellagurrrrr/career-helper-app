@@ -24,12 +24,29 @@ router = APIRouter(tags=["goals"])
 # ----- public catalog -----
 @router.get("/goal-catalog", response_model=list[CatalogGoal])
 def get_goal_catalog(user: UserRecord = Depends(get_current_user)) -> list[dict]:
+    '''
+    Get the goal catalog.
+
+    **Args**:
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[CatalogGoal]: The goal catalog, sorted by descending match score.
+    '''
     profile = store.profiles.get(user.id)
     return mock_match.sort_catalog_goals(profile, store.goal_catalog)
 
 
 @router.get("/goal-catalog/{catalog_id}", response_model=CatalogGoal)
 def get_catalog_item(catalog_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Get a goal catalog item.
+
+    **Args**:
+        - catalog_id: str: The ID of the catalog item.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - CatalogGoal: The catalog item.
+    '''
     item = store.get_catalog_goal(catalog_id)
     if not item:
         raise not_found("Catalog goal not found.")
@@ -39,12 +56,29 @@ def get_catalog_item(catalog_id: str, user: UserRecord = Depends(get_current_use
 # ----- user goals -----
 @router.get("/goals", response_model=list[UserGoal])
 def list_goals(user: UserRecord = Depends(get_current_user)) -> list[dict]:
+    '''
+    Get the list of goals that the current user has selected.
+
+    **Args**:
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
+    '''
     goals = list(store.goals.get(user.id, {}).values())
     return sorted(goals, key=lambda g: g["sortOrder"])
 
 
 @router.post("/goals", response_model=UserGoal, status_code=201)
 def create_goal(body: CreateGoalRequest, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Create a new goal for the current user.
+
+    **Args**:
+        - body: CreateGoalRequest: The request body containing the catalog ID of the goal to create.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - UserGoal: The created goal.
+    '''
     catalog = store.get_catalog_goal(body.catalog_id)
     if not catalog:
         raise not_found("Catalog goal not found.")
@@ -76,6 +110,15 @@ def create_goal(body: CreateGoalRequest, user: UserRecord = Depends(get_current_
 
 @router.get("/goals/{goal_id}", response_model=UserGoal)
 def get_goal(goal_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Get a goal for the current user.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to get.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - UserGoal: The goal.
+    '''
     goal = store.goals.get(user.id, {}).get(goal_id)
     if not goal:
         raise not_found("Goal not found.")
@@ -88,6 +131,16 @@ def update_goal(
     body: UpdateGoalRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Update a goal for the current user.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to update.
+        - body: UpdateGoalRequest: The request body containing the status and confidence of the goal.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - UserGoal: The updated goal.
+    '''
     goal = store.goals.get(user.id, {}).get(goal_id)
     if not goal:
         raise not_found("Goal not found.")
@@ -106,6 +159,15 @@ def update_goal(
 
 @router.delete("/goals/{goal_id}", status_code=204, response_model=None)
 def delete_goal(goal_id: str, user: UserRecord = Depends(get_current_user)) -> None:
+    '''
+    Delete a goal for the current user.
+
+    **Args**:
+        - goal_id: str: The ID of the goal to delete.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - None: The response is empty.
+    '''
     user_goals = store.goals.get(user.id, {})
     if goal_id not in user_goals:
         raise not_found("Goal not found.")
@@ -119,6 +181,15 @@ def delete_goal(goal_id: str, user: UserRecord = Depends(get_current_user)) -> N
 
 @router.put("/goals/order", response_model=list[UserGoal])
 def reorder_goals(body: ReorderGoalsRequest, user: UserRecord = Depends(get_current_user)) -> list[dict]:
+    '''
+    Reorder the goals for the current user.
+
+    **Args**:
+        - body: ReorderGoalsRequest: The request body containing the IDs of the goals to reorder.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
+    '''
     user_goals = store.goals.get(user.id, {})
     if set(body.goal_ids) != set(user_goals.keys()):
         raise validation_error("goalIds must include every goal exactly once.", "goalIds")
