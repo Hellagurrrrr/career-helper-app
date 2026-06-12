@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field
 
 from app.schemas.common import CamelModel
@@ -52,3 +54,24 @@ class CvExtractResult(CamelModel):
     status: str            # processing | complete | failed
     stage: str             # parsing | extracting | structuring
     draft: dict | None = None
+
+
+class OnboardingChatTurn(CamelModel):
+    id: str
+    role: Literal["assistant", "user"]
+    text: str
+    timestamp: int
+
+
+class OnboardingChatSession(CamelModel):
+    id: str
+    status: Literal["in_progress", "complete"]
+    question: str | None = None
+    question_index: int
+    total_questions: int
+    turns: list[OnboardingChatTurn] = Field(default_factory=list)
+    draft: dict | None = None
+
+
+class OnboardingAnswerRequest(CamelModel):
+    text: str = ""

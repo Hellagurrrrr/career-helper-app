@@ -85,6 +85,89 @@ def test_cv_extract_polling(client):
     assert r.json()["draft"]["name"]
 
 
+# --- Onboarding chat (§3.4 / OB-10~13) ---
+def test_onboarding_chat_full_flow(client):
+    headers = auth_headers(client)
+
+    start = client.post("/v1/profile/onboarding-chat", headers=headers)
+    assert start.status_code == 200
+    body = start.json()
+    assert body["status"] == "in_progress"
+    assert body["questionIndex"] == 0
+    assert body["question"]
+    total = body["totalQuestions"]
+
+    answers = ["Alex Chen", "State University", "Computer Science", "BSc", "Python, SQL, React", "Data Structures"]
+    last = None
+    for ans in answers[:total]:
+        last = client.post("/v1/profile/onboarding-chat/answers", json={"text": ans}, headers=headers)
+        assert last.status_code == 200
+
+    data = last.json()
+    assert data["status"] == "complete"
+    assert data["question"] is None
+    draft = data["draft"]
+    # OB-12 comma parsing into lists; school/major/degree -> education[0]
+    assert draft["skills"] == ["Python", "SQL", "React"]
+    assert draft["education"][0]["major"] == "Computer Science"
+    assert draft["name"] == "Alex Chen"
+
+    # OB-13: saving the draft creates the profile and fires a welcome notification
+    saved = client.put("/v1/profile", json=draft, headers=headers)
+    assert saved.status_code == 200
+    notifs = client.get("/v1/notifications", headers=headers)
+    assert any(n["type"] == "system" for n in notifs.json()["items"])
+
+
+def test_onboarding_chat_resume(client):
+    # OB-12: leaving and re-entering resumes the same session from the same node
+    headers = auth_headers(client)
+    client.post("/v1/profile/onboarding-chat", headers=headers)
+    s1 = client.post("/v1/profile/onboarding-chat/answers", json={"text": "Alex"}, headers=headers).json()
+    session_id = s1["id"]
+    assert s1["questionIndex"] == 1
+
+    resumed = client.post("/v1/profile/onboarding-chat", headers=headers).json()
+    assert resumed["id"] == session_id
+    assert resumed["questionIndex"] == 1
+
+
+def test_onboarding_chat_empty_answer_rejected(client):
+    # OB-11: empty message cannot be sent (server-side guard)
+    headers = auth_headers(client)
+    client.post("/v1/profile/onboarding-chat", headers=headers)
+    resp = client.post("/v1/profile/onboarding-chat/answers", json={"text": "   "}, headers=headers)
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_profile_normalization_and_welcome(client):
+    # OB-13: empty internship dropped, empty end -> null; welcome only on first create
+    headers = auth_headers(client)
+    payload = {
+        "name": "Alex",
+        "education": [{"degree": "BSc", "school": "U", "major": "CS", "start": "2022-09", "end": ""}],
+        "internships": [
+            {"title": "", "company": "", "description": "", "start": "", "end": ""},
+            {"title": "SWE Intern", "company": "Stripe", "start": "2025-06", "end": "", "description": "x"},
+        ],
+    }
+    first = client.put("/v1/profile", json=payload, headers=headers)
+    assert first.status_code == 200
+    saved = first.json()
+    assert len(saved["internships"]) == 1            # fully-empty entry dropped
+    assert saved["internships"][0]["end"] is None    # empty end -> null
+    assert saved["education"][0]["end"] is None
+
+    welcome_count = sum(1 for n in client.get("/v1/notifications", headers=headers).json()["items"] if n["type"] == "system")
+    assert welcome_count == 1
+
+    # Second PUT is an edit (profile already exists) -> no new welcome
+    client.put("/v1/profile", json={"name": "Alex 2"}, headers=headers)
+    welcome_count2 = sum(1 for n in client.get("/v1/notifications", headers=headers).json()["items"] if n["type"] == "system")
+    assert welcome_count2 == 1
+
+
 # --- Goals (§4) + Tracking (§5) ---
 def test_goals_and_tracking_progress(client):
     headers = auth_headers(client)

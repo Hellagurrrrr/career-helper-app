@@ -42,6 +42,19 @@ def push(
     return notification
 
 
+def welcome(user_id: str, name: str) -> dict[str, Any] | None:
+    """Emit the onboarding welcome notification (use-cases OB-03/04/13)."""
+    display = name.strip() or "Friend"
+    return push(
+        user_id,
+        type="system",
+        severity="success",
+        title="Welcome to AI Career Helper",
+        body=f"Welcome, {display}! Let's start building your career plan.",
+        link="/",
+    )
+
+
 def check_milestone(user_id: str, goal_id: str, old_progress: int, new_progress: int, goal_title: str) -> None:
     """Emit milestone notifications when progress crosses 25/50/75/100 (NT-05)."""
     for milestone in (25, 50, 75, 100):

@@ -30,6 +30,7 @@ class Store:
     # --- profile ---
     profiles: dict[str, dict[str, Any]] = field(default_factory=dict)  # user_id -> Profile dict
     cv_tasks: dict[str, dict[str, Any]] = field(default_factory=dict)  # task_id -> task state
+    onboarding_chats: dict[str, dict[str, Any]] = field(default_factory=dict)  # user_id -> chat session (resumable)
 
     # --- goals & tracking ---
     goals: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)     # user_id -> goal_id -> UserGoal
@@ -57,6 +58,7 @@ class Store:
     # ----- helpers -----
     def ensure_user_buckets(self, user_id: str) -> None:
         self.profiles.setdefault(user_id, None)  # type: ignore[arg-type]
+        self.onboarding_chats.setdefault(user_id, None)  # type: ignore[arg-type]
         self.goals.setdefault(user_id, {})
         self.tracking.setdefault(user_id, {})
         self.saved_jobs.setdefault(user_id, {})
@@ -69,6 +71,7 @@ class Store:
     def reset_user_data(self, user_id: str) -> None:
         """Clear demo data but keep the account (use-case SET-07)."""
         self.profiles[user_id] = None  # type: ignore[assignment]
+        self.onboarding_chats[user_id] = None  # type: ignore[assignment]
         self.goals[user_id] = {}
         self.tracking[user_id] = {}
         self.saved_jobs[user_id] = {}
@@ -87,7 +90,7 @@ class Store:
             if uid == user_id:
                 self.refresh_jti.pop(jti, None)
         for bucket in (
-            self.profiles, self.goals, self.tracking, self.saved_jobs,
+            self.profiles, self.onboarding_chats, self.goals, self.tracking, self.saved_jobs,
             self.applications, self.reviews, self.mocks, self.meetings, self.notifications,
         ):
             bucket.pop(user_id, None)  # type: ignore[arg-type]

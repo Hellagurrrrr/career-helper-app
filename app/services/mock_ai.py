@@ -17,6 +17,71 @@ def cv_extract_stage(polls: int) -> str:
     return _CV_STAGES[max(idx, 0)]
 
 
+# ---------------------------------------------------------------------------
+# Conversational onboarding collection (api-design 3.4 / use-case OB-10~12)
+# ---------------------------------------------------------------------------
+
+# Demo question script. Each entry maps a profile field to the assistant prompt.
+# A real backend would let an LLM decide the next question and when to stop.
+_ONBOARDING_SCRIPT: list[tuple[str, str]] = [
+    ("name", "Hi! I'm your career assistant. What's your name?"),
+    ("school", "Nice to meet you! Which school do you attend?"),
+    ("major", "What's your major or field of study?"),
+    ("degree", "What degree are you pursuing (e.g. BSc, MSc)?"),
+    ("skills", "What skills do you have? List a few, separated by commas."),
+    ("coursework", "Lastly, which relevant courses have you taken? Separate them with commas."),
+]
+
+
+def onboarding_total_questions() -> int:
+    return len(_ONBOARDING_SCRIPT)
+
+
+def onboarding_field(index: int) -> str | None:
+    """Profile field collected by the question at `index` (None when finished)."""
+    if 0 <= index < len(_ONBOARDING_SCRIPT):
+        return _ONBOARDING_SCRIPT[index][0]
+    return None
+
+
+def onboarding_question(index: int) -> str | None:
+    """Assistant prompt at `index` (None when there are no more questions)."""
+    if 0 <= index < len(_ONBOARDING_SCRIPT):
+        return _ONBOARDING_SCRIPT[index][1]
+    return None
+
+
+def _parse_list(text: str) -> list[str]:
+    return [part.strip() for part in text.split(",") if part.strip()]
+
+
+def build_onboarding_draft(answers: dict[str, str]) -> dict[str, Any]:
+    """Turn accumulated chat answers into a partial Profile draft for Review."""
+    degree = answers.get("degree", "").strip()
+    school = answers.get("school", "").strip()
+    major = answers.get("major", "").strip()
+    education: list[dict[str, Any]] = []
+    if degree or school or major:
+        education.append(
+            {
+                "degree": degree,
+                "school": school,
+                "major": major,
+                "grade": None,
+                "start": "",
+                "end": None,
+            }
+        )
+    return {
+        "name": answers.get("name", "").strip(),
+        "education": education,
+        "internships": [],
+        "projects": [],
+        "skills": _parse_list(answers.get("skills", "")),
+        "coursework": _parse_list(answers.get("coursework", "")),
+    }
+
+
 def cv_extract_draft(file_name: str) -> dict[str, Any]:
     """Return a mock extracted profile draft.
 

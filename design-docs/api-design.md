@@ -213,11 +213,21 @@ type Profile = {
 ### 3.2 接口列表
 
 
-| 方法   | 路径                    | 说明                                |
-| ---- | --------------------- | --------------------------------- |
-| GET  | `/profile`            | 获取当前用户 profile，未创建返回 404          |
-| PUT  | `/profile`            | 创建或整体覆盖 profile（onboarding 完成时调用） |
-| POST | `/profile/extract-cv` | 上传 CV 文件，AI 提取 profile 草稿（异步）     |
+| 方法     | 路径                              | 说明                                       |
+| ------ | ------------------------------- | ---------------------------------------- |
+| GET    | `/profile`                      | 获取当前用户 profile，未创建返回 404                 |
+| PUT    | `/profile`                      | 创建或整体覆盖 profile（onboarding 完成时调用）        |
+| POST   | `/profile/extract-cv`           | 上传 CV 文件，AI 提取 profile 草稿（异步）            |
+| GET    | `/profile/onboarding-chat`      | 获取当前对话式采集会话；无会话返回 404                    |
+| POST   | `/profile/onboarding-chat`      | 开始或**恢复**对话式采集会话（OB-10/OB-12）            |
+| POST   | `/profile/onboarding-chat/answers` | 回答当前问题，返回下一问题或 `complete` + draft（OB-10）|
+| DELETE | `/profile/onboarding-chat`      | 放弃当前会话（重新开始 / 退出对话采集）                   |
+
+> 关于 `PUT /profile`（对应 Review 步骤 OB-13）：
+>
+> - 服务端做轻量归一化：教育/实习/项目的 `end` 为空串时存为 `null`（表示在读/至今）；**完全空白的实习条目自动丢弃**（实习全空则不保存）。
+> - `grade`（GPA）由前端在 Review 表单解析为数字，非法值传 `null`；服务端按 `number | null` 存储。
+> - 当 profile 由「无」首次创建（onboarding 完成，含跳过引导 OB-03/04 与对话/CV 采集）时，服务端触发一条**欢迎通知**（见 §11）；后续在 Profile 编辑页保存（PF-01）不再触发。
 
 
 ### 3.3 POST /profile/extract-cv
@@ -249,6 +259,93 @@ type Profile = {
 ```
 
 `draft` 为 `Profile` 的部分字段，前端进入 Review 步骤让用户确认后再 `PUT /profile`。
+
+### 3.4 对话式信息采集 Onboarding Chat
+
+对应 onboarding 的「Chat with the assistant」流程（用例 OB-10~12）。由助手（AI）逐轮提问采集信息，**直到收集到足够信息后自动结束**并产出 `draft` 供 Review 步骤确认；会话**按用户持久化且可恢复**——中途退出后再次进入会从中断处继续（OB-12）。落地时由 LLM 驱动提问与抽取，demo 用固定问题脚本模拟。
+
+#### 数据模型
+
+```ts
+type OnboardingChatTurn = {
+  id: string;
+  role: "assistant" | "user";
+  text: string;
+  timestamp: number;
+};
+
+type OnboardingChatSession = {
+  id: string;
+  status: "in_progress" | "complete";
+  question: string | null;        // 当前待回答的问题；complete 时为 null
+  questionIndex: number;          // 已提问数量
+  totalQuestions: number;         // 预计问题总数（demo 固定脚本）
+  turns: OnboardingChatTurn[];    // 完整对话记录
+  draft: Partial<Profile> | null; // complete 时产出，供 Review 步骤使用
+};
+```
+
+> 每个用户至多一个进行中的会话。`POST /profile/onboarding-chat` 若已有 `in_progress` 会话则直接返回它（恢复，OB-12），否则新建并返回首个问题。
+
+#### POST /profile/onboarding-chat（开始 / 恢复）
+
+无请求体。响应 `200`（含首个或当前待答问题）：
+
+```json
+{
+  "id": "obc_01",
+  "status": "in_progress",
+  "question": "Hi! I'm your career assistant. What's your name?",
+  "questionIndex": 0,
+  "totalQuestions": 6,
+  "turns": [
+    { "id": "t_01", "role": "assistant", "text": "Hi! ... What's your name?", "timestamp": 1780000000000 }
+  ],
+  "draft": null
+}
+```
+
+#### POST /profile/onboarding-chat/answers（回答）
+
+请求：
+
+```json
+{ "text": "Python, SQL, React" }
+```
+
+约束与行为：
+
+- 空消息返回 `400 VALIDATION_ERROR`（OB-11 前端禁用，服务端兜底）；
+- 无进行中的会话返回 `404`；会话已 `complete` 返回 `422`；
+- 技能 / 课程类回答按逗号解析为列表；学校 / 专业 / 学位写入 `education[0]`；
+- 助手判断信息已足够（demo：问完脚本）后，会话置为 `complete` 并返回 `draft`。
+
+`complete` 响应示例：
+
+```json
+{
+  "id": "obc_01",
+  "status": "complete",
+  "question": null,
+  "questionIndex": 6,
+  "totalQuestions": 6,
+  "turns": [ /* ... */ ],
+  "draft": {
+    "name": "Alex Chen",
+    "education": [{ "degree": "BSc", "school": "State University", "major": "Computer Science", "grade": null, "start": "", "end": null }],
+    "skills": ["Python", "SQL", "React"],
+    "coursework": ["Data Structures"],
+    "internships": [],
+    "projects": []
+  }
+}
+```
+
+前端拿到 `draft` 后进入 Review 步骤，确认/编辑后 `PUT /profile`（OB-13）。
+
+#### DELETE /profile/onboarding-chat
+
+放弃当前会话，响应 `204`。用于「重新开始对话采集」或离开该方式。
 
 ---
 
