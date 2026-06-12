@@ -28,7 +28,7 @@ def _normalize_profile(record: dict[str, Any]) -> dict[str, Any]:
     """Apply Review-step normalization (use-case OB-13).
 
     - Empty-string `end` -> null for dated entries (in progress / present).
-    - Drop fully-empty internship entries (实习全空则不保存).
+    - Drop fully-empty internship entries.
     """
     for edu in record.get("education", []):
         if edu.get("end") == "":
