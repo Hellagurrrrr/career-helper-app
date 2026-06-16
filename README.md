@@ -29,8 +29,11 @@ uvicorn app.main:app --reload
 Run tests:
 
 ```bash
-pytest
+pytest tests/test_smoke.py          # mock-mode smoke tests (no API key, no network)
 ```
+
+There is also a separate suite that exercises the **real** models - see
+[Testing the real AI](#testing-the-real-ai).
 
 ## Design decisions (mock phase)
 
@@ -94,7 +97,7 @@ The model layer lives in [`app/llm/`](app/llm):
 | Capability | Module | Approach |
 | --- | --- | --- |
 | CV -> profile | `cv_extraction.py` | `parsing.py` (PDF/DOCX/TXT) -> structured-output extraction, run in a background task |
-| Conversational onboarding | `onboarding.py` | **LangGraph** graph (`decide` -> `extract`) that asks dynamic questions then emits a draft |
+| Conversational onboarding | `onboarding.py` | **LangGraph** graph (`decide` -> `extract`): the model leads the chat, validates each answer, breaks big topics into small follow-ups, handles "I don't know"/multiple degrees, then emits a draft |
 | Tailored CV | `tailored_cv.py` | structured-output generation (synchronous) |
 | Interview coaching | `interview.py` | question generation + transcript scoring (5 fixed dimensions) |
 | Voice (STT/TTS) | `voice.py` | pluggable `VoiceProvider`; `OpenAIVoiceProvider` ships (Whisper + OpenAI TTS) |
@@ -116,6 +119,33 @@ via `CAREER_LLM_CV_MODEL`, `CAREER_LLM_ONBOARDING_MODEL`,
   background scoring; poll `GET .../mock-interviews/{id}` until dimensions appear.
 
 The voice endpoints return `SPEECH_NOT_SUPPORTED` when real AI is disabled.
+
+### Testing the real AI
+
+[`tests/test_llm/`](tests/test_llm) makes **real model calls** using the
+credentials in `.env`. Every test is skipped automatically when
+`CAREER_ENABLE_REAL_AI` is false, no key is set, or the AI extras are not
+installed - so it never interferes with the mock smoke tests. Run with `-s` to
+see the printed model output:
+
+```bash
+pytest tests/test_llm -s
+```
+
+| File | Covers |
+| --- | --- |
+| `test_01_connectivity.py` | model import + a live call proving the `.env` key works |
+| `test_02_llm_functions.py` | each `app/llm/*` function on mock data; prints output, saves TTS audio |
+| `test_03_api_routers.py` | the API routers end-to-end (tailored CV, CV extract, interview review, mock interview with text + voice + TTS); prints output, saves audio |
+| `run_onboarding_chat.py` | interactive onboarding in your terminal (not a pytest test) |
+
+Generated audio is written to `tests/test_llm/output/` (gitignored). The
+onboarding script supports two modes:
+
+```bash
+python tests/test_llm/run_onboarding_chat.py          # drives app/llm/onboarding directly
+python tests/test_llm/run_onboarding_chat.py api      # drives the real API router
+```
 
 ## Project structure
 
@@ -147,7 +177,12 @@ app/
     applications_service.py  # partner pipeline + summary + counts
     notifications_service.py # notification creation/dedup + milestone helper
   data/                   # mock seed catalogs (goal_catalog / jobs / alumni)
-tests/                    # pytest smoke tests keyed to use-case IDs
+tests/
+  test_smoke.py           # mock-mode smoke tests keyed to use-case IDs
+  test_llm/               # real-AI tests (skipped unless CAREER_ENABLE_REAL_AI=true)
+    test_01_connectivity.py / test_02_llm_functions.py / test_03_api_routers.py
+    run_onboarding_chat.py  # interactive onboarding (direct or via API router)
+    mock_data.py / conftest.py
 ```
 
 ## Module coverage
