@@ -28,6 +28,14 @@ def list_applications(
     goal_id: str | None = Query(default=None, alias="goalId"),
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    List the applications for a goal.
+    **Parameters**:
+        - goal_id: str | None: The ID of the goal.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The list of applications.
+    '''
     apps = list(store.applications.get(user.id, {}).values())
     # Advance partner pipelines before reporting (use-case APP-05).
     for app in apps:
@@ -45,6 +53,14 @@ def create_application(
     body: CreateApplicationRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Create an application for a goal.
+    **Parameters**:
+        - body: CreateApplicationRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The application.
+    '''
     if body.goal_id not in store.goals.get(user.id, {}):
         raise validation_error("Goal not found.", "goalId")
     job = store.get_job(body.job_id)
@@ -79,6 +95,15 @@ def update_application(
     body: UpdateApplicationRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Update an application for a goal.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - body: UpdateApplicationRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The application.
+    '''
     app = store.applications.get(user.id, {}).get(application_id)
     if not app:
         raise not_found("Application not found.")
@@ -95,6 +120,14 @@ def update_application(
 
 @router.delete("/{application_id}", status_code=204, response_model=None)
 def delete_application(application_id: str, user: UserRecord = Depends(get_current_user)) -> None:
+    '''
+    Delete an application for a goal.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - None: The response body.
+    '''
     bucket = store.applications.get(user.id, {})
     if application_id not in bucket:
         raise not_found("Application not found.")

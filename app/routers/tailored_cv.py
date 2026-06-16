@@ -13,6 +13,14 @@ router = APIRouter(prefix="/tailored-cv", tags=["tailored-cv"])
 
 @router.post("/generate", response_model=TailoredCvResponse)
 def generate(body: TailoredCvRequest, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Generate a tailored CV for a job.
+    **Parameters**:
+        - body: TailoredCvRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The tailored CV.
+    '''
     job = store.get_job(body.job_id)
     if not job:
         raise not_found("Job not found.")

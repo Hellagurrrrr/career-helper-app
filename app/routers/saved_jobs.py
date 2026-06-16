@@ -15,6 +15,14 @@ def list_saved_jobs(
     goal_id: str = Query(..., alias="goalId"),
     user: UserRecord = Depends(get_current_user),
 ) -> list[dict]:
+    '''
+    List the saved jobs for a goal.
+    **Parameters**:
+        - goal_id: str: The ID of the goal.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of saved jobs.
+    '''
     if goal_id not in store.goals.get(user.id, {}):
         raise not_found("Goal not found.")
     job_ids = store.saved_jobs.get(user.id, {}).get(goal_id, set())
@@ -27,6 +35,15 @@ def save_job(
     body: SaveJobRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> list[dict]:
+    '''
+    Save a job for a goal.
+    **Parameters**:
+        - job_id: str: The ID of the job.
+        - body: SaveJobRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of saved jobs.
+    '''
     if body.goal_id not in store.goals.get(user.id, {}):
         raise validation_error("Goal not found.", "goalId")
     if not store.get_job(job_id):
@@ -43,6 +60,15 @@ def unsave_job(
     goal_id: str = Query(..., alias="goalId"),
     user: UserRecord = Depends(get_current_user),
 ) -> None:
+    '''
+    Unsave a job for a goal.
+    **Parameters**:
+        - job_id: str: The ID of the job.
+        - goal_id: str: The ID of the goal.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - None: The response body.
+    '''
     saved = store.saved_jobs.get(user.id, {}).get(goal_id)
     if not saved or job_id not in saved:
         raise not_found("Saved job not found.")

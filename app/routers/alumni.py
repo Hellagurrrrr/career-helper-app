@@ -18,6 +18,16 @@ def list_alumni(
     expertise: str | None = Query(default=None),
     user: UserRecord = Depends(get_current_user),
 ) -> list[dict]:
+    '''
+    List the alumni for a goal.
+    **Parameters**:
+        - goal_id: str | None: The ID of the goal.
+        - q: str | None: The query to filter by.
+        - expertise: str | None: The expertise to filter by.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of alumni.
+    '''
     alumni = list(store.alumni)
     if expertise:
         needle = expertise.strip().lower()
@@ -43,6 +53,14 @@ def list_alumni(
 
 @router.get("/{alumni_id}", response_model=AlumniProfile)
 def get_alumni(alumni_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Get an alumni profile.
+    **Parameters**:
+        - alumni_id: str: The ID of the alumni.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The alumni profile.
+    '''
     alum = store.get_alumni(alumni_id)
     if not alum:
         raise not_found("Profile not found.")

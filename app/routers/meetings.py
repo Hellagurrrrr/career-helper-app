@@ -19,6 +19,14 @@ def list_meetings(
     alumni_id: str | None = Query(default=None, alias="alumniId"),
     user: UserRecord = Depends(get_current_user),
 ) -> list[dict]:
+    '''
+    List the meetings for a user.
+    **Parameters**:
+        - alumni_id: str | None: The ID of the alumni.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of meetings.
+    '''
     meetings = list(store.meetings.get(user.id, {}).values())
     if alumni_id is not None:
         meetings = [m for m in meetings if m["alumniId"] == alumni_id]
@@ -27,6 +35,14 @@ def list_meetings(
 
 @router.post("", response_model=MeetingRequest, status_code=201)
 def create_meeting(body: CreateMeetingRequest, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Create a meeting for a user.
+    **Parameters**:
+        - body: CreateMeetingRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The meeting.
+    '''
     alum = store.get_alumni(body.alumni_id)
     if not alum:
         raise validation_error("Alumni not found.", "alumniId")
@@ -72,6 +88,15 @@ def update_meeting(
     body: UpdateMeetingRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Update a meeting for a user.
+    **Parameters**:
+        - meeting_id: str: The ID of the meeting.
+        - body: UpdateMeetingRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The meeting.
+    '''
     meeting = store.meetings.get(user.id, {}).get(meeting_id)
     if not meeting:
         raise not_found("Meeting request not found.")

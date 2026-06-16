@@ -21,6 +21,16 @@ def list_notifications(
     cursor: str | None = Query(default=None),
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    List the notifications for a user.
+    **Parameters**:
+        - unread: bool | None: Whether to filter by unread.
+        - limit: int: The limit of notifications to return.
+        - cursor: str | None: The cursor to paginate by.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The list of notifications.
+    '''
     items = list(store.notifications.get(user.id, []))
     if unread:
         items = [n for n in items if not n["read"]]
@@ -30,6 +40,14 @@ def list_notifications(
 
 @router.post("/read", response_model=NotificationListResponse)
 def mark_read(body: MarkReadRequest, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Mark notifications as read.
+    **Parameters**:
+        - body: MarkReadRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The list of notifications.
+    '''
     items = store.notifications.get(user.id, [])
     ids = set(body.ids) if body.ids is not None else None
     for n in items:
@@ -41,6 +59,14 @@ def mark_read(body: MarkReadRequest, user: UserRecord = Depends(get_current_user
 
 @router.delete("/{notification_id}", status_code=204, response_model=None)
 def delete_notification(notification_id: str, user: UserRecord = Depends(get_current_user)) -> None:
+    '''
+    Delete a notification.
+    **Parameters**:
+        - notification_id: str: The ID of the notification.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - None: The response body.
+    '''
     items = store.notifications.get(user.id, [])
     idx = next((i for i, n in enumerate(items) if n["id"] == notification_id), None)
     if idx is None:

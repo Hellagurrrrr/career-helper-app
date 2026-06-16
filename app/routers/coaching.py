@@ -56,6 +56,13 @@ def _context(user_id: str, app: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 @router.get("/ai-coaching/summary", response_model=CoachingSummary)
 def coaching_summary(user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Get the coaching summary.
+    **Parameters**:
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The coaching summary.
+    '''
     apps = store.applications.get(user.id, {})
     review_count = sum(
         sum(1 for r in rs if r.get("status") == "complete")
@@ -71,6 +78,13 @@ def coaching_summary(user: UserRecord = Depends(get_current_user)) -> dict:
 
 @router.get("/ai-coaching/applications", response_model=list[JobApplication])
 def coaching_applications(user: UserRecord = Depends(get_current_user)) -> list[dict]:
+    '''
+    Get the coaching applications.
+    **Parameters**:
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of coaching applications.
+    '''
     apps = list(store.applications.get(user.id, {}).values())
     for app in apps:
         applications_service.advance_partner(user.id, app)
@@ -83,6 +97,14 @@ def coaching_applications(user: UserRecord = Depends(get_current_user)) -> list[
 # ---------------------------------------------------------------------------
 @router.get("/applications/{application_id}/interview-reviews", response_model=list[InterviewReview])
 def list_reviews(application_id: str, user: UserRecord = Depends(get_current_user)) -> list[dict]:
+    '''
+    List the interview reviews for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of interview reviews.
+    '''
     _get_app_or_404(user.id, application_id)
     reviews = store.reviews.get(user.id, {}).get(application_id, [])
     completed = [r for r in reviews if r.get("status") == "complete"]
@@ -99,6 +121,15 @@ def create_review(
     file: UploadFile = File(...),
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Create an interview review for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - file: UploadFile: The audio file to upload.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The interview review.
+    '''
     _get_app_or_404(user.id, application_id)
     name = (file.filename or "").lower()
     if not name.endswith(_ALLOWED_AUDIO_EXT):
@@ -134,6 +165,15 @@ def get_review(
     review_id: str,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Get the status of an interview review.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - review_id: str: The ID of the review.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The status of the interview review.
+    '''
     _get_app_or_404(user.id, application_id)
     reviews = store.reviews.get(user.id, {}).get(application_id, [])
     review = next((r for r in reviews if r["id"] == review_id), None)
@@ -169,6 +209,15 @@ def delete_review(
     review_id: str,
     user: UserRecord = Depends(get_current_user),
 ) -> None:
+    '''
+    Delete an interview review for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - review_id: str: The ID of the review.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - None: The response body.
+    '''
     reviews = store.reviews.get(user.id, {}).get(application_id, [])
     idx = next((i for i, r in enumerate(reviews) if r["id"] == review_id), None)
     if idx is None:
@@ -191,6 +240,14 @@ def _finalize_mock(session: dict[str, Any]) -> None:
     response_model=list[MockInterviewSession],
 )
 def list_mocks(application_id: str, user: UserRecord = Depends(get_current_user)) -> list[dict]:
+    '''
+    List the mock interviews for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - list[dict]: The list of mock interviews.
+    '''
     _get_app_or_404(user.id, application_id)
     sessions = store.mocks.get(user.id, {}).get(application_id, [])
     return sorted(sessions, key=lambda s: s["startedAt"], reverse=True)
@@ -202,6 +259,14 @@ def list_mocks(application_id: str, user: UserRecord = Depends(get_current_user)
     status_code=201,
 )
 def start_mock(application_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+    '''
+    Start a mock interview for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The mock interview.
+    '''
     app = _get_app_or_404(user.id, application_id)
     ctx = _context(user.id, app)
     job = store.get_job(app["jobId"]) or {}
@@ -250,6 +315,16 @@ def submit_turn(
     body: MockTurnRequest,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Submit a turn for a mock interview.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - session_id: str: The ID of the session.
+        - body: MockTurnRequest: The request body.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The mock interview turn.
+    '''
     _get_app_or_404(user.id, application_id)
     sessions = store.mocks.get(user.id, {}).get(application_id, [])
     session = next((s for s in sessions if s["id"] == session_id), None)
@@ -300,6 +375,15 @@ def get_mock(
     session_id: str,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
+    '''
+    Get a mock interview for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - session_id: str: The ID of the session.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - dict: The mock interview.
+    '''
     _get_app_or_404(user.id, application_id)
     sessions = store.mocks.get(user.id, {}).get(application_id, [])
     session = next((s for s in sessions if s["id"] == session_id), None)
@@ -318,6 +402,15 @@ def delete_mock(
     session_id: str,
     user: UserRecord = Depends(get_current_user),
 ) -> None:
+    '''
+    Delete a mock interview for an application.
+    **Parameters**:
+        - application_id: str: The ID of the application.
+        - session_id: str: The ID of the session.
+        - user: UserRecord: The current user.
+    **Returns**:
+        - None: The response body.
+    '''
     sessions = store.mocks.get(user.id, {}).get(application_id, [])
     idx = next((i for i, s in enumerate(sessions) if s["id"] == session_id), None)
     if idx is None:
