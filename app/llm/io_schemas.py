@@ -86,5 +86,22 @@ class InterviewQuestions(BaseModel):
 class OnboardingStep(BaseModel):
     """One assistant turn: either ask the next question, or finish."""
 
-    done: bool = Field(..., description="True when enough info has been collected to build a draft")
-    question: str = Field("", description="The next question to ask the user (empty when done=true)")
+    assessment: str = Field(
+        "",
+        description=(
+            "Private note, never shown to the user: is the user's last answer clear, "
+            "plausible and on-topic? What profile information is still missing or needs "
+            "clarifying? Decide the next move based on this."
+        ),
+    )
+    done: bool = Field(
+        ...,
+        description="True only when the core profile info is gathered or the user wants to stop",
+    )
+    question: str = Field(
+        "",
+        description=(
+            "Your next chat message: briefly acknowledge the user's last answer, then ask "
+            "ONE focused question or a gentle clarification. Empty when done=true."
+        ),
+    )

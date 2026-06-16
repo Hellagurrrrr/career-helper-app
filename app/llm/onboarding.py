@@ -28,18 +28,21 @@ def _graph():
 
     from app.llm.io_schemas import OnboardingStep, ProfileDraft
     from app.llm.models import Purpose, get_llm
-    from app.llm.prompts import CV_EXTRACTION_SYSTEM, ONBOARDING_SYSTEM
+    from app.llm.prompts import ONBOARDING_EXTRACTION_SYSTEM, ONBOARDING_SYSTEM
 
     def decide(state: _State) -> _State:
         target = state["target_questions"]
+        # `target` is a soft guide; this hard cap only exists so a runaway
+        # conversation always terminates.
+        hard_cap = max(target * 2, target + 4)
         llm = get_llm(Purpose.ONBOARDING).with_structured_output(OnboardingStep)
-        messages: list[tuple[str, str]] = [
-            ("system", f"{ONBOARDING_SYSTEM} Aim for about {target} questions in total."),
-            *state["history"],
-        ]
+        guidance = (
+            f"{ONBOARDING_SYSTEM}\n\nAim for roughly {target} questions, but prioritise a "
+            "natural flow and completeness over hitting an exact count."
+        )
+        messages: list[tuple[str, str]] = [("system", guidance), *state["history"]]
         step: OnboardingStep = llm.invoke(messages)
-        # Hard cap so the conversation always terminates.
-        done = bool(step.done) or state["questions_asked"] >= target
+        done = bool(step.done) or state["questions_asked"] >= hard_cap
         return {"done": done, "question": "" if done else step.question.strip()}
 
     def extract(state: _State) -> _State:
@@ -47,7 +50,7 @@ def _graph():
         convo = "\n".join(f"{'Assistant' if r == 'ai' else 'User'}: {t}" for r, t in state["history"])
         draft: ProfileDraft = llm.invoke(
             [
-                ("system", CV_EXTRACTION_SYSTEM),
+                ("system", ONBOARDING_EXTRACTION_SYSTEM),
                 ("human", f"Conversation:\n{convo}\n\nExtract the candidate's profile."),
             ]
         )
