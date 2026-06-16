@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated audio from the real-AI test suite (TTS output / uploaded clips)
+tests/test_llm/output/
