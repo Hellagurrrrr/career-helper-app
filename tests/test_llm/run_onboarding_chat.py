@@ -4,9 +4,15 @@ Talk to the real onboarding model in your terminal. The assistant asks
 questions, you type answers, and when it decides it has enough information it
 prints the final extracted profile draft.
 
+Two modes:
+  - direct: drives app.llm.onboarding.run_step directly (the LLM layer)
+  - api:    drives the real API router endpoints (POST /v1/profile/onboarding-chat
+            and /answers) through a TestClient
+
 Run from the project root:
 
-    python tests/test_llm/run_onboarding_chat.py
+    python tests/test_llm/run_onboarding_chat.py          # direct (default)
+    python tests/test_llm/run_onboarding_chat.py api      # via API router
 
 Type 'quit' (or press Ctrl-C) to stop early.
 """
@@ -38,10 +44,27 @@ def _preflight() -> None:
         sys.exit(f"AI dependencies not installed: {exc}")
 
 
-def main() -> None:
+def _read_answer() -> str | None:
+    """Read one non-empty answer from the terminal; return None to abort/quit."""
+    while True:
+        try:
+            answer = input("You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n[aborted]")
+            return None
+        if answer.lower() in {"quit", "exit"}:
+            print("[stopped early]")
+            return None
+        if answer:
+            return answer
+        print("(please type something, or 'quit' to stop)")
+
+
+def run_direct() -> None:
+    """Drive the LLM layer (app.llm.onboarding.run_step) directly."""
     _preflight()
     target = settings.onboarding_target_questions
-    print(f"=== Onboarding chat (model={settings.llm_onboarding_model}, target~{target} questions) ===")
+    print(f"=== Onboarding chat - DIRECT (model={settings.llm_onboarding_model}, target~{target}) ===")
     print("Type your answers. Enter 'quit' to stop.\n")
 
     history: list[tuple[str, str]] = []
@@ -54,23 +77,73 @@ def main() -> None:
         if step.get("done"):
             break
 
-        try:
-            answer = input("You: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\n[aborted]")
-            return
-        if answer.lower() in {"quit", "exit"}:
-            print("[stopped early]")
+        answer = _read_answer()
+        if answer is None:
             return
 
         history.append(("ai", question))
         history.append(("human", answer))
         step = run_step(history, target)
 
-    draft = step.get("draft")
     print("\n===== FINAL PROFILE DRAFT =====")
-    print(json.dumps(draft, ensure_ascii=False, indent=2))
+    print(json.dumps(step.get("draft"), ensure_ascii=False, indent=2))
+
+
+def run_via_api() -> None:
+    """Drive the real API router endpoints through a TestClient."""
+    _preflight()
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    target = settings.onboarding_target_questions
+    print(f"=== Onboarding chat - API ROUTER (model={settings.llm_onboarding_model}, target~{target}) ===")
+    print("Type your answers. Enter 'quit' to stop.\n")
+
+    with TestClient(app) as client:
+        reg = client.post(
+            "/v1/auth/register",
+            json={
+                "name": "Onboarding Tester",
+                "email": "onboarding-cli@example.com",
+                "password": "secret123",
+            },
+        )
+        if reg.status_code != 201:
+            sys.exit(f"register failed: {reg.status_code} {reg.text}")
+        headers = {"Authorization": f"Bearer {reg.json()['tokens']['accessToken']}"}
+
+        # POST /v1/profile/onboarding-chat -> first question
+        session = client.post("/v1/profile/onboarding-chat", headers=headers).json()
+
+        while session.get("status") != "complete":
+            question = session.get("question") or "(no question)"
+            print(f"Assistant: {question}")
+
+            answer = _read_answer()
+            if answer is None:
+                return
+
+            # POST /v1/profile/onboarding-chat/answers -> next question or completion
+            resp = client.post(
+                "/v1/profile/onboarding-chat/answers",
+                json={"text": answer},
+                headers=headers,
+            )
+            if resp.status_code != 200:
+                print(f"[error] {resp.status_code} {resp.text}")
+                continue
+            session = resp.json()
+
+        print("\n===== FINAL PROFILE DRAFT (from API) =====")
+        print(json.dumps(session.get("draft"), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
-    main()
+    mode = sys.argv[1].lower() if len(sys.argv) > 1 else "direct"
+    if mode == "api":
+        run_via_api()
+    elif mode in ("direct", "llm"):
+        run_direct()
+    else:
+        sys.exit("usage: python tests/test_llm/run_onboarding_chat.py [direct|api]")
