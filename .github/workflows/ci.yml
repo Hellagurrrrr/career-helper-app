@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+# Avoid piling up redundant runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Mock-mode tests: deterministic, no API key, no network. This is the gate
+  # that runs on every push / PR. The real-AI suite under tests/test_llm is
+  # collected too, but auto-skips because CAREER_ENABLE_REAL_AI is false.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests (mock mode) - py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    env:
+      CAREER_ENABLE_REAL_AI: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run test suite
+        run: pytest -q
+
+  # ---------------------------------------------------------------------------
+  # Real-AI integration tests: opt-in only (manual dispatch) because they make
+  # real, billable model calls. Requires an OPENAI_API_KEY repository secret;
+  # if it is missing the job is a no-op instead of failing.
+  # ---------------------------------------------------------------------------
+  real-ai:
+    name: Real AI integration (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run real-AI tests
+        env:
+          CAREER_ENABLE_REAL_AI: "true"
+          CAREER_LLM_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$CAREER_LLM_API_KEY" ]; then
+            echo "::warning::OPENAI_API_KEY secret not set - skipping real-AI tests."
+            exit 0
+          fi
+          pytest tests/test_llm -s -q

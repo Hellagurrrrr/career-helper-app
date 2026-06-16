@@ -147,6 +147,21 @@ python tests/test_llm/run_onboarding_chat.py          # drives app/llm/onboardin
 python tests/test_llm/run_onboarding_chat.py api      # drives the real API router
 ```
 
+## Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines two jobs:
+
+- **test** (runs on every push / PR): installs `requirements.txt` and runs
+  `pytest -q` on Python 3.11 / 3.12 / 3.13 with `CAREER_ENABLE_REAL_AI=false`, so
+  only the deterministic mock smoke tests execute and the `tests/test_llm` suite
+  auto-skips. This is the required gate.
+- **real-ai** (manual `workflow_dispatch` only): runs `tests/test_llm` against the
+  real models using an `OPENAI_API_KEY` repository secret. It never runs
+  automatically (the calls are billable) and is a no-op if the secret is unset.
+
+To enable the optional real-AI job, add an `OPENAI_API_KEY` secret under the repo's
+Settings -> Secrets and variables -> Actions, then trigger the workflow manually.
+
 ## Project structure
 
 ```
