@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from app.core.deps import get_current_user
 from app.core.errors import not_found, validation_error
 from app.schemas.tailored_cv import TailoredCvRequest, TailoredCvResponse
-from app.services import mock_ai
+from app.services import ai_service
 from app.services.store import UserRecord, store
 
 router = APIRouter(prefix="/tailored-cv", tags=["tailored-cv"])
@@ -27,4 +27,4 @@ def generate(body: TailoredCvRequest, user: UserRecord = Depends(get_current_use
     if body.goal_id not in store.goals.get(user.id, {}):
         raise validation_error("Goal not found.", "goalId")
     profile = store.profiles.get(user.id)
-    return mock_ai.generate_tailored_cv(profile, job)
+    return ai_service.generate_tailored_cv(profile, job)

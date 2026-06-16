@@ -34,5 +34,40 @@ class Settings(BaseSettings):
     # Enable the dev-only reset endpoint (use-case SET-07)
     enable_dev_reset: bool = True
 
+    # -----------------------------------------------------------------------
+    # Real AI integration (see plan: real-ai-integration)
+    #
+    # Master switch. When false (default) every AI capability falls back to the
+    # deterministic mock in app/services/mock_ai.py, so the demo and the test
+    # suite run with zero external dependencies or API keys.
+    # -----------------------------------------------------------------------
+    enable_real_ai: bool = False
+
+    # Chat LLM (OpenAI-compatible). base_url lets you point at a proxy or a
+    # domestic gateway that speaks the OpenAI protocol.
+    llm_api_key: str = ""
+    llm_base_url: str | None = None
+    llm_temperature: float = 0.2
+    llm_timeout: int = 60
+
+    # Per-purpose model names so expensive capabilities can use stronger models.
+    llm_cv_model: str = "gpt-4o-mini"
+    llm_onboarding_model: str = "gpt-4o-mini"
+    llm_tailored_cv_model: str = "gpt-4o"
+    llm_interview_model: str = "gpt-4o"
+
+    # Conversational onboarding: how many questions the assistant aims to ask
+    # before it stops and produces the profile draft (drives totalQuestions).
+    onboarding_target_questions: int = 6
+
+    # Voice (STT/TTS). voice_provider selects the implementation in
+    # app/llm/voice.py; only "openai" ships today but the layer is pluggable.
+    voice_provider: str = "openai"
+    voice_api_key: str = ""          # falls back to llm_api_key when empty
+    voice_base_url: str | None = None  # falls back to llm_base_url when empty
+    stt_model: str = "whisper-1"
+    tts_model: str = "tts-1"
+    tts_voice: str = "alloy"
+
 
 settings = Settings()

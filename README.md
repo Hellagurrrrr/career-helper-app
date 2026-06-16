@@ -10,6 +10,10 @@ validation rules, and error codes all follow the design docs), while the
 the frontend integrate immediately; later you replace the `services/` layer with
 real implementations without changing the routers.
 
+The AI capabilities (CV extraction, conversational onboarding, tailored CV,
+interview coaching with voice) can be switched from mock to **real large-model
+calls** with a single flag - see [Real AI integration](#real-ai-integration).
+
 ## Quick start
 
 ```bash
@@ -37,14 +41,14 @@ to swap for a real implementation later.
 | --- | --- |
 | Storage | Process-wide **in-memory** store ([`app/services/store.py`](app/services/store.py)). Data resets on restart. |
 | Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation, via `PyJWT`; passwords hashed with `bcrypt`. |
-| Async tasks | CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (first 2 polls `processing`, 3rd `complete`). Controlled by `CAREER_ASYNC_PROCESSING_POLLS`. |
+| Async tasks | In mock mode CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (`CAREER_ASYNC_PROCESSING_POLLS`). In real-AI mode they run in **FastAPI background tasks** and the poll just reports the live status. |
 | Public catalogs | Mock seed data for goal catalog / jobs / alumni in [`app/data/`](app/data). |
 | matchScore / ranking | Simple **skill-overlap** rule ([`app/services/mock_match.py`](app/services/mock_match.py)). |
 | Goal progress | `progress = 0.5 * normalized average confidence + 0.5 * average module step completion` ([`app/services/progress.py`](app/services/progress.py)). |
-| File uploads | CV and audio files are **validated (type/size) then discarded** (not persisted). |
+| File uploads | In mock mode CV and audio files are **validated (type/size) then discarded**. In real-AI mode CVs are parsed (PDF/DOCX/TXT) and audio is transcribed before being scored. |
 | Notifications | Server-side event generation on milestones, partner pipeline advances, and meeting updates; de-duplicated by `dedupKey`. |
 | Partner pipeline | Status advances automatically by elapsed time since `submittedAt`: 8h, 24h, 48h, 120h (use-case APP-05). |
-| Mock interview | Fixed **4 rounds** (`CAREER_MOCK_QUESTION_COUNT`); evaluation returns mock dimension scores. |
+| Mock interview | Up to **4 rounds** (`CAREER_MOCK_QUESTION_COUNT`). Mock mode returns fixed dimension scores; real mode generates questions from the profile/job and scores the transcript. Voice answers + TTS playback available in real mode. |
 | Dev reset | `POST /__dev/reset` clears the current user's demo data (use-case SET-07). Toggle with `CAREER_ENABLE_DEV_RESET`. |
 | Authoritative spec | `design-docs/` (the `docs/` copy is treated as a duplicate). |
 
@@ -67,6 +71,51 @@ file. See [`app/core/config.py`](app/core/config.py). Common ones:
 | `CAREER_ASYNC_PROCESSING_POLLS` | `2` | Polls returning `processing` before `complete` |
 | `CAREER_MOCK_QUESTION_COUNT` | `4` | Mock interview rounds |
 | `CAREER_ENABLE_DEV_RESET` | `true` | Enable `POST /__dev/reset` |
+| `CAREER_ENABLE_REAL_AI` | `false` | Master switch for real large-model calls (see below) |
+
+## Real AI integration
+
+When `CAREER_ENABLE_REAL_AI=true`, the AI features call real models through a
+single switch point, [`app/services/ai_service.py`](app/services/ai_service.py).
+When it is `false` (the default) everything falls back to the deterministic mock
+in [`app/services/mock_ai.py`](app/services/mock_ai.py), so the demo and the test
+suite run with **zero external dependencies or API keys**.
+
+Setup:
+
+```bash
+pip install -r requirements.txt          # includes the optional AI extras
+cp .env.example .env                      # then fill in your keys
+# set CAREER_ENABLE_REAL_AI=true and CAREER_LLM_API_KEY=...
+```
+
+The model layer lives in [`app/llm/`](app/llm):
+
+| Capability | Module | Approach |
+| --- | --- | --- |
+| CV -> profile | `cv_extraction.py` | `parsing.py` (PDF/DOCX/TXT) -> structured-output extraction, run in a background task |
+| Conversational onboarding | `onboarding.py` | **LangGraph** graph (`decide` -> `extract`) that asks dynamic questions then emits a draft |
+| Tailored CV | `tailored_cv.py` | structured-output generation (synchronous) |
+| Interview coaching | `interview.py` | question generation + transcript scoring (5 fixed dimensions) |
+| Voice (STT/TTS) | `voice.py` | pluggable `VoiceProvider`; `OpenAIVoiceProvider` ships (Whisper + OpenAI TTS) |
+
+Models are chosen per purpose in [`app/llm/models.py`](app/llm/models.py) so cheap
+tasks (extraction) and expensive ones (writing/scoring) can use different models
+via `CAREER_LLM_CV_MODEL`, `CAREER_LLM_ONBOARDING_MODEL`,
+`CAREER_LLM_TAILORED_CV_MODEL`, `CAREER_LLM_INTERVIEW_MODEL`.
+
+### Interview coaching flows
+
+- **Interview review**: `POST .../interview-reviews` stores the audio and starts a
+  background job (transcribe -> score); `GET .../interview-reviews/{id}` reports
+  `transcribing -> scoring -> complete`.
+- **Mock interview**: questions are generated from the profile + job. Answers come
+  in as text (`POST .../turns`) or **voice** (`POST .../turns/voice`, transcribed via
+  STT). Coach questions can be played back on demand via
+  `GET .../turns/{turn_id}/audio` (TTS, cached). Finishing the interview kicks off
+  background scoring; poll `GET .../mock-interviews/{id}` until dimensions appear.
+
+The voice endpoints return `SPEECH_NOT_SUPPORTED` when real AI is disabled.
 
 ## Project structure
 
@@ -81,9 +130,17 @@ app/
     pagination.py         # cursor pagination (api-design 1.4)
   schemas/                # Pydantic models (camelCase JSON via CamelModel)
   routers/                # one module per API section (§2-§11)
+  llm/                    # real large-model integration (loaded only when CAREER_ENABLE_REAL_AI=true)
+    models.py             # per-purpose ChatOpenAI factory
+    voice.py              # pluggable STT/TTS (OpenAIVoiceProvider)
+    parsing.py            # CV file -> text (pdf/docx/txt)
+    prompts.py            # capability prompts
+    io_schemas.py         # structured-output Pydantic models
+    cv_extraction.py / onboarding.py / tailored_cv.py / interview.py
   services/
+    ai_service.py         # single AI entry point; routes real vs mock by CAREER_ENABLE_REAL_AI
     store.py              # in-memory repository + seeding
-    mock_ai.py            # CV extract / tailored CV / interview analysis / mock interview
+    mock_ai.py            # mock CV extract / tailored CV / interview analysis / mock interview
     mock_match.py         # matchScore + recommendation ordering
     progress.py           # goal progress formula
     goals_service.py      # tracking init + progress recompute + milestone notifications
@@ -110,6 +167,9 @@ All 11 modules from the API design are implemented:
 
 ## Replacing the mocks later
 
-- Swap `services/mock_ai.py` with real LLM / STT / TTS calls.
-- Swap `services/store.py` with a database-backed repository.
+- AI: set `CAREER_ENABLE_REAL_AI=true` to route through `app/llm/` (real LLM / STT /
+  TTS) instead of `services/mock_ai.py`. Swap in another provider by extending
+  `app/llm/voice.py` / `app/llm/models.py`.
+- Swap `services/store.py` with a database-backed repository (and move background
+  tasks to a real queue like Celery/RQ for multi-process deployments).
 - Keep `routers/` and `schemas/` mostly unchanged - they are the public contract.

@@ -43,6 +43,7 @@ class Store:
     applications: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)  # user_id -> app_id -> JobApplication
     reviews: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)  # user_id -> app_id -> [review]
     mocks: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)    # user_id -> app_id -> [session]
+    tts_cache: dict[str, bytes] = field(default_factory=dict)  # turn_id -> synthesized audio (on-demand TTS, real-AI mode)
 
     # --- alumni meetings ---
     meetings: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)  # user_id -> meeting_id -> MeetingRequest
@@ -68,8 +69,16 @@ class Store:
         self.meetings.setdefault(user_id, {})
         self.notifications.setdefault(user_id, [])
 
+    def _purge_tts_for(self, user_id: str) -> None:
+        """Drop cached TTS audio belonging to the user's mock-interview turns."""
+        for sessions in self.mocks.get(user_id, {}).values():
+            for session in sessions:
+                for turn in session.get("turns", []):
+                    self.tts_cache.pop(turn.get("id", ""), None)
+
     def reset_user_data(self, user_id: str) -> None:
         """Clear demo data but keep the account (use-case SET-07)."""
+        self._purge_tts_for(user_id)
         self.profiles[user_id] = None  # type: ignore[assignment]
         self.onboarding_chats[user_id] = None  # type: ignore[assignment]
         self.goals[user_id] = {}
@@ -83,6 +92,7 @@ class Store:
 
     def delete_account(self, user_id: str) -> None:
         """Remove the account and all of its data (use-case SET-08)."""
+        self._purge_tts_for(user_id)
         user = self.users.pop(user_id, None)
         if user:
             self.email_index.pop(user.email.lower(), None)

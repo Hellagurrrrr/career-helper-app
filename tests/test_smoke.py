@@ -328,6 +328,33 @@ def test_mock_end_early_requires_answer(client):
     assert early.status_code == 422 and early.json()["error"]["code"] == "MOCK_SESSION_INCOMPLETE"
 
 
+def test_voice_endpoints_disabled_in_mock_mode(client):
+    # Voice answer + TTS are real-AI-only; in mock mode they must be rejected.
+    headers = auth_headers(client)
+    goal_id = client.post("/v1/goals", json={"catalogId": "1"}, headers=headers).json()["id"]
+    app_id = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
+        headers=headers,
+    ).json()["id"]
+    session_id = client.post(
+        f"/v1/applications/{app_id}/mock-interviews", headers=headers
+    ).json()["sessionId"]
+
+    voice = client.post(
+        f"/v1/applications/{app_id}/mock-interviews/{session_id}/turns/voice",
+        files={"file": ("answer.mp3", b"fakeaudio", "audio/mpeg")},
+        headers=headers,
+    )
+    assert voice.status_code == 422 and voice.json()["error"]["code"] == "SPEECH_NOT_SUPPORTED"
+
+    audio = client.get(
+        f"/v1/applications/{app_id}/mock-interviews/{session_id}/turns/some_turn/audio",
+        headers=headers,
+    )
+    assert audio.status_code == 422 and audio.json()["error"]["code"] == "SPEECH_NOT_SUPPORTED"
+
+
 # --- Alumni + Meetings (§10) + Notifications (§11) ---
 def test_alumni_meetings_and_notifications(client):
     headers = auth_headers(client)

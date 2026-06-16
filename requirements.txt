@@ -9,3 +9,13 @@ email-validator==2.3.0
 httpx==0.28.1
 httpx2==2.2.0
 pytest==9.0.3
+
+# --- Real AI integration (optional) ---
+# Only required when CAREER_ENABLE_REAL_AI=true. The mock backend and the test
+# suite run without these installed (the app/llm/* modules import them lazily).
+langchain>=0.3,<0.4
+langchain-openai>=0.2,<0.4
+langgraph>=0.2,<0.4
+openai>=1.40
+pypdf>=4.0
+python-docx>=1.1

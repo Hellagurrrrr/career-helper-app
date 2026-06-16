@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Response, UploadFile, status
 
 from app.core.config import settings
 from app.core.deps import get_current_user
@@ -10,6 +10,7 @@ from app.core.errors import (
     file_too_large,
     mock_session_incomplete,
     not_found,
+    speech_not_supported,
     unsupported_audio_format,
     validation_error,
 )
@@ -25,7 +26,7 @@ from app.schemas.coaching import (
     ReviewCreatedResponse,
     ReviewStatusResponse,
 )
-from app.services import applications_service, mock_ai
+from app.services import ai_service, applications_service
 from app.services.store import UserRecord, store
 
 router = APIRouter(tags=["ai-coaching"])
@@ -49,6 +50,23 @@ def _context(user_id: str, app: dict[str, Any]) -> dict[str, Any]:
         "goalTitle": goal.get("title"),
         "skills": job.get("skills", []),
     }
+
+
+def _run_review_analysis(review: dict[str, Any], audio_bytes: bytes, filename: str) -> None:
+    """Real-AI background job: transcribe the recording, then score the transcript."""
+    try:
+        review["status"] = "transcribing"
+        transcript = ai_service.transcribe(audio_bytes, filename)
+        review["transcript"] = transcript
+        review["status"] = "scoring"
+        analysis = ai_service.analyze_transcript(transcript)
+        review["overallSummary"] = analysis["overallSummary"]
+        review["dimensions"] = analysis["dimensions"]
+        review["improvementAdvice"] = analysis["improvementAdvice"]
+        review["status"] = "complete"
+    except Exception as exc:  # noqa: BLE001 - surface failure to the poller
+        review["status"] = "failed"
+        review["error"] = str(exc)
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +136,7 @@ def list_reviews(application_id: str, user: UserRecord = Depends(get_current_use
 )
 def create_review(
     application_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
@@ -153,6 +172,9 @@ def create_review(
         "polls": 0,
     }
     store.reviews.setdefault(user.id, {}).setdefault(application_id, []).append(review)
+    if ai_service.real_enabled():
+        # Real AI: transcribe + score in the background; get_review reports status.
+        background_tasks.add_task(_run_review_analysis, review, contents, review["fileName"])
     return {"id": review_id, "applicationId": application_id, "status": "transcribing"}
 
 
@@ -180,16 +202,21 @@ def get_review(
     if not review:
         raise not_found("Review not found.")
 
-    if review["status"] != "complete":
-        review["polls"] += 1
-        if review["polls"] <= settings.async_processing_polls:
-            review["status"] = mock_ai.review_stage(review["polls"])
+    if ai_service.real_enabled():
+        # Real AI: the background task owns the state machine; just report it.
+        if review["status"] != "complete":
             return {"id": review_id, "applicationId": application_id, "status": review["status"]}
-        # Finalize analysis.
-        analysis = mock_ai.mock_review_analysis(review["fileName"])
-        review.update(analysis)
-        review["durationSec"] = 180
-        review["status"] = "complete"
+    else:
+        # Mock: simulate the analysis pipeline via the poll counter.
+        if review["status"] != "complete":
+            review["polls"] += 1
+            if review["polls"] <= settings.async_processing_polls:
+                review["status"] = ai_service.review_stage(review["polls"])
+                return {"id": review_id, "applicationId": application_id, "status": review["status"]}
+            analysis = ai_service.mock_review_analysis(review["fileName"])
+            review.update(analysis)
+            review["durationSec"] = 180
+            review["status"] = "complete"
 
     return {
         "id": review_id,
@@ -228,11 +255,90 @@ def delete_review(
 # ---------------------------------------------------------------------------
 # Mock interviews (api-design 9.6)
 # ---------------------------------------------------------------------------
-def _finalize_mock(session: dict[str, Any]) -> None:
+def _build_transcript(turns: list[dict[str, Any]]) -> str:
+    return "\n".join(f"{t['role']}: {t['text']}" for t in turns)
+
+
+def _run_mock_scoring(session: dict[str, Any]) -> None:
+    """Real-AI background job: score a finished mock interview transcript."""
+    try:
+        transcript = _build_transcript(session["turns"])
+        analysis = ai_service.analyze_transcript(transcript)
+        session["transcript"] = transcript
+        session["overallSummary"] = analysis["overallSummary"]
+        session["dimensions"] = analysis["dimensions"]
+        session["improvementAdvice"] = analysis["improvementAdvice"]
+        session["status"] = "complete"
+    except Exception as exc:  # noqa: BLE001 - surface failure to the poller
+        session["status"] = "failed"
+        session["error"] = str(exc)
+
+
+def _finalize_mock(session: dict[str, Any], background_tasks: BackgroundTasks) -> None:
     session["completedAt"] = now_ms()
     session["durationSec"] = max(1, (session["completedAt"] - session["startedAt"]) // 1000)
-    session.update(mock_ai.mock_interview_evaluation(session["turns"]))
-    session["status"] = "complete"
+    if ai_service.real_enabled():
+        # Scoring is a real LLM call -> run it in the background; client polls
+        # GET .../mock-interviews/{id} until dimensions are populated.
+        session["status"] = "scoring"
+        background_tasks.add_task(_run_mock_scoring, session)
+    else:
+        session.update(ai_service.mock_interview_evaluation(session["turns"]))
+        session["status"] = "complete"
+
+
+def _finalize_response(session: dict[str, Any], background_tasks: BackgroundTasks) -> dict[str, Any]:
+    _finalize_mock(session, background_tasks)
+    return {"status": session["status"], "session": MockInterviewSession.model_validate(session)}
+
+
+def _process_turn(
+    session: dict[str, Any],
+    text: str,
+    end: bool,
+    background_tasks: BackgroundTasks,
+) -> dict[str, Any]:
+    """Shared logic for text and voice answers."""
+    if session["status"] not in ("in_progress",):
+        raise validation_error("This mock interview is already complete.")
+
+    user_turns = [t for t in session["turns"] if t["role"] == "user"]
+
+    if end:
+        if not user_turns:
+            raise mock_session_incomplete()
+        return _finalize_response(session, background_tasks)
+
+    if not text.strip():
+        raise validation_error("Answer text is required.", "text")
+
+    session["turns"].append(
+        {"id": new_id("t"), "role": "user", "text": text.strip(), "timestamp": now_ms()}
+    )
+    session["currentIndex"] += 1
+    idx = session["currentIndex"]
+
+    if idx < len(session["questions"]):
+        question = session["questions"][idx]
+        session["turns"].append(
+            {"id": new_id("t"), "role": "coach", "text": question, "timestamp": now_ms()}
+        )
+        return {
+            "status": "in_progress",
+            "question": question,
+            "questionIndex": idx,
+            "totalQuestions": len(session["questions"]),
+        }
+
+    return _finalize_response(session, background_tasks)
+
+
+def _find_mock(user_id: str, application_id: str, session_id: str) -> dict[str, Any]:
+    sessions = store.mocks.get(user_id, {}).get(application_id, [])
+    session = next((s for s in sessions if s["id"] == session_id), None)
+    if not session:
+        raise not_found("Mock session not found.")
+    return session
 
 
 @router.get(
@@ -270,7 +376,8 @@ def start_mock(application_id: str, user: UserRecord = Depends(get_current_user)
     app = _get_app_or_404(user.id, application_id)
     ctx = _context(user.id, app)
     job = store.get_job(app["jobId"]) or {}
-    questions = mock_ai.mock_interview_questions(job)
+    profile = store.profiles.get(user.id)
+    questions = ai_service.interview_questions(profile, job)
 
     session_id = new_id("mock")
     ts = now_ms()
@@ -313,57 +420,82 @@ def submit_turn(
     application_id: str,
     session_id: str,
     body: MockTurnRequest,
+    background_tasks: BackgroundTasks,
     user: UserRecord = Depends(get_current_user),
 ) -> dict:
     '''
-    Submit a turn for a mock interview.
+    Submit a text answer for a mock interview turn.
     **Parameters**:
         - application_id: str: The ID of the application.
         - session_id: str: The ID of the session.
-        - body: MockTurnRequest: The request body.
+        - body: MockTurnRequest: The request body (text answer or end flag).
         - user: UserRecord: The current user.
     **Returns**:
-        - dict: The mock interview turn.
+        - dict: The next question, or the (scoring/complete) session.
     '''
     _get_app_or_404(user.id, application_id)
-    sessions = store.mocks.get(user.id, {}).get(application_id, [])
-    session = next((s for s in sessions if s["id"] == session_id), None)
-    if not session:
-        raise not_found("Mock session not found.")
-    if session["status"] == "complete":
-        raise validation_error("This mock interview is already complete.")
+    session = _find_mock(user.id, application_id, session_id)
+    return _process_turn(session, body.text, body.end, background_tasks)
 
-    user_turns = [t for t in session["turns"] if t["role"] == "user"]
 
-    if body.end:
-        if not user_turns:
-            raise mock_session_incomplete()
-        _finalize_mock(session)
-        return {"status": "complete", "session": MockInterviewSession.model_validate(session)}
+@router.post(
+    "/applications/{application_id}/mock-interviews/{session_id}/turns/voice",
+    response_model=MockTurnResponse,
+)
+def submit_turn_voice(
+    application_id: str,
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    end: bool = Form(False),
+    user: UserRecord = Depends(get_current_user),
+) -> dict:
+    '''
+    Submit a *spoken* answer for a mock interview turn.
 
-    if not body.text.strip():
-        raise validation_error("Answer text is required.", "text")
+    The uploaded audio is transcribed (STT) and then handled exactly like a text
+    answer. Only available in real-AI mode.
+    '''
+    if not ai_service.real_enabled():
+        raise speech_not_supported()
+    _get_app_or_404(user.id, application_id)
+    session = _find_mock(user.id, application_id, session_id)
 
-    session["turns"].append(
-        {"id": new_id("t"), "role": "user", "text": body.text.strip(), "timestamp": now_ms()}
-    )
-    session["currentIndex"] += 1
-    idx = session["currentIndex"]
+    name = (file.filename or "").lower()
+    if not name.endswith(_ALLOWED_AUDIO_EXT):
+        raise unsupported_audio_format()
+    contents = file.file.read()
+    if len(contents) > settings.audio_max_bytes:
+        raise file_too_large("File is too large. Maximum size is 25 MB.")
 
-    if idx < len(session["questions"]):
-        question = session["questions"][idx]
-        session["turns"].append(
-            {"id": new_id("t"), "role": "coach", "text": question, "timestamp": now_ms()}
-        )
-        return {
-            "status": "in_progress",
-            "question": question,
-            "questionIndex": idx,
-            "totalQuestions": len(session["questions"]),
-        }
+    text = ai_service.transcribe(contents, file.filename or "answer")
+    return _process_turn(session, text, end, background_tasks)
 
-    _finalize_mock(session)
-    return {"status": "complete", "session": MockInterviewSession.model_validate(session)}
+
+@router.get("/applications/{application_id}/mock-interviews/{session_id}/turns/{turn_id}/audio")
+def get_turn_audio(
+    application_id: str,
+    session_id: str,
+    turn_id: str,
+    user: UserRecord = Depends(get_current_user),
+) -> Response:
+    '''
+    Return the synthesized speech (TTS) for a coach turn. Audio is generated on
+    demand and cached by turn id. Only available in real-AI mode.
+    '''
+    if not ai_service.real_enabled():
+        raise speech_not_supported()
+    _get_app_or_404(user.id, application_id)
+    session = _find_mock(user.id, application_id, session_id)
+    turn = next((t for t in session["turns"] if t["id"] == turn_id), None)
+    if not turn:
+        raise not_found("Turn not found.")
+
+    audio = store.tts_cache.get(turn_id)
+    if audio is None:
+        audio, _media = ai_service.synthesize(turn["text"])
+        store.tts_cache[turn_id] = audio
+    return Response(content=audio, media_type="audio/mpeg")
 
 
 @router.get(
