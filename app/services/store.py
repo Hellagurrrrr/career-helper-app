@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import re
+import shutil
 import sqlite3
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass
@@ -254,6 +255,7 @@ class Store:
         object.__setattr__(self, "database_path", Path(database_path))
         object.__setattr__(self, "_loading", True)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        self._ensure_database_file()
         conn = sqlite3.connect(self.database_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
@@ -271,6 +273,14 @@ class Store:
                 self._save_bucket(name)
             self._conn.execute("DROP TABLE IF EXISTS store_buckets")
             self._conn.commit()
+
+    def _ensure_database_file(self) -> None:
+        if self.database_path.exists():
+            return
+
+        initial_path = self.database_path.with_name("career_helper_initial.sqlite3")
+        if initial_path.exists() and initial_path.resolve() != self.database_path.resolve():
+            shutil.copyfile(initial_path, self.database_path)
 
     def __setattr__(self, name: str, value: StoreValue) -> None:
         if name in self._bucket_defaults:
@@ -1520,7 +1530,7 @@ store = Store(settings.local_database_path)
 
 
 def seed_catalogs() -> None:
-    """Verify public catalogs are present in the local SQLite database."""
+    """Ensure public catalogs are present in the local SQLite database."""
     missing = [name for name in Store._catalog_buckets if not getattr(store, name)]
     if missing:
         joined = ", ".join(missing)

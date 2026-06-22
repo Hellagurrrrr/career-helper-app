@@ -62,6 +62,13 @@ db.sqlite3
 db.sqlite3-journal
 *.sqlite3
 *.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+!app/data/career_helper_initial.sqlite3
+app/data/career_helper.sqlite3
+app/data/career_helper.sqlite3-journal
+app/data/career_helper.sqlite3-wal
+app/data/career_helper.sqlite3-shm
 
 # Flask stuff:
 instance/

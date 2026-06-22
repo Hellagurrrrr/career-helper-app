@@ -42,10 +42,10 @@ to swap for a real implementation later.
 
 | Area | Decision |
 | --- | --- |
-| Storage | Local **normalized SQLite** store ([`app/services/store.py`](app/services/store.py)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). |
+| Storage | Local **normalized SQLite** store ([`app/services/store.py`](app/services/store.py)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). If the runtime DB is missing, it is copied from the committed initial DB at `app/data/career_helper_initial.sqlite3`. |
 | Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation, via `PyJWT`; passwords hashed with `bcrypt`. |
 | Async tasks | In mock mode CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (`CAREER_ASYNC_PROCESSING_POLLS`). In real-AI mode they run in **FastAPI background tasks** and the poll just reports the live status. |
-| Public catalogs | Goal catalog / jobs / alumni are stored in the local SQLite database. |
+| Public catalogs | Goal catalog / jobs / alumni are stored in SQLite. `career_helper_initial.sqlite3` contains the seed catalog data for CI and fresh local setup; `career_helper.sqlite3` is ignored local runtime state. |
 | matchScore / ranking | Simple **skill-overlap** rule ([`app/services/mock_match.py`](app/services/mock_match.py)). |
 | Goal progress | `progress = 0.5 * normalized average confidence + 0.5 * average module step completion` ([`app/services/progress.py`](app/services/progress.py)). |
 | File uploads | In mock mode CV and audio files are **validated (type/size) then discarded**. In real-AI mode CVs are parsed (PDF/DOCX/TXT) and audio is transcribed before being scored. |
