@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     cv_max_bytes: int = 10 * 1024 * 1024     # 10 MB (api-design 3.3)
     audio_max_bytes: int = 25 * 1024 * 1024  # 25 MB (api-design 9.5)
 
+    # Local database. Uses SQLite by default so the demo persists across restarts
+    # without requiring an external service.
+    local_database_path: str = "app/data/career_helper.sqlite3"
+
     # Async task simulation: number of polls returning "processing" before "complete"
     async_processing_polls: int = 2
 

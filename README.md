@@ -6,9 +6,9 @@ page use cases in [`design-docs/use-cases.md`](design-docs/use-cases.md).
 
 The **interface contracts are real** (paths, methods, status codes, schemas,
 validation rules, and error codes all follow the design docs), while the
-**business logic is mocked** (in-memory store, mock AI, mock matching). This lets
-the frontend integrate immediately; later you replace the `services/` layer with
-real implementations without changing the routers.
+**business logic is mocked** (local SQLite store, mock AI, mock matching). This
+lets the frontend integrate immediately; later you replace the `services/` layer
+with real implementations without changing the routers.
 
 The AI capabilities (CV extraction, conversational onboarding, tailored CV,
 interview coaching with voice) can be switched from mock to **real large-model
@@ -42,10 +42,10 @@ to swap for a real implementation later.
 
 | Area | Decision |
 | --- | --- |
-| Storage | Process-wide **in-memory** store ([`app/services/store.py`](app/services/store.py)). Data resets on restart. |
+| Storage | Local **normalized SQLite** store ([`app/services/store.py`](app/services/store.py)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). |
 | Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation, via `PyJWT`; passwords hashed with `bcrypt`. |
 | Async tasks | In mock mode CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (`CAREER_ASYNC_PROCESSING_POLLS`). In real-AI mode they run in **FastAPI background tasks** and the poll just reports the live status. |
-| Public catalogs | Mock seed data for goal catalog / jobs / alumni in [`app/data/`](app/data). |
+| Public catalogs | Goal catalog / jobs / alumni are stored in the local SQLite database. |
 | matchScore / ranking | Simple **skill-overlap** rule ([`app/services/mock_match.py`](app/services/mock_match.py)). |
 | Goal progress | `progress = 0.5 * normalized average confidence + 0.5 * average module step completion` ([`app/services/progress.py`](app/services/progress.py)). |
 | File uploads | In mock mode CV and audio files are **validated (type/size) then discarded**. In real-AI mode CVs are parsed (PDF/DOCX/TXT) and audio is transcribed before being scored. |
@@ -71,6 +71,7 @@ file. See [`app/core/config.py`](app/core/config.py). Common ones:
 | `CAREER_JWT_SECRET` | `dev-secret-change-me-in-production-min-32-bytes` | JWT signing secret (use >= 32 bytes) |
 | `CAREER_ACCESS_TOKEN_TTL_SECONDS` | `1800` | Access token lifetime |
 | `CAREER_REFRESH_TOKEN_TTL_SECONDS` | `2592000` | Refresh token lifetime |
+| `CAREER_LOCAL_DATABASE_PATH` | `app/data/career_helper.sqlite3` | Local SQLite database path |
 | `CAREER_ASYNC_PROCESSING_POLLS` | `2` | Polls returning `processing` before `complete` |
 | `CAREER_MOCK_QUESTION_COUNT` | `4` | Mock interview rounds |
 | `CAREER_ENABLE_DEV_RESET` | `true` | Enable `POST /__dev/reset` |
@@ -184,7 +185,7 @@ app/
     cv_extraction.py / onboarding.py / tailored_cv.py / interview.py
   services/
     ai_service.py         # single AI entry point; routes real vs mock by CAREER_ENABLE_REAL_AI
-    store.py              # in-memory repository + seeding
+    store.py              # local SQLite repository + seeding
     mock_ai.py            # mock CV extract / tailored CV / interview analysis / mock interview
     mock_match.py         # matchScore + recommendation ordering
     progress.py           # goal progress formula
@@ -220,6 +221,8 @@ All 11 modules from the API design are implemented:
 - AI: set `CAREER_ENABLE_REAL_AI=true` to route through `app/llm/` (real LLM / STT /
   TTS) instead of `services/mock_ai.py`. Swap in another provider by extending
   `app/llm/voice.py` / `app/llm/models.py`.
-- Swap `services/store.py` with a database-backed repository (and move background
-  tasks to a real queue like Celery/RQ for multi-process deployments).
+- `services/store.py` now persists to normalized local SQLite tables while
+  preserving the original dict-like API used by routers. For production
+  multi-process deployments, split that compatibility layer into explicit
+  repository methods and move background tasks to a real queue like Celery/RQ.
 - Keep `routers/` and `schemas/` mostly unchanged - they are the public contract.

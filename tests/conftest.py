@@ -12,11 +12,7 @@ def client():
     # `with` triggers the lifespan (seeds public catalogs).
     with TestClient(app) as c:
         yield c
-    # Reset the in-memory store so tests stay isolated.
-    fresh = store_module.Store()
-    s = store_module.store
-    for key, value in vars(fresh).items():
-        setattr(s, key, value)
+    store_module.store.reset_all()
 
 
 def register(client: TestClient, email="alex@example.com", name="Alex Chen", password="secret123"):
