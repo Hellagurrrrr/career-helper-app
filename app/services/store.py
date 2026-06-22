@@ -193,6 +193,7 @@ class PersistentSet(set):
 class Store:
     """SQLite-backed local repository with the original dict-like interface."""
 
+    _catalog_buckets = ("goal_catalog", "jobs", "alumni")
     _bucket_defaults: dict[str, StoreValue] = {
         "users": {},
         "email_index": {},
@@ -258,8 +259,10 @@ class Store:
         )
         self._conn.commit()
 
-    def reset_all(self) -> None:
+    def reset_all(self, *, preserve_catalogs: bool = True) -> None:
         for name, default in self._bucket_defaults.items():
+            if preserve_catalogs and name in self._catalog_buckets:
+                continue
             setattr(self, name, default.copy() if isinstance(default, (dict, list, set)) else default)
 
     def ensure_user_buckets(self, user_id: str) -> None:
@@ -332,11 +335,8 @@ store = Store(settings.local_database_path)
 
 
 def seed_catalogs() -> None:
-    """Populate public catalogs. Imported lazily to avoid circular imports."""
-    from app.data.alumni import ALUMNI
-    from app.data.goal_catalog import GOAL_CATALOG
-    from app.data.jobs import JOBS
-
-    store.goal_catalog = [dict(g) for g in GOAL_CATALOG]
-    store.jobs = [dict(j) for j in JOBS]
-    store.alumni = [dict(a) for a in ALUMNI]
+    """Verify public catalogs are present in the local SQLite database."""
+    missing = [name for name in Store._catalog_buckets if not getattr(store, name)]
+    if missing:
+        joined = ", ".join(missing)
+        raise RuntimeError(f"Missing catalog data in SQLite database: {joined}")
