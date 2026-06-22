@@ -1,7 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import base64
+import json
+import sqlite3
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
+
+from app.core.config import settings
 
 
 @dataclass
@@ -13,53 +20,255 @@ class UserRecord:
     created_at: int
 
 
-@dataclass
+StoreValue = Any
+SaveCallback = Callable[[], None]
+
+
+def _encode(value: StoreValue) -> StoreValue:
+    if isinstance(value, UserRecord):
+        return {"__type__": "UserRecord", "value": asdict(value)}
+    if isinstance(value, bytes):
+        return {"__type__": "bytes", "value": base64.b64encode(value).decode("ascii")}
+    if isinstance(value, (PersistentSet, set)):
+        return {"__type__": "set", "value": [_encode(v) for v in value]}
+    if isinstance(value, (PersistentDict, dict)):
+        return {str(k): _encode(v) for k, v in value.items()}
+    if isinstance(value, (PersistentList, list)):
+        return [_encode(v) for v in value]
+    return value
+
+
+def _decode(value: StoreValue) -> StoreValue:
+    if isinstance(value, dict) and value.get("__type__") == "UserRecord":
+        return UserRecord(**value["value"])
+    if isinstance(value, dict) and value.get("__type__") == "bytes":
+        return base64.b64decode(value["value"].encode("ascii"))
+    if isinstance(value, dict) and value.get("__type__") == "set":
+        return set(_decode(v) for v in value["value"])
+    if isinstance(value, dict):
+        return {k: _decode(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_decode(v) for v in value]
+    return value
+
+
+def _wrap(value: StoreValue, save: SaveCallback) -> StoreValue:
+    if isinstance(value, PersistentDict | PersistentList | PersistentSet):
+        value._set_save(save)
+        return value
+    if isinstance(value, dict):
+        return PersistentDict(value, save)
+    if isinstance(value, list):
+        return PersistentList(value, save)
+    if isinstance(value, set):
+        return PersistentSet(value, save)
+    return value
+
+
+class PersistentDict(dict):
+    def __init__(self, values: Mapping[str, StoreValue] | None = None, save: SaveCallback | None = None):
+        super().__init__()
+        self._save = save or (lambda: None)
+        for key, value in (values or {}).items():
+            dict.__setitem__(self, key, _wrap(value, self._save))
+
+    def _set_save(self, save: SaveCallback) -> None:
+        self._save = save
+        for value in self.values():
+            if isinstance(value, PersistentDict | PersistentList | PersistentSet):
+                value._set_save(save)
+
+    def __setitem__(self, key: str, value: StoreValue) -> None:
+        dict.__setitem__(self, key, _wrap(value, self._save))
+        self._save()
+
+    def __delitem__(self, key: str) -> None:
+        dict.__delitem__(self, key)
+        self._save()
+
+    def clear(self) -> None:
+        dict.clear(self)
+        self._save()
+
+    def pop(self, key: str, default: StoreValue = None) -> StoreValue:
+        value = dict.pop(self, key, default)
+        self._save()
+        return value
+
+    def popitem(self) -> tuple[str, StoreValue]:
+        value = dict.popitem(self)
+        self._save()
+        return value
+
+    def setdefault(self, key: str, default: StoreValue = None) -> StoreValue:
+        if key not in self:
+            self[key] = default
+        return dict.__getitem__(self, key)
+
+    def update(self, *args: Any, **kwargs: StoreValue) -> None:
+        updates = dict(*args, **kwargs)
+        for key, value in updates.items():
+            dict.__setitem__(self, key, _wrap(value, self._save))
+        self._save()
+
+
+class PersistentList(list):
+    def __init__(self, values: Iterable[StoreValue] | None = None, save: SaveCallback | None = None):
+        self._save = save or (lambda: None)
+        super().__init__(_wrap(value, self._save) for value in (values or []))
+
+    def _set_save(self, save: SaveCallback) -> None:
+        self._save = save
+        for value in self:
+            if isinstance(value, PersistentDict | PersistentList | PersistentSet):
+                value._set_save(save)
+
+    def __setitem__(self, key: int | slice, value: StoreValue) -> None:
+        if isinstance(key, slice):
+            list.__setitem__(self, key, [_wrap(v, self._save) for v in value])
+        else:
+            list.__setitem__(self, key, _wrap(value, self._save))
+        self._save()
+
+    def __delitem__(self, key: int | slice) -> None:
+        list.__delitem__(self, key)
+        self._save()
+
+    def append(self, value: StoreValue) -> None:
+        list.append(self, _wrap(value, self._save))
+        self._save()
+
+    def clear(self) -> None:
+        list.clear(self)
+        self._save()
+
+    def extend(self, values: Iterable[StoreValue]) -> None:
+        list.extend(self, [_wrap(value, self._save) for value in values])
+        self._save()
+
+    def insert(self, index: int, value: StoreValue) -> None:
+        list.insert(self, index, _wrap(value, self._save))
+        self._save()
+
+    def pop(self, index: int = -1) -> StoreValue:
+        value = list.pop(self, index)
+        self._save()
+        return value
+
+    def remove(self, value: StoreValue) -> None:
+        list.remove(self, value)
+        self._save()
+
+
+class PersistentSet(set):
+    def __init__(self, values: Iterable[StoreValue] | None = None, save: SaveCallback | None = None):
+        self._save = save or (lambda: None)
+        super().__init__(values or [])
+
+    def _set_save(self, save: SaveCallback) -> None:
+        self._save = save
+
+    def add(self, value: StoreValue) -> None:
+        set.add(self, value)
+        self._save()
+
+    def clear(self) -> None:
+        set.clear(self)
+        self._save()
+
+    def discard(self, value: StoreValue) -> None:
+        set.discard(self, value)
+        self._save()
+
+    def pop(self) -> StoreValue:
+        value = set.pop(self)
+        self._save()
+        return value
+
+    def remove(self, value: StoreValue) -> None:
+        set.remove(self, value)
+        self._save()
+
+
 class Store:
-    """Process-wide in-memory repository.
+    """SQLite-backed local repository with the original dict-like interface."""
 
-    All user-owned collections are keyed by user_id. Public catalogs
-    (goal_catalog / jobs / alumni) are shared and seeded on startup.
-    Data is lost on restart by design (mock backend).
-    """
+    _bucket_defaults: dict[str, StoreValue] = {
+        "users": {},
+        "email_index": {},
+        "refresh_jti": {},
+        "profiles": {},
+        "cv_tasks": {},
+        "onboarding_chats": {},
+        "goals": {},
+        "tracking": {},
+        "saved_jobs": {},
+        "applications": {},
+        "reviews": {},
+        "mocks": {},
+        "tts_cache": {},
+        "meetings": {},
+        "notifications": {},
+        "goal_catalog": [],
+        "jobs": [],
+        "alumni": [],
+    }
 
-    # --- auth ---
-    users: dict[str, UserRecord] = field(default_factory=dict)
-    email_index: dict[str, str] = field(default_factory=dict)  # email_lower -> user_id
-    refresh_jti: dict[str, str] = field(default_factory=dict)  # jti -> user_id (valid refresh tokens)
+    def __init__(self, database_path: str | Path | None = None):
+        object.__setattr__(self, "database_path", Path(database_path) if database_path else None)
+        object.__setattr__(self, "_conn", None)
+        object.__setattr__(self, "_loading", True)
+        if self.database_path:
+            self.database_path.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(self.database_path, check_same_thread=False)
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS store_buckets ("
+                "name TEXT PRIMARY KEY, "
+                "value TEXT NOT NULL"
+                ")"
+            )
+            object.__setattr__(self, "_conn", conn)
 
-    # --- profile ---
-    profiles: dict[str, dict[str, Any]] = field(default_factory=dict)  # user_id -> Profile dict
-    cv_tasks: dict[str, dict[str, Any]] = field(default_factory=dict)  # task_id -> task state
-    onboarding_chats: dict[str, dict[str, Any]] = field(default_factory=dict)  # user_id -> chat session (resumable)
+        for name, default in self._bucket_defaults.items():
+            value = self._load_bucket(name, default)
+            object.__setattr__(self, name, _wrap(value, lambda bucket=name: self._save_bucket(bucket)))
 
-    # --- goals & tracking ---
-    goals: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)     # user_id -> goal_id -> UserGoal
-    tracking: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)  # user_id -> goal_id -> GoalTracking
+        object.__setattr__(self, "_loading", False)
 
-    # --- jobs ---
-    saved_jobs: dict[str, dict[str, set[str]]] = field(default_factory=dict)  # user_id -> goal_id -> {job_id}
+    def __setattr__(self, name: str, value: StoreValue) -> None:
+        if name in self._bucket_defaults:
+            object.__setattr__(self, name, _wrap(value, lambda bucket=name: self._save_bucket(bucket)))
+            if not getattr(self, "_loading", False):
+                self._save_bucket(name)
+            return
+        object.__setattr__(self, name, value)
 
-    # --- applications & coaching ---
-    applications: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)  # user_id -> app_id -> JobApplication
-    reviews: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)  # user_id -> app_id -> [review]
-    mocks: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)    # user_id -> app_id -> [session]
-    tts_cache: dict[str, bytes] = field(default_factory=dict)  # turn_id -> synthesized audio (on-demand TTS, real-AI mode)
+    def _load_bucket(self, name: str, default: StoreValue) -> StoreValue:
+        if not self._conn:
+            return default.copy() if isinstance(default, (dict, list, set)) else default
+        row = self._conn.execute("SELECT value FROM store_buckets WHERE name = ?", (name,)).fetchone()
+        if not row:
+            return default.copy() if isinstance(default, (dict, list, set)) else default
+        return _decode(json.loads(row[0]))
 
-    # --- alumni meetings ---
-    meetings: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)  # user_id -> meeting_id -> MeetingRequest
+    def _save_bucket(self, name: str) -> None:
+        if self._loading or not self._conn:
+            return
+        payload = json.dumps(_encode(getattr(self, name)), separators=(",", ":"), sort_keys=True)
+        self._conn.execute(
+            "INSERT INTO store_buckets(name, value) VALUES(?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET value = excluded.value",
+            (name, payload),
+        )
+        self._conn.commit()
 
-    # --- notifications ---
-    notifications: dict[str, list[dict[str, Any]]] = field(default_factory=dict)  # user_id -> [notification]
+    def reset_all(self) -> None:
+        for name, default in self._bucket_defaults.items():
+            setattr(self, name, default.copy() if isinstance(default, (dict, list, set)) else default)
 
-    # --- public catalogs (shared) ---
-    goal_catalog: list[dict[str, Any]] = field(default_factory=list)
-    jobs: list[dict[str, Any]] = field(default_factory=list)
-    alumni: list[dict[str, Any]] = field(default_factory=list)
-
-    # ----- helpers -----
     def ensure_user_buckets(self, user_id: str) -> None:
-        self.profiles.setdefault(user_id, None)  # type: ignore[arg-type]
-        self.onboarding_chats.setdefault(user_id, None)  # type: ignore[arg-type]
+        self.profiles.setdefault(user_id, None)
+        self.onboarding_chats.setdefault(user_id, None)
         self.goals.setdefault(user_id, {})
         self.tracking.setdefault(user_id, {})
         self.saved_jobs.setdefault(user_id, {})
@@ -79,8 +288,8 @@ class Store:
     def reset_user_data(self, user_id: str) -> None:
         """Clear demo data but keep the account (use-case SET-07)."""
         self._purge_tts_for(user_id)
-        self.profiles[user_id] = None  # type: ignore[assignment]
-        self.onboarding_chats[user_id] = None  # type: ignore[assignment]
+        self.profiles[user_id] = None
+        self.onboarding_chats[user_id] = None
         self.goals[user_id] = {}
         self.tracking[user_id] = {}
         self.saved_jobs[user_id] = {}
@@ -100,10 +309,18 @@ class Store:
             if uid == user_id:
                 self.refresh_jti.pop(jti, None)
         for bucket in (
-            self.profiles, self.onboarding_chats, self.goals, self.tracking, self.saved_jobs,
-            self.applications, self.reviews, self.mocks, self.meetings, self.notifications,
+            self.profiles,
+            self.onboarding_chats,
+            self.goals,
+            self.tracking,
+            self.saved_jobs,
+            self.applications,
+            self.reviews,
+            self.mocks,
+            self.meetings,
+            self.notifications,
         ):
-            bucket.pop(user_id, None)  # type: ignore[arg-type]
+            bucket.pop(user_id, None)
 
     def get_catalog_goal(self, catalog_id: str) -> dict[str, Any] | None:
         return next((g for g in self.goal_catalog if g["id"] == catalog_id), None)
@@ -115,14 +332,14 @@ class Store:
         return next((a for a in self.alumni if a["id"] == alumni_id), None)
 
 
-store = Store()
+store = Store(settings.local_database_path)
 
 
 def seed_catalogs() -> None:
     """Populate public catalogs. Imported lazily to avoid circular imports."""
+    from app.data.alumni import ALUMNI
     from app.data.goal_catalog import GOAL_CATALOG
     from app.data.jobs import JOBS
-    from app.data.alumni import ALUMNI
 
     store.goal_catalog = [dict(g) for g in GOAL_CATALOG]
     store.jobs = [dict(j) for j in JOBS]

@@ -67,11 +67,7 @@ def save_audio(output_dir: Path):
 def client():
     with TestClient(app) as c:
         yield c
-    # Reset the in-memory store so tests stay isolated.
-    fresh = store_module.Store()
-    s = store_module.store
-    for key, value in vars(fresh).items():
-        setattr(s, key, value)
+    store_module.store.reset_all()
 
 
 def auth_headers(client: TestClient, email: str = "llm@example.com") -> dict[str, str]:

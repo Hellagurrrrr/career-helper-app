@@ -22,7 +22,7 @@ app = FastAPI(
     version="1.0.0",
     description=(
         "Mock backend for the AI Career Helper. Interface contracts follow "
-        "design-docs/api-design.md; business logic is mocked (in-memory store, "
+        "design-docs/api-design.md; business logic is mocked (local SQLite store, "
         "mock AI/matching). See README for the full list of decisions."
     ),
     lifespan=lifespan,
