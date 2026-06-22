@@ -4,7 +4,7 @@
 
 This document defines the target normalized SQLite database design for the AI Career Helper backend.
 
-The current implementation stores data in `store_buckets(name, value)` as JSON buckets. That is acceptable for a small local persistent store, but the target design below moves business data into explicit relational tables so the database can be queried, indexed, constrained, and managed with normal SQLite tools.
+The current implementation stores data in explicit SQLite business tables. Earlier builds used `store_buckets(name, value)` JSON buckets; startup migration imports that legacy shape into the normalized schema and then drops the legacy table.
 
 ## 2. Design Principles
 
@@ -765,9 +765,9 @@ Routers should stop mutating `store.users[...]` and other dictionaries directly.
    - `mocks`
    - `meetings`
    - `notifications`
-7. Keep `store_buckets` temporarily as `legacy_store_buckets` or leave it untouched until verification is complete.
+7. Drop `store_buckets` after successful import so the local database is table-backed only.
 8. Run the existing smoke tests against the repository-backed implementation.
-9. After verification, remove the JSON bucket code path.
+9. After verification, remove any remaining compatibility-only code paths.
 
 ## 13. Open Decisions
 

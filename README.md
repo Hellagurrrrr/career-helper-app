@@ -42,7 +42,7 @@ to swap for a real implementation later.
 
 | Area | Decision |
 | --- | --- |
-| Storage | Local **SQLite** store ([`app/services/store.py`](app/services/store.py)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). |
+| Storage | Local **normalized SQLite** store ([`app/services/store.py`](app/services/store.py)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). |
 | Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation, via `PyJWT`; passwords hashed with `bcrypt`. |
 | Async tasks | In mock mode CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (`CAREER_ASYNC_PROCESSING_POLLS`). In real-AI mode they run in **FastAPI background tasks** and the poll just reports the live status. |
 | Public catalogs | Goal catalog / jobs / alumni are stored in the local SQLite database. |
@@ -221,8 +221,8 @@ All 11 modules from the API design are implemented:
 - AI: set `CAREER_ENABLE_REAL_AI=true` to route through `app/llm/` (real LLM / STT /
   TTS) instead of `services/mock_ai.py`. Swap in another provider by extending
   `app/llm/voice.py` / `app/llm/models.py`.
-- `services/store.py` now persists to local SQLite while preserving the original
-  dict-like interface. For production multi-process deployments, replace it with
-  a normalized database repository and move background tasks to a real queue like
-  Celery/RQ.
+- `services/store.py` now persists to normalized local SQLite tables while
+  preserving the original dict-like API used by routers. For production
+  multi-process deployments, split that compatibility layer into explicit
+  repository methods and move background tasks to a real queue like Celery/RQ.
 - Keep `routers/` and `schemas/` mostly unchanged - they are the public contract.
