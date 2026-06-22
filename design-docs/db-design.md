@@ -29,7 +29,7 @@ The current implementation stores data in `store_buckets(name, value)` as JSON b
 | `onboarding_chats` | `onboarding_chat_sessions`, `onboarding_chat_turns` |
 | `goal_catalog` | `catalog_goals`, `catalog_goal_match_signals`, `catalog_core_skills`, `catalog_skill_steps`, `catalog_skill_resources`, `catalog_skill_job_keywords` |
 | `jobs` | `jobs`, `job_skills` |
-| `alumni` | `alumni`, `alumni_expertise`, `alumni_topics`, `alumni_goal_alignment` |
+| `alumni` | `alumni`, `alumni_education`, `alumni_work_experiences`, `alumni_expertise`, `alumni_topics`, `alumni_goal_alignment` |
 | `goals` | `user_goals`, `user_goal_confidence` |
 | `tracking` | `goal_tracking`, `goal_tracking_modules`, `goal_tracking_completed_steps`, `goal_tracking_consumed_resources`, `goal_tracking_week_focus` |
 | `saved_jobs` | `saved_jobs` |
@@ -356,13 +356,7 @@ CREATE TABLE alumni (
   id TEXT PRIMARY KEY,
   first_name TEXT NOT NULL,
   last_initial TEXT NOT NULL,
-  role TEXT NOT NULL,
-  company TEXT NOT NULL,
-  industry TEXT NOT NULL,
-  graduation_year INTEGER NOT NULL,
-  major TEXT NOT NULL,
-  university TEXT NOT NULL,
-  years_experience INTEGER NOT NULL,
+  headline TEXT,
   bio TEXT NOT NULL,
   response_time TEXT NOT NULL,
   availability TEXT NOT NULL,
@@ -370,14 +364,43 @@ CREATE TABLE alumni (
   linkedin_url TEXT NOT NULL
 );
 
-CREATE INDEX idx_alumni_industry ON alumni(industry);
-CREATE INDEX idx_alumni_company ON alumni(company);
+CREATE TABLE alumni_education (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  alumni_id TEXT NOT NULL REFERENCES alumni(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL,
+  degree TEXT NOT NULL DEFAULT '',
+  school TEXT NOT NULL DEFAULT '',
+  major TEXT NOT NULL DEFAULT '',
+  start TEXT NOT NULL DEFAULT '',
+  end TEXT,
+  graduation_year INTEGER
+);
+
+CREATE INDEX idx_alumni_education_alumni_order ON alumni_education(alumni_id, sort_order);
+
+CREATE TABLE alumni_work_experiences (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  alumni_id TEXT NOT NULL REFERENCES alumni(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  company TEXT NOT NULL,
+  industry TEXT,
+  start TEXT NOT NULL DEFAULT '',
+  end TEXT,
+  description TEXT NOT NULL DEFAULT '',
+  is_current INTEGER NOT NULL DEFAULT 0 CHECK (is_current IN (0, 1))
+);
+
+CREATE INDEX idx_alumni_work_alumni_order ON alumni_work_experiences(alumni_id, sort_order);
+CREATE INDEX idx_alumni_work_company ON alumni_work_experiences(company);
+CREATE INDEX idx_alumni_work_industry ON alumni_work_experiences(industry);
 
 CREATE TABLE alumni_expertise (
   alumni_id TEXT NOT NULL REFERENCES alumni(id) ON DELETE CASCADE,
-  expertise TEXT NOT NULL,
+  skill_id TEXT NOT NULL REFERENCES skills(id),
+  display_label TEXT,
   sort_order INTEGER NOT NULL,
-  PRIMARY KEY (alumni_id, expertise)
+  PRIMARY KEY (alumni_id, skill_id)
 );
 
 CREATE TABLE alumni_topics (
@@ -393,6 +416,22 @@ CREATE TABLE alumni_goal_alignment (
   PRIMARY KEY (alumni_id, catalog_goal_id)
 );
 ```
+
+Notes:
+
+- `alumni` stores stable profile-level identity and display metadata only.
+- Multi-segment education and work history live in `alumni_education` and `alumni_work_experiences`.
+- Existing API fields can remain backward compatible by deriving summary values from child tables:
+  - `role` maps to the current or first `alumni_work_experiences.title`.
+  - `company` maps to the current or first `alumni_work_experiences.company`.
+  - `industry` maps to the current or first `alumni_work_experiences.industry`.
+  - `graduationYear` maps to the first `alumni_education.graduation_year`.
+  - `major` maps to the first `alumni_education.major`.
+  - `university` maps to the first `alumni_education.school`.
+- For fast list rendering, use a repository query or an optional `alumni_summary` view instead of storing duplicate summary columns in `alumni`.
+- `alumni_expertise` references canonical `skills`. There is intentionally no separate `alumni_skills` table; expertise is the alumni-facing skill set.
+- `alumni_expertise.display_label` is optional and should only be used when the public label needs to differ from `skills.name`.
+- `alumni_topics` remains free text because topics are conversation themes, not necessarily canonical skills.
 
 ## 6. User Goals And Tracking
 
@@ -701,13 +740,18 @@ Routers should stop mutating `store.users[...]` and other dictionaries directly.
 3. Build the canonical skill taxonomy:
    - Collect skill strings from `jobs[*].skills`.
    - Collect keyword strings from `goal_catalog[*].coreSkills[*].jobSkillKeywords`.
+   - Collect expertise strings from `alumni[*].expertise`.
    - Normalize each string into `skills.normalized_name`.
    - Insert canonical `skills` rows and initial `skill_aliases` rows.
 4. Insert public catalogs:
    - `goal_catalog` -> `catalog_goals` and catalog child tables.
    - `catalog_core_skills[*].jobSkillKeywords` -> `catalog_skill_job_keywords` using canonical `skills.id`.
    - `jobs` -> `jobs`, `job_skills` using canonical `skills.id`.
-   - `alumni` -> `alumni`, alumni child tables.
+   - `alumni` -> `alumni`, `alumni_education`, `alumni_work_experiences`, and alumni child tables.
+   - Existing alumni `role`, `company`, and `industry` become one initial `alumni_work_experiences` row.
+   - Existing alumni `university`, `major`, and `graduationYear` become one initial `alumni_education` row.
+   - Existing alumni `yearsExperience` is not stored on `alumni`; derive it later from work history or import it into a future summary view if needed.
+   - Existing alumni `expertise` strings become `alumni_expertise` rows using canonical `skills.id`.
 5. Insert auth data:
    - `users` -> `users`.
    - `refresh_jti` -> `refresh_tokens`.
