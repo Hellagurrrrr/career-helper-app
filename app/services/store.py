@@ -214,20 +214,18 @@ class Store:
         "alumni": [],
     }
 
-    def __init__(self, database_path: str | Path | None = None):
-        object.__setattr__(self, "database_path", Path(database_path) if database_path else None)
-        object.__setattr__(self, "_conn", None)
+    def __init__(self, database_path: str | Path):
+        object.__setattr__(self, "database_path", Path(database_path))
         object.__setattr__(self, "_loading", True)
-        if self.database_path:
-            self.database_path.parent.mkdir(parents=True, exist_ok=True)
-            conn = sqlite3.connect(self.database_path, check_same_thread=False)
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS store_buckets ("
-                "name TEXT PRIMARY KEY, "
-                "value TEXT NOT NULL"
-                ")"
-            )
-            object.__setattr__(self, "_conn", conn)
+        self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(self.database_path, check_same_thread=False)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS store_buckets ("
+            "name TEXT PRIMARY KEY, "
+            "value TEXT NOT NULL"
+            ")"
+        )
+        object.__setattr__(self, "_conn", conn)
 
         for name, default in self._bucket_defaults.items():
             value = self._load_bucket(name, default)
@@ -244,15 +242,13 @@ class Store:
         object.__setattr__(self, name, value)
 
     def _load_bucket(self, name: str, default: StoreValue) -> StoreValue:
-        if not self._conn:
-            return default.copy() if isinstance(default, (dict, list, set)) else default
         row = self._conn.execute("SELECT value FROM store_buckets WHERE name = ?", (name,)).fetchone()
         if not row:
             return default.copy() if isinstance(default, (dict, list, set)) else default
         return _decode(json.loads(row[0]))
 
     def _save_bucket(self, name: str) -> None:
-        if self._loading or not self._conn:
+        if self._loading:
             return
         payload = json.dumps(_encode(getattr(self, name)), separators=(",", ":"), sort_keys=True)
         self._conn.execute(
