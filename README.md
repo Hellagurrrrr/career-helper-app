@@ -31,6 +31,14 @@ The script runs inside the `career-helper-app` conda environment, syncs Python
 and Node dependencies when the requirements or lockfile change, builds the
 frontend when `frontend/dist` is missing, and then starts FastAPI.
 
+Seeded demo account:
+
+```text
+Name: Demo Student
+Email: demo@example.com
+Password: Demo123456
+```
+
 - Full app: http://127.0.0.1:8000/
 - Interactive docs (Swagger): http://127.0.0.1:8000/docs
 - OpenAPI schema: http://127.0.0.1:8000/openapi.json
