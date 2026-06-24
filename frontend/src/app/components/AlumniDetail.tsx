@@ -13,7 +13,7 @@ import {
   X,
   CheckCircle2,
   Sparkles,
-  Linkedin,
+  ExternalLink,
 } from "lucide-react";
 import {
   AlumniProfile,
@@ -110,7 +110,7 @@ export function AlumniDetail() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[#0A66C2]/35 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-[#0A66C2] shadow-sm transition-colors hover:bg-sky-100"
                   aria-label={`View ${alumni.firstName}'s LinkedIn profile (opens in a new tab)`}
                 >
-                  <Linkedin className="h-4 w-4 shrink-0" aria-hidden />
+                  <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
                   LinkedIn
                 </a>
               </div>

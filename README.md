@@ -21,47 +21,51 @@ calls** with a single flag - see [Real AI integration](#real-ai-integration).
 
 ## Quick start
 
-Backend only, using the local conda environment:
+Start the full local app with one command:
 
-```bash
-conda run -n career-helper-app uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```powershell
+.\scripts\start.ps1
 ```
 
+The script runs inside the `career-helper-app` conda environment, syncs Python
+and Node dependencies when the requirements or lockfile change, builds the
+frontend when `frontend/dist` is missing, and then starts FastAPI.
+
+- Full app: http://127.0.0.1:8000/
 - Interactive docs (Swagger): http://127.0.0.1:8000/docs
 - OpenAPI schema: http://127.0.0.1:8000/openapi.json
 - Health check: http://127.0.0.1:8000/health
 - API base path: `/v1` (e.g. `POST /v1/auth/register`)
 
-Frontend dev server:
+Development mode, with FastAPI and Vite running separately:
 
-```bash
-cd frontend
-npm install
-npm run dev
+```powershell
+.\scripts\dev.ps1
 ```
 
+- Backend URL: http://127.0.0.1:8000
 - Frontend dev URL: http://127.0.0.1:5173
 - For frontend dev, copy `frontend/.env.example` to `frontend/.env.local` if you
   need to override the API URL. The default production build uses same-origin
   `/v1`.
 
-Single-service local publication:
+Stop local app processes on the default ports:
 
-```bash
-cd frontend
-npm install
-npm run build
-cd ..
-conda run -n career-helper-app uvicorn app.main:app --host 127.0.0.1 --port 8000
+```powershell
+.\scripts\stop.ps1
 ```
 
-- Full app URL: http://127.0.0.1:8000/
-- API and docs remain available under `/v1` and `/docs`.
+Run the verification suite:
 
-Run tests:
+```powershell
+.\scripts\test.ps1
+```
+
+Manual backend-only commands:
 
 ```bash
 set CAREER_ENABLE_REAL_AI=false
+conda run -n career-helper-app python -m pip install -r requirements-dev.txt
 conda run -n career-helper-app python -m pytest tests/test_smoke.py
 ```
 
@@ -121,7 +125,7 @@ suite run with **zero external dependencies or API keys**.
 Setup:
 
 ```bash
-pip install -r requirements.txt          # includes the optional AI extras
+pip install -r requirements-ai.txt       # includes the optional AI extras
 cp .env.example .env                      # then fill in your keys
 # set CAREER_ENABLE_REAL_AI=true and CAREER_LLM_API_KEY=...
 ```
@@ -183,12 +187,13 @@ python tests/test_llm/run_onboarding_chat.py api      # drives the real API rout
 
 ## Continuous integration
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines two jobs:
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines three jobs:
 
-- **test** (runs on every push / PR): installs `requirements.txt` and runs
-  `pytest -q` on Python 3.11 / 3.12 / 3.13 with `CAREER_ENABLE_REAL_AI=false`, so
-  only the deterministic mock smoke tests execute and the `tests/test_llm` suite
-  auto-skips. This is the required gate.
+- **test** (runs on every push / PR): installs `requirements-dev.txt`, runs
+  `pip check`, and runs `pytest -q` on Python 3.11 / 3.12 / 3.13 with
+  `CAREER_ENABLE_REAL_AI=false`, so only deterministic mock tests execute.
+- **frontend**: installs the Vite app with `npm ci`, builds it, and runs
+  `npm audit --audit-level=high`.
 - **real-ai** (manual `workflow_dispatch` only): runs `tests/test_llm` against the
   real models using an `OPENAI_API_KEY` repository secret. It never runs
   automatically (the calls are billable) and is a no-op if the secret is unset.
