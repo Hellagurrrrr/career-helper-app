@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import os
+import threading
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -72,3 +75,18 @@ if settings.enable_dev_reset:
     def dev_reset(user: "UserRecord" = Depends(get_current_user)) -> None:
         """Dev-only: clear the current user's demo data (use-case SET-07)."""
         store.reset_user_data(user.id)
+
+
+if settings.enable_dev_reset:
+    @app.post("/__dev/shutdown", tags=["meta"], include_in_schema=False)
+    def dev_shutdown(x_dev_action: str | None = Header(default=None)) -> dict[str, str]:
+        """Dev-only: let local scripts stop the server when the OS PID is inaccessible."""
+        if x_dev_action != "shutdown":
+            raise HTTPException(status_code=403, detail="Missing dev shutdown header.")
+
+        def exit_process() -> None:
+            time.sleep(0.2)
+            os._exit(0)
+
+        threading.Thread(target=exit_process, daemon=True).start()
+        return {"status": "shutting_down"}
