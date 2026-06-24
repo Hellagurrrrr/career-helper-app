@@ -8,7 +8,7 @@ import { AuthLayout, AuthField } from "./AuthLayout";
 export function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { profile } = useProfile();
+  const { refreshProfile } = useProfile();
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -26,7 +26,8 @@ export function Login() {
       setError(result.error);
       return;
     }
-    navigate(profile ? "/" : "/onboarding", { replace: true });
+    const nextProfile = await refreshProfile();
+    navigate(nextProfile ? "/" : "/onboarding", { replace: true });
   };
 
   return (

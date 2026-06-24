@@ -47,10 +47,26 @@ export function PlanTracking() {
   const { getGoal, updateConfidence } = useGoals();
   const tracking = useTracking();
 
-  const catalogGoal = goalId ? getCatalogGoal(goalId) : undefined;
   const userGoal = goalId ? getGoal(goalId) : undefined;
+  const trackingGoalId = userGoal?.id ?? goalId;
+  const catalogGoal = userGoal ? getCatalogGoal(userGoal.catalogId) : undefined;
+  const confidence = userGoal?.confidence ?? {};
+  const goalTracking = trackingGoalId
+    ? tracking.getGoalTracking(trackingGoalId)
+    : undefined;
 
-  if (!catalogGoal || !goalId) {
+  React.useEffect(() => {
+    if (!trackingGoalId || !catalogGoal) return;
+    if (isWeekStale(goalTracking) || goalTracking?.weekFocus.length === 0) {
+      const focus = pickWeekFocus(catalogGoal, goalTracking, confidence);
+      if (focus.length > 0) {
+        tracking.setWeekFocus(trackingGoalId, focus);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackingGoalId, catalogGoal]);
+
+  if (!userGoal || !catalogGoal || !trackingGoalId) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
         <h2 className="text-lg font-semibold text-slate-950">
@@ -62,19 +78,6 @@ export function PlanTracking() {
       </div>
     );
   }
-
-  const confidence = userGoal?.confidence ?? {};
-  const goalTracking = tracking.getGoalTracking(goalId);
-
-  React.useEffect(() => {
-    if (isWeekStale(goalTracking) || goalTracking.weekFocus.length === 0) {
-      const focus = pickWeekFocus(catalogGoal, goalTracking, confidence);
-      if (focus.length > 0) {
-        tracking.setWeekFocus(goalId, focus);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goalId]);
 
   const sortedModules = React.useMemo(() => {
     return [...catalogGoal.coreSkills].sort((a, b) => {
@@ -102,20 +105,20 @@ export function PlanTracking() {
       catalogGoal,
       goalTracking,
       confidence,
-      goalTracking.weekFocus
+      goalTracking?.weekFocus ?? []
     );
-    tracking.setWeekFocus(goalId, focus);
+    tracking.setWeekFocus(trackingGoalId, focus);
   };
 
   return (
     <div className="space-y-6">
       <WeekFocusCard
-        goalId={goalId}
+        goalId={trackingGoalId}
         catalogGoal={catalogGoal}
-        focusKeys={goalTracking.weekFocus}
+        focusKeys={goalTracking?.weekFocus ?? []}
         goalTracking={goalTracking}
         onToggle={(moduleId, stepIdx) =>
-          tracking.toggleStep(goalId, moduleId, stepIdx)
+          tracking.toggleStep(trackingGoalId, moduleId, stepIdx)
         }
         onReroll={handleReroll}
       />
@@ -178,22 +181,23 @@ export function PlanTracking() {
           {sortedModules.map((module) => (
             <ModuleAccordionItem
               key={module.id}
-              goalId={goalId}
+              goalId={trackingGoalId}
+              catalogGoalId={catalogGoal.id}
               module={module}
               confidenceValue={confidence[module.id]}
               goalTracking={goalTracking}
               onToggleStep={(stepIdx) =>
-                tracking.toggleStep(goalId, module.id, stepIdx)
+                tracking.toggleStep(trackingGoalId, module.id, stepIdx)
               }
               onToggleResource={(idx) =>
-                tracking.toggleResource(goalId, module.id, idx)
+                tracking.toggleResource(trackingGoalId, module.id, idx)
               }
               onRerate={(value) => {
-                updateConfidence(goalId, module.id, value);
-                tracking.resetRerateCounter(goalId, module.id);
+                updateConfidence(trackingGoalId, module.id, value);
+                tracking.resetRerateCounter(trackingGoalId, module.id);
               }}
               onDismissRerate={() =>
-                tracking.markRerateDismissed(goalId, module.id)
+                tracking.markRerateDismissed(trackingGoalId, module.id)
               }
             />
           ))}
@@ -214,7 +218,7 @@ function WeekFocusCard({
   goalId: string;
   catalogGoal: ReturnType<typeof getCatalogGoal>;
   focusKeys: WeekFocusKey[];
-  goalTracking: ReturnType<typeof useTracking>["state"][string];
+  goalTracking: ReturnType<typeof useTracking>["state"][string] | undefined;
   onToggle: (moduleId: string, stepIdx: number) => void;
   onReroll: () => void;
 }) {
@@ -335,6 +339,7 @@ function WeekFocusCard({
 
 function ModuleAccordionItem({
   goalId,
+  catalogGoalId,
   module,
   confidenceValue,
   goalTracking,
@@ -344,9 +349,10 @@ function ModuleAccordionItem({
   onDismissRerate,
 }: {
   goalId: string;
+  catalogGoalId: string;
   module: CoreSkill;
   confidenceValue: number | undefined;
-  goalTracking: ReturnType<typeof useTracking>["state"][string];
+  goalTracking: ReturnType<typeof useTracking>["state"][string] | undefined;
   onToggleStep: (stepIdx: number) => void;
   onToggleResource: (resourceIdx: number) => void;
   onRerate: (value: number) => void;
@@ -364,7 +370,7 @@ function ModuleAccordionItem({
     module.name,
     ...module.jobSkillKeywords,
   ]);
-  const jobCount = countJobsForSkillKeywords(goalId, module.jobSkillKeywords);
+  const jobCount = countJobsForSkillKeywords(catalogGoalId, module.jobSkillKeywords);
 
   const shouldShowRerate =
     confidenceValue !== undefined &&

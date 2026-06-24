@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_user
 from app.core.errors import not_found, validation_error
+from app.core.security import now_ms
 from app.schemas.tracking import (
     GoalTracking,
     ResourceToggleRequest,
@@ -187,4 +188,5 @@ def set_week_focus(
     _get_goal_or_404(user.id, goal_id)
     tracking = _get_tracking(user.id, goal_id)
     tracking["weekFocus"] = body.week_focus
+    tracking["weekStartedAt"] = now_ms()
     return tracking

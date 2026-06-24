@@ -81,8 +81,21 @@ const navItems = [
   { to: "/applications", label: "Applications", icon: ClipboardList },
   { to: "/ai-coaching", label: "AI Coaching", icon: Sparkles },
   { to: "/jobs", label: "Jobs", icon: Briefcase },
-  { to: "/alumni", label: "Network", icon: Users },
+  { to: "/alumni", label: "Network", icon: Users, avatar: true },
 ] as const;
+
+function AlumniNavAvatar() {
+  return (
+    <span
+      className="relative flex size-4 shrink-0 items-center justify-center"
+      aria-hidden="true"
+    >
+      <span className="absolute left-0 top-0 size-2.5 rounded-full bg-blue-500" />
+      <span className="absolute right-0 top-0 size-2.5 rounded-full bg-cyan-500" />
+      <span className="absolute bottom-0 left-1/2 size-2.5 -translate-x-1/2 rounded-full border border-sidebar bg-indigo-500" />
+    </span>
+  );
+}
 
 function AppSidebar({
   displayName,
@@ -138,7 +151,7 @@ function AppSidebar({
                     isActive={isActive(item.to, "end" in item ? item.end : false)}
                   >
                     <NavLink to={item.to} onClick={closeOnMobile}>
-                      <item.icon />
+                      {"avatar" in item ? <AlumniNavAvatar /> : <item.icon />}
                       <span>{item.label}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -311,12 +324,20 @@ function AppSidebar({
 export function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useProfile();
-  const { currentUser, logout } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const { currentUser, loading: authLoading, logout } = useAuth();
   const { removeGoal } = useGoals();
   const [pendingDelete, setPendingDelete] = React.useState<UserGoal | null>(
     null,
   );
+
+  if (authLoading || profileLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Loading...
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;

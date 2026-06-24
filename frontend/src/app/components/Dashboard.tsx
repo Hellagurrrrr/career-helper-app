@@ -354,7 +354,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <Link
-                  to="/onboarding"
+                  to="/profile"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
                   aria-label="Edit profile"
                 >
@@ -384,7 +384,7 @@ export function Dashboard() {
                 ) : (
                   <p className="text-sm text-slate-500">
                     No skills added yet.{" "}
-                    <Link to="/onboarding" className="font-medium text-blue-700 hover:underline">
+                    <Link to="/profile" className="font-medium text-blue-700 hover:underline">
                       Add some
                     </Link>
                     .
