@@ -233,6 +233,7 @@ class Store:
         "users": {},
         "email_index": {},
         "refresh_jti": {},
+        "user_settings": {},
         "profiles": {},
         "cv_tasks": {},
         "onboarding_chats": {},
@@ -315,6 +316,11 @@ class Store:
               revoked_at INTEGER
             );
             CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+            CREATE TABLE IF NOT EXISTS user_settings (
+              user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+              notifications_enabled INTEGER NOT NULL DEFAULT 1,
+              updated_at INTEGER NOT NULL DEFAULT 0
+            );
 
             CREATE TABLE IF NOT EXISTS profiles (
               user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -697,6 +703,7 @@ class Store:
             setattr(self, name, default.copy() if isinstance(default, (dict, list, set)) else default)
 
     def ensure_user_buckets(self, user_id: str) -> None:
+        self.user_settings.setdefault(user_id, {"notificationsEnabled": True, "updatedAt": 0})
         self.profiles.setdefault(user_id, None)
         self.onboarding_chats.setdefault(user_id, None)
         self.goals.setdefault(user_id, {})
@@ -790,6 +797,41 @@ class Store:
                 "INSERT INTO refresh_tokens(jti, user_id, created_at) VALUES(?, ?, 0)",
                 (jti, user_id),
             )
+
+    def _load_user_settings(self) -> dict[str, dict[str, Any]]:
+        rows = self._conn.execute("SELECT * FROM user_settings").fetchall()
+        return {
+            row["user_id"]: {
+                "notificationsEnabled": bool(row["notifications_enabled"]),
+                "updatedAt": row["updated_at"],
+            }
+            for row in rows
+        }
+
+    def _save_user_settings(self, user_settings: Mapping[str, dict[str, Any]]) -> None:
+        self._conn.execute("DELETE FROM user_settings")
+        for user_id, prefs in user_settings.items():
+            self._conn.execute(
+                "INSERT OR REPLACE INTO user_settings(user_id, notifications_enabled, updated_at) VALUES(?, ?, ?)",
+                (
+                    user_id,
+                    int(bool(prefs.get("notificationsEnabled", True))),
+                    prefs.get("updatedAt", 0),
+                ),
+            )
+
+    def update_user_password(self, user_id: str, password_hash: str) -> None:
+        user = self.users.get(user_id)
+        if user is None:
+            return
+        user.password_hash = password_hash
+        self._conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+        self._conn.commit()
+
+    def revoke_refresh_tokens_for_user(self, user_id: str) -> None:
+        for jti, uid in list(self.refresh_jti.items()):
+            if uid == user_id:
+                self.refresh_jti.pop(jti, None)
 
     # ----- profiles -----
     def _load_profiles(self) -> dict[str, dict[str, Any] | None]:
@@ -1493,6 +1535,7 @@ class Store:
             if uid == user_id:
                 self.refresh_jti.pop(jti, None)
         for bucket in (
+            self.user_settings,
             self.profiles,
             self.onboarding_chats,
             self.goals,
