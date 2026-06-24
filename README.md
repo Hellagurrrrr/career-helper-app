@@ -1,6 +1,7 @@
-# AI Career Helper - Mock Backend (FastAPI)
+# AI Career Helper - Full Local Demo App
 
-A FastAPI backend that implements the full API contract from
+AI Career Helper is a FastAPI backend plus a Vite/React frontend demo. The
+backend implements the full API contract from
 [`design-docs/api-design.md`](design-docs/api-design.md) (11 modules) against the
 page use cases in [`design-docs/use-cases.md`](design-docs/use-cases.md).
 
@@ -8,7 +9,11 @@ The **interface contracts are real** (paths, methods, status codes, schemas,
 validation rules, and error codes all follow the design docs), while the
 **business logic is mocked** (local SQLite store, mock AI, mock matching). This
 lets the frontend integrate immediately; later you replace the `services/` layer
-with real implementations without changing the routers.
+with real implementations without changing the routers or frontend API client.
+
+The frontend lives in [`frontend/`](frontend/) and is wired to the backend `/v1`
+API. In production-style local runs, FastAPI serves the built Vite app from
+`frontend/dist`, so the app can run as a single service.
 
 The AI capabilities (CV extraction, conversational onboarding, tailored CV,
 interview coaching with voice) can be switched from mock to **real large-model
@@ -16,9 +21,10 @@ calls** with a single flag - see [Real AI integration](#real-ai-integration).
 
 ## Quick start
 
+Backend only, using the local conda environment:
+
 ```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+conda run -n career-helper-app uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 - Interactive docs (Swagger): http://127.0.0.1:8000/docs
@@ -26,10 +32,37 @@ uvicorn app.main:app --reload
 - Health check: http://127.0.0.1:8000/health
 - API base path: `/v1` (e.g. `POST /v1/auth/register`)
 
+Frontend dev server:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- Frontend dev URL: http://127.0.0.1:5173
+- For frontend dev, copy `frontend/.env.example` to `frontend/.env.local` if you
+  need to override the API URL. The default production build uses same-origin
+  `/v1`.
+
+Single-service local publication:
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+conda run -n career-helper-app uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+- Full app URL: http://127.0.0.1:8000/
+- API and docs remain available under `/v1` and `/docs`.
+
 Run tests:
 
 ```bash
-pytest tests/test_smoke.py          # mock-mode smoke tests (no API key, no network)
+set CAREER_ENABLE_REAL_AI=false
+conda run -n career-helper-app python -m pytest tests/test_smoke.py
 ```
 
 There is also a separate suite that exercises the **real** models - see
