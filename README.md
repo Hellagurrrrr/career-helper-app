@@ -31,6 +31,20 @@ The script runs inside the `career-helper-app` conda environment, syncs Python
 and Node dependencies when the requirements or lockfile change, builds the
 frontend when `frontend/dist` is missing, and then starts FastAPI.
 
+By default, the app starts in mock-AI mode. To start with real LLM integration,
+set `CAREER_LLM_API_KEY` in `.env` and run:
+
+```powershell
+.\scripts\start.ps1 -EnableLlm
+```
+
+This installs the optional AI dependencies, sets `CAREER_ENABLE_REAL_AI=true`,
+and performs a small live model call before the server starts. If the LLM check
+fails, startup is aborted.
+
+Without `-EnableLlm`, `start.ps1` forces `CAREER_ENABLE_REAL_AI=false` for that
+run even if your shell already has the variable set.
+
 Seeded demo account:
 
 ```text
