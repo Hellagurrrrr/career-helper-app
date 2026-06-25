@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import sqlite3
+
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_user
 from app.core.errors import validation_error, wrong_password
 from app.core.security import hash_password, now_ms, verify_password
+from app.db import get_conn
+from app.repositories import user_settings as user_settings_repo
 from app.schemas.settings import (
     ChangePasswordRequest,
     NotificationPreferences,
@@ -18,13 +22,8 @@ from app.services.store import UserRecord, store
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
-def _notification_preferences(user_id: str) -> dict:
-    store.ensure_user_buckets(user_id)
-    return store.user_settings[user_id]
-
-
-def _settings_response(user: UserRecord) -> SettingsResponse:
-    prefs = _notification_preferences(user.id)
+def _settings_response(user: UserRecord, conn: sqlite3.Connection) -> SettingsResponse:
+    prefs = user_settings_repo.get(conn, user.id)
     return SettingsResponse(
         account=SettingsAccount(
             id=user.id,
@@ -33,16 +32,19 @@ def _settings_response(user: UserRecord) -> SettingsResponse:
             created_at=user.created_at,
         ),
         notifications=NotificationPreferences(
-            enabled=bool(prefs.get("notificationsEnabled", True)),
-            updated_at=int(prefs.get("updatedAt", 0)),
+            enabled=prefs["notifications_enabled"],
+            updated_at=prefs["updated_at"],
         ),
     )
 
 
 @router.get("", response_model=SettingsResponse)
-def get_settings(user: UserRecord = Depends(get_current_user)) -> SettingsResponse:
+def get_settings(
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> SettingsResponse:
     """Return read-only account data and stored settings preferences."""
-    return _settings_response(user)
+    return _settings_response(user, conn)
 
 
 @router.post("/password", response_model=SettingsStatusResponse)
@@ -65,11 +67,13 @@ def change_password(
 def update_notification_preferences(
     body: NotificationPreferencesRequest,
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> NotificationPreferences:
     """Persist the in-app notification toggle (use-case SET-06)."""
-    prefs = {"notificationsEnabled": body.enabled, "updatedAt": now_ms()}
-    store.user_settings[user.id] = prefs
-    return NotificationPreferences(enabled=prefs["notificationsEnabled"], updated_at=prefs["updatedAt"])
+    prefs = user_settings_repo.set_enabled(conn, user.id, body.enabled, now_ms())
+    return NotificationPreferences(
+        enabled=prefs["notifications_enabled"], updated_at=prefs["updated_at"]
+    )
 
 
 @router.post("/reset-demo-data", response_model=SettingsStatusResponse)

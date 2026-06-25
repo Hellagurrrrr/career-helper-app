@@ -234,10 +234,7 @@ class Store:
         "users": {},
         "email_index": {},
         "refresh_jti": {},
-        "user_settings": {},
         "profiles": {},
-        "cv_tasks": {},
-        "onboarding_chats": {},
         "goals": {},
         "tracking": {},
         "saved_jobs": {},
@@ -245,8 +242,8 @@ class Store:
         "reviews": {},
         "mocks": {},
         "tts_cache": {},
-        # NOTE: "meetings" and "notifications" now live in the repository layer
-        # (app/repositories/), not in this in-memory mirror. See the P0 sample slices.
+        # NOTE: "meetings", "notifications" and "user_settings" now live in the
+        # repository layer (app/repositories/), not in this in-memory mirror.
         "goal_catalog": [],
         "jobs": [],
         "alumni": [],
@@ -713,9 +710,7 @@ class Store:
             setattr(self, name, default.copy() if isinstance(default, (dict, list, set)) else default)
 
     def ensure_user_buckets(self, user_id: str) -> None:
-        self.user_settings.setdefault(user_id, {"notificationsEnabled": True, "updatedAt": 0})
         self.profiles.setdefault(user_id, None)
-        self.onboarding_chats.setdefault(user_id, None)
         self.goals.setdefault(user_id, {})
         self.tracking.setdefault(user_id, {})
         self.saved_jobs.setdefault(user_id, {})
@@ -819,27 +814,8 @@ class Store:
                 (jti, user_id),
             )
 
-    def _load_user_settings(self) -> dict[str, dict[str, Any]]:
-        rows = self._conn.execute("SELECT * FROM user_settings").fetchall()
-        return {
-            row["user_id"]: {
-                "notificationsEnabled": bool(row["notifications_enabled"]),
-                "updatedAt": row["updated_at"],
-            }
-            for row in rows
-        }
-
-    def _save_user_settings(self, user_settings: Mapping[str, dict[str, Any]]) -> None:
-        self._conn.execute("DELETE FROM user_settings")
-        for user_id, prefs in user_settings.items():
-            self._conn.execute(
-                "INSERT OR REPLACE INTO user_settings(user_id, notifications_enabled, updated_at) VALUES(?, ?, ?)",
-                (
-                    user_id,
-                    int(bool(prefs.get("notificationsEnabled", True))),
-                    prefs.get("updatedAt", 0),
-                ),
-            )
+    # NOTE: user_settings persistence moved to app/repositories/user_settings.py
+    # (P0 sample slice). Its former _load_*/_save_* mirror methods were removed.
 
     def update_user_password(self, user_id: str, password_hash: str) -> None:
         user = self.users.get(user_id)
@@ -939,79 +915,11 @@ class Store:
                 )
 
     # ----- tasks and onboarding -----
-    def _load_cv_tasks(self) -> dict[str, dict[str, Any]]:
-        rows = self._conn.execute("SELECT * FROM cv_extract_tasks").fetchall()
-        return {
-            row["id"]: {
-                "userId": row["user_id"],
-                "fileName": row["file_name"],
-                "status": row["status"],
-                "stage": row["stage"],
-                "draft": _from_json(row["draft_json"], None),
-                "polls": row["polls"],
-                "error": row["error"],
-            }
-            for row in rows
-        }
+    # NOTE: cv_extract_tasks persistence moved to app/repositories/cv_tasks.py
+    # (P0 sample slice). Its former _load_cv_tasks/_save_cv_tasks were removed.
 
-    def _save_cv_tasks(self, tasks: Mapping[str, dict[str, Any]]) -> None:
-        self._conn.execute("DELETE FROM cv_extract_tasks")
-        for task_id, task in tasks.items():
-            self._conn.execute(
-                "INSERT INTO cv_extract_tasks"
-                "(id, user_id, file_name, status, stage, draft_json, polls, error, created_at, updated_at) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?, 0, 0)",
-                (task_id, task.get("userId"), task.get("fileName", "cv"),
-                 task.get("status", "processing"), task.get("stage", "parsing"),
-                 _json(task.get("draft")) if task.get("draft") is not None else None,
-                 task.get("polls", 0), task.get("error")),
-            )
-
-    def _load_onboarding_chats(self) -> dict[str, dict[str, Any] | None]:
-        out: dict[str, dict[str, Any]] = {}
-        rows = self._conn.execute("SELECT * FROM onboarding_chat_sessions").fetchall()
-        for row in rows:
-            out[row["user_id"]] = {
-                "id": row["id"],
-                "status": row["status"],
-                "question": row["question"],
-                "questionIndex": row["question_index"],
-                "totalQuestions": row["total_questions"],
-                "turns": [],
-                "answers": _from_json(row["answers_json"], {}),
-                "draft": _from_json(row["draft_json"], None),
-            }
-        for row in self._conn.execute("SELECT * FROM onboarding_chat_turns ORDER BY sort_order").fetchall():
-            owner = self._conn.execute(
-                "SELECT user_id FROM onboarding_chat_sessions WHERE id = ?", (row["session_id"],)
-            ).fetchone()
-            if owner and owner["user_id"] in out:
-                out[owner["user_id"]]["turns"].append(
-                    {"id": row["id"], "role": row["role"], "text": row["text"], "timestamp": row["timestamp"]}
-                )
-        return out
-
-    def _save_onboarding_chats(self, chats: Mapping[str, dict[str, Any] | None]) -> None:
-        self._conn.execute("DELETE FROM onboarding_chat_turns")
-        self._conn.execute("DELETE FROM onboarding_chat_sessions")
-        for user_id, session in chats.items():
-            if not session:
-                continue
-            self._conn.execute(
-                "INSERT INTO onboarding_chat_sessions"
-                "(id, user_id, status, question, question_index, total_questions, answers_json, draft_json) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                (session["id"], user_id, session["status"], session.get("question"),
-                 session.get("questionIndex", 0), session.get("totalQuestions", 0),
-                 _json(session.get("answers", {})),
-                 _json(session.get("draft")) if session.get("draft") is not None else None),
-            )
-            for idx, turn in enumerate(session.get("turns", [])):
-                self._conn.execute(
-                    "INSERT INTO onboarding_chat_turns(id, session_id, role, text, timestamp, sort_order) "
-                    "VALUES(?, ?, ?, ?, ?, ?)",
-                    (turn["id"], session["id"], turn["role"], turn["text"], turn["timestamp"], idx),
-                )
+    # NOTE: onboarding chat persistence moved to app/repositories/onboarding_chats.py
+    # (P0 sample slice). Its former _load/_save_onboarding_chats were removed.
 
     # ----- public catalogs -----
     def _load_goal_catalog(self) -> list[dict[str, Any]]:
@@ -1484,19 +1392,20 @@ class Store:
         """Clear demo data but keep the account (use-case SET-07)."""
         self._purge_tts_for(user_id)
         self.profiles[user_id] = None
-        self.onboarding_chats[user_id] = None
         self.goals[user_id] = {}
         self.tracking[user_id] = {}
         self.saved_jobs[user_id] = {}
         self.applications[user_id] = {}
         self.reviews[user_id] = {}
         self.mocks[user_id] = {}
-        # meetings and notifications now live in the repository layer, not the mirror.
+        # These domains now live in the repository layer, not the mirror.
         from app.repositories import meetings as meetings_repo
         from app.repositories import notifications as notifications_repo
+        from app.repositories import onboarding_chats as onboarding_chats_repo
 
         meetings_repo.delete_for_user(self._conn, user_id)
         notifications_repo.delete_for_user(self._conn, user_id)
+        onboarding_chats_repo.delete(self._conn, user_id)
 
     def delete_account(self, user_id: str) -> None:
         """Remove the account and all of its data (use-case SET-08)."""
@@ -1508,9 +1417,7 @@ class Store:
             if uid == user_id:
                 self.refresh_jti.pop(jti, None)
         for bucket in (
-            self.user_settings,
             self.profiles,
-            self.onboarding_chats,
             self.goals,
             self.tracking,
             self.saved_jobs,
@@ -1519,8 +1426,9 @@ class Store:
             self.mocks,
         ):
             bucket.pop(user_id, None)
-        # meetings and notifications rows are removed by the users ON DELETE CASCADE
-        # once the user row is dropped (self.users.pop above), so no explicit cleanup.
+        # meetings, notifications, user_settings, cv_extract_tasks and onboarding
+        # chats are removed by the users ON DELETE CASCADE once the user row is
+        # dropped (self.users.pop above).
 
     def get_catalog_goal(self, catalog_id: str) -> dict[str, Any] | None:
         return next((g for g in self.goal_catalog if g["id"] == catalog_id), None)

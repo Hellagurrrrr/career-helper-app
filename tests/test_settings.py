@@ -82,6 +82,20 @@ def test_settings_reset_demo_data_preserves_account_and_preferences(client):
     assert client.get("/v1/settings", headers=headers).json()["notifications"]["enabled"] is False
 
 
+def test_settings_repository_default_and_isolation(client):
+    # Regression guard for the user_settings repository slice: a user with no
+    # stored row gets the default, preferences are per-user, and a second user
+    # registering must not cascade-wipe the first user's preference.
+    _b1, alice = _register_with_tokens(client, email="alice@example.com")
+    assert client.get("/v1/settings", headers=alice).json()["notifications"]["enabled"] is True
+
+    client.put("/v1/settings/notifications", json={"enabled": False}, headers=alice)
+
+    _b2, bob = _register_with_tokens(client, email="bob@example.com")
+    assert client.get("/v1/settings", headers=alice).json()["notifications"]["enabled"] is False
+    assert client.get("/v1/settings", headers=bob).json()["notifications"]["enabled"] is True
+
+
 def test_settings_delete_account_removes_auth_and_data(client):
     body, headers = _register_with_tokens(client)
     client.put("/v1/profile", json={"name": "Alex"}, headers=headers)

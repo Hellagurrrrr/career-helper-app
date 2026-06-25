@@ -141,6 +141,25 @@ def test_onboarding_chat_empty_answer_rejected(client):
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_onboarding_chat_repository_turns_and_delete(client):
+    # Regression guard for the onboarding_chats parent+child repository slice:
+    # turns round-trip in order across save/reload, and the discard endpoint works.
+    headers = auth_headers(client)
+    assert client.delete("/v1/profile/onboarding-chat", headers=headers).status_code == 404
+
+    started = client.post("/v1/profile/onboarding-chat", headers=headers).json()
+    session_id = started["id"]
+    client.post("/v1/profile/onboarding-chat/answers", json={"text": "Alex Chen"}, headers=headers)
+    resumed = client.post("/v1/profile/onboarding-chat/answers", json={"text": "State University"}, headers=headers).json()
+
+    # Same session persisted; turns reloaded from child rows in order.
+    assert resumed["id"] == session_id
+    assert [t["role"] for t in resumed["turns"][:4]] == ["assistant", "user", "assistant", "user"]
+
+    assert client.delete("/v1/profile/onboarding-chat", headers=headers).status_code == 204
+    assert client.get("/v1/profile/onboarding-chat", headers=headers).status_code == 404
+
+
 def test_profile_normalization_and_welcome(client):
     # OB-13: empty internship dropped, empty end -> null; welcome only on first create
     headers = auth_headers(client)
