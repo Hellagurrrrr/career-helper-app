@@ -397,3 +397,42 @@ def test_alumni_meetings_and_notifications(client):
     # Mark all read (NT-03)
     read = client.post("/v1/notifications/read", json={}, headers=headers)
     assert all(n["read"] for n in read.json()["items"])
+
+
+def test_meetings_repository_isolation_across_users(client):
+    # Regression guard for the P0 repository slice: meetings live in the SQLite
+    # repository (not the in-memory mirror). A second user registering must not
+    # cascade-wipe the first user's meetings, and meetings must stay per-user.
+    alice = auth_headers(client, email="alice@example.com", name="Alice")
+    msg = {"alumniId": "a1", "topic": "Career", "message": "I would love to learn about your path."}
+    created = client.post("/v1/meetings", json=msg, headers=alice)
+    assert created.status_code == 201
+
+    # Registering Bob triggers a users-table save; Alice's meeting must survive.
+    bob = auth_headers(client, email="bob@example.com", name="Bob")
+    assert len(client.get("/v1/meetings", headers=alice).json()) == 1
+    assert client.get("/v1/meetings", headers=bob).json() == []
+
+
+def test_notifications_repository_dedup_isolation_and_delete(client):
+    # Regression guard for the notifications repository slice: dedup, per-user
+    # isolation across a second registration, unread filter, and delete.
+    alice = auth_headers(client, email="alice@example.com", name="Alice")
+    # A meeting request creates exactly one "meeting" notification (deduped by id).
+    msg = {"alumniId": "a1", "topic": "Career", "message": "I would love to learn about your path."}
+    assert client.post("/v1/meetings", json=msg, headers=alice).status_code == 201
+
+    listing = client.get("/v1/notifications", headers=alice).json()
+    assert listing["total"] == 1
+    notif_id = listing["items"][0]["id"]
+
+    # Second user must not cascade-wipe Alice's notifications, and stays isolated.
+    bob = auth_headers(client, email="bob@example.com", name="Bob")
+    assert client.get("/v1/notifications", headers=alice).json()["total"] == 1
+    assert client.get("/v1/notifications", headers=bob).json()["total"] == 0
+
+    # unread filter + delete (404 then 204).
+    assert client.get("/v1/notifications", params={"unread": True}, headers=alice).json()["total"] == 1
+    assert client.delete("/v1/notifications/missing-id", headers=alice).status_code == 404
+    assert client.delete(f"/v1/notifications/{notif_id}", headers=alice).status_code == 204
+    assert client.get("/v1/notifications", headers=alice).json()["total"] == 0

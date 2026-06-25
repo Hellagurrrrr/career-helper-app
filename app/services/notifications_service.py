@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.security import new_id, now_ms
-from app.services.store import store
-
-MAX_NOTIFICATIONS = 50  # api-design 11.2: keep most recent 50 per user
+from app.db import get_connection
+from app.repositories import notifications as notifications_repo
 
 
 def push(
@@ -20,25 +19,25 @@ def push(
 ) -> dict[str, Any] | None:
     """Create a notification, de-duplicating by (user_id, dedupKey).
 
-    Returns the created notification, or None if it was a duplicate.
+    Returns the created notification, or None if it was a duplicate. This service
+    is called from non-DI contexts (other services, background tasks), so it pulls
+    the shared connection directly and commits the write -- mirroring the old
+    store's commit-on-save behavior.
     """
-    bucket = store.notifications.setdefault(user_id, [])
-    if dedup_key and any(n.get("dedupKey") == dedup_key for n in bucket):
-        return None
-
-    notification = {
-        "id": new_id("n"),
-        "type": type,
-        "severity": severity,
-        "title": title,
-        "body": body,
-        "link": link,
-        "createdAt": now_ms(),
-        "read": False,
-        "dedupKey": dedup_key,
-    }
-    bucket.insert(0, notification)
-    del bucket[MAX_NOTIFICATIONS:]
+    conn = get_connection()
+    notification = notifications_repo.add(
+        conn,
+        user_id,
+        notification_id=new_id("n"),
+        type=type,
+        severity=severity,
+        title=title,
+        body=body,
+        created_at=now_ms(),
+        link=link,
+        dedup_key=dedup_key,
+    )
+    conn.commit()
     return notification
 
 

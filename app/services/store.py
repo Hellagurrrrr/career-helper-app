@@ -245,8 +245,8 @@ class Store:
         "reviews": {},
         "mocks": {},
         "tts_cache": {},
-        "meetings": {},
-        "notifications": {},
+        # NOTE: "meetings" and "notifications" now live in the repository layer
+        # (app/repositories/), not in this in-memory mirror. See the P0 sample slices.
         "goal_catalog": [],
         "jobs": [],
         "alumni": [],
@@ -722,8 +722,6 @@ class Store:
         self.applications.setdefault(user_id, {})
         self.reviews.setdefault(user_id, {})
         self.mocks.setdefault(user_id, {})
-        self.meetings.setdefault(user_id, {})
-        self.notifications.setdefault(user_id, [])
 
     def _load_bucket(self, name: str, default: StoreValue) -> StoreValue:
         loader = getattr(self, f"_load_{name}", None)
@@ -783,10 +781,23 @@ class Store:
         }
 
     def _save_users(self, users: Mapping[str, UserRecord]) -> None:
-        self._conn.execute("DELETE FROM users")
+        # Upsert present users and delete only the ones that disappeared from the
+        # mirror. The previous "DELETE FROM users; reinsert all" rewrite cascaded
+        # (ON DELETE CASCADE) into every child table on *every* save -- harmless
+        # while all children were also mirrored, but it would silently wipe rows
+        # owned by the repository layer (e.g. meetings). Targeted deletes keep the
+        # reset semantics (empty mirror -> delete all) without the collateral.
+        ids = list(users.keys())
+        if ids:
+            placeholders = ",".join("?" * len(ids))
+            self._conn.execute(f"DELETE FROM users WHERE id NOT IN ({placeholders})", ids)
+        else:
+            self._conn.execute("DELETE FROM users")
         for user in users.values():
             self._conn.execute(
-                "INSERT INTO users(id, email, name, password_hash, created_at) VALUES(?, ?, ?, ?, ?)",
+                "INSERT INTO users(id, email, name, password_hash, created_at) VALUES(?, ?, ?, ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET email=excluded.email, name=excluded.name, "
+                "password_hash=excluded.password_hash, created_at=excluded.created_at",
                 (user.id, user.email, user.name, user.password_hash, user.created_at),
             )
 
@@ -1458,60 +1469,8 @@ class Store:
             self._conn.execute("INSERT INTO tts_cache(turn_id, audio, created_at) VALUES(?, ?, 0)", (turn_id, audio))
 
     # ----- meetings and notifications -----
-    def _load_meetings(self) -> dict[str, dict[str, dict[str, Any]]]:
-        out: dict[str, dict[str, dict[str, Any]]] = {}
-        for row in self._conn.execute("SELECT * FROM meetings").fetchall():
-            meeting = {
-                "id": row["id"], "alumniId": row["alumni_id"], "topic": row["topic"], "message": row["message"],
-                "preferredTimes": [
-                    r["preferred_time"] for r in self._conn.execute(
-                        "SELECT preferred_time FROM meeting_preferred_times WHERE meeting_id = ? ORDER BY sort_order",
-                        (row["id"],),
-                    )
-                ],
-                "submittedAt": row["submitted_at"], "status": row["status"], "completedAt": row["completed_at"],
-            }
-            out.setdefault(row["user_id"], {})[row["id"]] = meeting
-        return out
-
-    def _save_meetings(self, meetings: Mapping[str, Mapping[str, dict[str, Any]]]) -> None:
-        self._conn.execute("DELETE FROM meeting_preferred_times")
-        self._conn.execute("DELETE FROM meetings")
-        for user_id, by_id in meetings.items():
-            for meeting in by_id.values():
-                self._conn.execute(
-                    "INSERT INTO meetings(id, user_id, alumni_id, topic, message, submitted_at, status, completed_at) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                    (meeting["id"], user_id, meeting["alumniId"], meeting["topic"], meeting["message"],
-                     meeting["submittedAt"], meeting["status"], meeting.get("completedAt")),
-                )
-                for idx, preferred in enumerate(meeting.get("preferredTimes", [])):
-                    self._conn.execute(
-                        "INSERT OR REPLACE INTO meeting_preferred_times(meeting_id, preferred_time, sort_order) VALUES(?, ?, ?)",
-                        (meeting["id"], preferred, idx),
-                    )
-
-    def _load_notifications(self) -> dict[str, list[dict[str, Any]]]:
-        out: dict[str, list[dict[str, Any]]] = {}
-        for row in self._conn.execute("SELECT * FROM notifications ORDER BY created_at DESC").fetchall():
-            item = {
-                "id": row["id"], "type": row["type"], "severity": row["severity"], "title": row["title"],
-                "body": row["body"], "link": row["link"], "createdAt": row["created_at"],
-                "read": bool(row["read"]), "dedupKey": row["dedup_key"],
-            }
-            out.setdefault(row["user_id"], []).append(item)
-        return out
-
-    def _save_notifications(self, notifications: Mapping[str, list[dict[str, Any]]]) -> None:
-        self._conn.execute("DELETE FROM notifications")
-        for user_id, items in notifications.items():
-            for item in items:
-                self._conn.execute(
-                    "INSERT INTO notifications(id, user_id, type, severity, title, body, link, created_at, read, dedup_key) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (item["id"], user_id, item["type"], item["severity"], item["title"], item["body"],
-                     item.get("link"), item["createdAt"], int(bool(item.get("read", False))), item.get("dedupKey")),
-                )
+    # NOTE: meetings and notifications persistence moved to app/repositories/
+    # (P0 sample slices). Their former _load_*/_save_* mirror methods were removed.
 
     # ----- helpers -----
     def _purge_tts_for(self, user_id: str) -> None:
@@ -1532,8 +1491,12 @@ class Store:
         self.applications[user_id] = {}
         self.reviews[user_id] = {}
         self.mocks[user_id] = {}
-        self.meetings[user_id] = {}
-        self.notifications[user_id] = []
+        # meetings and notifications now live in the repository layer, not the mirror.
+        from app.repositories import meetings as meetings_repo
+        from app.repositories import notifications as notifications_repo
+
+        meetings_repo.delete_for_user(self._conn, user_id)
+        notifications_repo.delete_for_user(self._conn, user_id)
 
     def delete_account(self, user_id: str) -> None:
         """Remove the account and all of its data (use-case SET-08)."""
@@ -1554,10 +1517,10 @@ class Store:
             self.applications,
             self.reviews,
             self.mocks,
-            self.meetings,
-            self.notifications,
         ):
             bucket.pop(user_id, None)
+        # meetings and notifications rows are removed by the users ON DELETE CASCADE
+        # once the user row is dropped (self.users.pop above), so no explicit cleanup.
 
     def get_catalog_goal(self, catalog_id: str) -> dict[str, Any] | None:
         return next((g for g in self.goal_catalog if g["id"] == catalog_id), None)
