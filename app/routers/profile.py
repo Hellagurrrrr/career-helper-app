@@ -12,6 +12,7 @@ from app.core.security import new_id, now_ms
 from app.db import get_conn, get_connection
 from app.repositories import cv_tasks as cv_tasks_repo
 from app.repositories import onboarding_chats as onboarding_chats_repo
+from app.repositories import profiles as profiles_repo
 from app.services import ai_service, notifications_service
 from app.schemas.profile import (
     CvExtractResult,
@@ -78,7 +79,10 @@ def _normalize_profile(record: dict[str, Any]) -> dict[str, Any]:
 
 
 @router.get("", response_model=Profile)
-def get_profile(user: UserRecord = Depends(get_current_user)) -> Profile:
+def get_profile(
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Profile:
     '''
     Get the profile of the current user.
 
@@ -89,14 +93,18 @@ def get_profile(user: UserRecord = Depends(get_current_user)) -> Profile:
     **Raises**:
         - not_found: If the profile has not been created yet.
     '''
-    data = store.profiles.get(user.id)
+    data = profiles_repo.get(conn, user.id)
     if not data:
         raise not_found("Profile has not been created yet.")
     return Profile.model_validate(data)
 
 
 @router.put("", response_model=Profile)
-def put_profile(body: ProfileInput, user: UserRecord = Depends(get_current_user)) -> Profile:
+def put_profile(
+    body: ProfileInput,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> Profile:
     '''
     Put the profile of the current user.
 
@@ -106,10 +114,10 @@ def put_profile(body: ProfileInput, user: UserRecord = Depends(get_current_user)
     **Returns**:
         - Profile: The profile of the current user.
     '''
-    was_empty = not store.profiles.get(user.id)
+    was_empty = not profiles_repo.get(conn, user.id)
     record = _normalize_profile(body.model_dump(by_alias=True))
     record["updatedAt"] = now_ms()
-    store.profiles[user.id] = record
+    profiles_repo.save(conn, user.id, record)
     # First-time creation = onboarding completion -> welcome notification (OB-03/04/13).
     if was_empty:
         notifications_service.welcome(user.id, record.get("name", ""))

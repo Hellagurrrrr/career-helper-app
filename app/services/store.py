@@ -36,15 +36,6 @@ def _from_json(value: str | None, default: Any) -> Any:
     return json.loads(value)
 
 
-def _snake_to_camel(value: str) -> str:
-    parts = value.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-
-def _row_to_camel(row: sqlite3.Row) -> dict[str, Any]:
-    return {_snake_to_camel(k): row[k] for k in row.keys()}
-
-
 def _normalize_skill_text(raw: str) -> str:
     text = raw.strip().lower()
     text = re.sub(r"[._/+-]+", " ", text)
@@ -234,16 +225,11 @@ class Store:
         "users": {},
         "email_index": {},
         "refresh_jti": {},
-        "profiles": {},
-        "goals": {},
-        "tracking": {},
-        "saved_jobs": {},
-        "applications": {},
-        "reviews": {},
-        "mocks": {},
-        "tts_cache": {},
-        # NOTE: "meetings", "notifications" and "user_settings" now live in the
-        # repository layer (app/repositories/), not in this in-memory mirror.
+        # NOTE: every per-user domain (meetings, notifications, user_settings,
+        # cv_extract_tasks, onboarding chats, profiles, goals, tracking, saved_jobs,
+        # applications, reviews, mocks, tts_cache) now lives in the repository layer
+        # (app/repositories/). Only auth state and the read-only catalogs remain
+        # mirrored here, pending the #7 auth migration.
         "goal_catalog": [],
         "jobs": [],
         "alumni": [],
@@ -710,13 +696,8 @@ class Store:
             setattr(self, name, default.copy() if isinstance(default, (dict, list, set)) else default)
 
     def ensure_user_buckets(self, user_id: str) -> None:
-        self.profiles.setdefault(user_id, None)
-        self.goals.setdefault(user_id, {})
-        self.tracking.setdefault(user_id, {})
-        self.saved_jobs.setdefault(user_id, {})
-        self.applications.setdefault(user_id, {})
-        self.reviews.setdefault(user_id, {})
-        self.mocks.setdefault(user_id, {})
+        # All per-user domains are repository-owned now; nothing to pre-seed.
+        return
 
     def _load_bucket(self, name: str, default: StoreValue) -> StoreValue:
         loader = getattr(self, f"_load_{name}", None)
@@ -831,88 +812,8 @@ class Store:
                 self.refresh_jti.pop(jti, None)
 
     # ----- profiles -----
-    def _load_profiles(self) -> dict[str, dict[str, Any] | None]:
-        profiles: dict[str, dict[str, Any]] = {}
-        for row in self._conn.execute("SELECT * FROM profiles").fetchall():
-            user_id = row["user_id"]
-            profiles[user_id] = {
-                "name": row["name"],
-                "education": [],
-                "internships": [],
-                "projects": [],
-                "skills": [],
-                "coursework": [],
-                "updatedAt": row["updated_at"],
-            }
-        for table, key in (
-            ("profile_education", "education"),
-            ("profile_internships", "internships"),
-            ("profile_projects", "projects"),
-        ):
-            for row in self._conn.execute(f"SELECT * FROM {table} ORDER BY sort_order").fetchall():
-                item = _row_to_camel(row)
-                user_id = item.pop("userId")
-                item.pop("id", None)
-                item.pop("sortOrder", None)
-                profiles[user_id][key].append(item)
-        for row in self._conn.execute("SELECT * FROM profile_skills ORDER BY sort_order").fetchall():
-            profiles[row["user_id"]]["skills"].append(row["raw_text"])
-        for row in self._conn.execute("SELECT * FROM profile_coursework ORDER BY sort_order").fetchall():
-            profiles[row["user_id"]]["coursework"].append(row["course"])
-        return profiles
-
-    def _save_profiles(self, profiles: Mapping[str, dict[str, Any] | None]) -> None:
-        for table in (
-            "profile_coursework", "profile_skills", "profile_projects",
-            "profile_internships", "profile_education", "profiles",
-        ):
-            self._conn.execute(f"DELETE FROM {table}")
-        for user_id, profile in profiles.items():
-            if not profile:
-                continue
-            self._conn.execute(
-                "INSERT INTO profiles(user_id, name, updated_at) VALUES(?, ?, ?)",
-                (user_id, profile.get("name", ""), profile.get("updatedAt", 0)),
-            )
-            for idx, edu in enumerate(profile.get("education", [])):
-                self._conn.execute(
-                    "INSERT INTO profile_education(user_id, sort_order, degree, school, major, grade, start, end) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, idx, edu.get("degree", ""), edu.get("school", ""), edu.get("major", ""),
-                     edu.get("grade"), edu.get("start", ""), edu.get("end")),
-                )
-            for idx, intern in enumerate(profile.get("internships", [])):
-                self._conn.execute(
-                    "INSERT INTO profile_internships(user_id, sort_order, title, company, start, end, description) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, idx, intern.get("title", ""), intern.get("company", ""), intern.get("start", ""),
-                     intern.get("end"), intern.get("description", "")),
-                )
-            for idx, project in enumerate(profile.get("projects", [])):
-                self._conn.execute(
-                    "INSERT INTO profile_projects(user_id, sort_order, title, start, end, description) "
-                    "VALUES(?, ?, ?, ?, ?, ?)",
-                    (user_id, idx, project.get("title", ""), project.get("start", ""),
-                     project.get("end"), project.get("description", "")),
-                )
-            for idx, skill in enumerate(profile.get("skills", [])):
-                normalized = _normalize_skill_text(skill)
-                row = self._conn.execute(
-                    "SELECT skill_id FROM skill_aliases WHERE normalized_alias = ?", (normalized,)
-                ).fetchone()
-                skill_id = row["skill_id"] if row else None
-                confidence = 1.0 if skill_id else 0.0
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO profile_skills"
-                    "(user_id, raw_text, normalized_text, skill_id, match_confidence, source, sort_order) "
-                    "VALUES(?, ?, ?, ?, ?, 'user', ?)",
-                    (user_id, skill, normalized, skill_id, confidence, idx),
-                )
-            for idx, course in enumerate(profile.get("coursework", [])):
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO profile_coursework(user_id, course, sort_order) VALUES(?, ?, ?)",
-                    (user_id, course, idx),
-                )
+    # NOTE: profiles persistence (profile + 5 child tables) moved to
+    # app/repositories/profiles.py. Its former _load/_save_profiles were removed.
 
     # ----- tasks and onboarding -----
     # NOTE: cv_extract_tasks persistence moved to app/repositories/cv_tasks.py
@@ -1152,283 +1053,57 @@ class Store:
                     (alum["id"], catalog_id),
                 )
 
-    # ----- goals and tracking -----
-    def _load_goals(self) -> dict[str, dict[str, dict[str, Any]]]:
-        out: dict[str, dict[str, dict[str, Any]]] = {}
-        for row in self._conn.execute("SELECT * FROM user_goals").fetchall():
-            goal = {
-                "id": row["id"], "catalogId": row["catalog_id"], "title": row["title"],
-                "description": row["description"], "color": row["color"], "status": row["status"],
-                "progress": row["progress"], "lastUpdated": row["last_updated"],
-                "createdAt": row["created_at"], "confidence": {}, "sortOrder": row["sort_order"],
-            }
-            for c in self._conn.execute("SELECT skill_id, score FROM user_goal_confidence WHERE goal_id = ?", (row["id"],)):
-                goal["confidence"][c["skill_id"]] = c["score"]
-            out.setdefault(row["user_id"], {})[row["id"]] = goal
-        return out
+    # NOTE: goals (user_goals + confidence), tracking and saved_jobs persistence
+    # moved to app/repositories/{goals,tracking,saved_jobs}.py. Their former
+    # _load/_save mirror methods were removed.
 
-    def _save_goals(self, goals: Mapping[str, Mapping[str, dict[str, Any]]]) -> None:
-        self._conn.execute("DELETE FROM user_goal_confidence")
-        self._conn.execute("DELETE FROM user_goals")
-        for user_id, by_id in goals.items():
-            for goal in by_id.values():
-                self._conn.execute(
-                    "INSERT INTO user_goals(id, user_id, catalog_id, title, description, color, status, progress, "
-                    "last_updated, created_at, sort_order) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (goal["id"], user_id, goal["catalogId"], goal["title"], goal["description"], goal["color"],
-                     goal["status"], goal.get("progress", 0), goal.get("lastUpdated", ""), goal.get("createdAt", 0),
-                     goal.get("sortOrder", 0)),
-                )
-                for skill_id, score in goal.get("confidence", {}).items():
-                    self._conn.execute(
-                        "INSERT OR REPLACE INTO user_goal_confidence(goal_id, skill_id, score) VALUES(?, ?, ?)",
-                        (goal["id"], skill_id, score),
-                    )
-
-    def _load_tracking(self) -> dict[str, dict[str, dict[str, Any]]]:
-        out: dict[str, dict[str, dict[str, Any]]] = {}
-        for row in self._conn.execute(
-            "SELECT gt.goal_id, gt.week_started_at, ug.user_id FROM goal_tracking gt JOIN user_goals ug ON ug.id = gt.goal_id"
-        ).fetchall():
-            tracking = {"modules": {}, "weekStartedAt": row["week_started_at"], "weekFocus": []}
-            for mod in self._conn.execute("SELECT * FROM goal_tracking_modules WHERE goal_id = ?", (row["goal_id"],)):
-                skill_id = mod["skill_id"]
-                tracking["modules"][skill_id] = {
-                    "completedSteps": [
-                        r["step_index"] for r in self._conn.execute(
-                            "SELECT step_index FROM goal_tracking_completed_steps WHERE goal_id = ? AND skill_id = ? ORDER BY step_index",
-                            (row["goal_id"], skill_id),
-                        )
-                    ],
-                    "consumedResources": [
-                        r["resource_index"] for r in self._conn.execute(
-                            "SELECT resource_index FROM goal_tracking_consumed_resources WHERE goal_id = ? AND skill_id = ? ORDER BY resource_index",
-                            (row["goal_id"], skill_id),
-                        )
-                    ],
-                    "stepsCompletedSinceRerate": mod["steps_completed_since_rerate"],
-                    "rerateDismissed": bool(mod["rerate_dismissed"]),
-                }
-            tracking["weekFocus"] = [
-                r["focus"] for r in self._conn.execute(
-                    "SELECT focus FROM goal_tracking_week_focus WHERE goal_id = ? ORDER BY sort_order",
-                    (row["goal_id"],),
-                )
-            ]
-            out.setdefault(row["user_id"], {})[row["goal_id"]] = tracking
-        return out
-
-    def _save_tracking(self, tracking: Mapping[str, Mapping[str, dict[str, Any]]]) -> None:
-        for table in (
-            "goal_tracking_week_focus", "goal_tracking_consumed_resources",
-            "goal_tracking_completed_steps", "goal_tracking_modules", "goal_tracking",
-        ):
-            self._conn.execute(f"DELETE FROM {table}")
-        for _user_id, by_goal in tracking.items():
-            for goal_id, tr in by_goal.items():
-                self._conn.execute(
-                    "INSERT INTO goal_tracking(goal_id, week_started_at) VALUES(?, ?)",
-                    (goal_id, tr.get("weekStartedAt", 0)),
-                )
-                for skill_id, mod in tr.get("modules", {}).items():
-                    self._conn.execute(
-                        "INSERT INTO goal_tracking_modules(goal_id, skill_id, steps_completed_since_rerate, rerate_dismissed) "
-                        "VALUES(?, ?, ?, ?)",
-                        (goal_id, skill_id, mod.get("stepsCompletedSinceRerate", 0),
-                         int(bool(mod.get("rerateDismissed", False)))),
-                    )
-                    for step in mod.get("completedSteps", []):
-                        self._conn.execute(
-                            "INSERT OR REPLACE INTO goal_tracking_completed_steps(goal_id, skill_id, step_index) VALUES(?, ?, ?)",
-                            (goal_id, skill_id, step),
-                        )
-                    for res in mod.get("consumedResources", []):
-                        self._conn.execute(
-                            "INSERT OR REPLACE INTO goal_tracking_consumed_resources(goal_id, skill_id, resource_index) VALUES(?, ?, ?)",
-                            (goal_id, skill_id, res),
-                        )
-                for idx, focus in enumerate(tr.get("weekFocus", [])):
-                    self._conn.execute(
-                        "INSERT OR REPLACE INTO goal_tracking_week_focus(goal_id, focus, sort_order) VALUES(?, ?, ?)",
-                        (goal_id, focus, idx),
-                    )
-
-    # ----- applications and related -----
-    def _load_saved_jobs(self) -> dict[str, dict[str, set[str]]]:
-        out: dict[str, dict[str, set[str]]] = {}
-        for row in self._conn.execute("SELECT * FROM saved_jobs").fetchall():
-            out.setdefault(row["user_id"], {}).setdefault(row["goal_id"], set()).add(row["job_id"])
-        return out
-
-    def _save_saved_jobs(self, saved_jobs: Mapping[str, Mapping[str, set[str]]]) -> None:
-        self._conn.execute("DELETE FROM saved_jobs")
-        for user_id, by_goal in saved_jobs.items():
-            for goal_id, job_ids in by_goal.items():
-                for job_id in job_ids:
-                    self._conn.execute(
-                        "INSERT OR REPLACE INTO saved_jobs(user_id, goal_id, job_id, saved_at) VALUES(?, ?, ?, 0)",
-                        (user_id, goal_id, job_id),
-                    )
-
-    def _load_applications(self) -> dict[str, dict[str, dict[str, Any]]]:
-        out: dict[str, dict[str, dict[str, Any]]] = {}
-        for row in self._conn.execute("SELECT * FROM applications").fetchall():
-            app = {
-                "id": row["id"], "kind": row["kind"], "goalId": row["goal_id"], "jobId": row["job_id"],
-                "title": row["title"], "company": row["company"], "submittedAt": row["submitted_at"],
-                "partnerStatus": row["partner_status"], "manualStatus": row["manual_status"],
-            }
-            out.setdefault(row["user_id"], {})[row["id"]] = app
-        return out
-
-    def _save_applications(self, applications: Mapping[str, Mapping[str, dict[str, Any]]]) -> None:
-        self._conn.execute("DELETE FROM applications")
-        for user_id, by_id in applications.items():
-            for app in by_id.values():
-                self._conn.execute(
-                    "INSERT INTO applications(id, user_id, kind, goal_id, job_id, title, company, submitted_at, "
-                    "partner_status, manual_status, cv_text) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (app["id"], user_id, app["kind"], app["goalId"], app["jobId"], app["title"], app["company"],
-                     app["submittedAt"], app.get("partnerStatus"), app.get("manualStatus"), app.get("cvText")),
-                )
-
-    def _load_reviews(self) -> dict[str, dict[str, list[dict[str, Any]]]]:
-        out: dict[str, dict[str, list[dict[str, Any]]]] = {}
-        for row in self._conn.execute("SELECT * FROM interview_reviews").fetchall():
-            review = {
-                "id": row["id"], "applicationId": row["application_id"], "fileName": row["file_name"],
-                "uploadedAt": row["uploaded_at"], "durationSec": row["duration_sec"],
-                "transcript": row["transcript"], "overallSummary": row["overall_summary"],
-                "dimensions": _from_json(row["dimensions_json"], []),
-                "improvementAdvice": row["improvement_advice"], "status": row["status"],
-                "polls": row["polls"], "error": row["error"],
-            }
-            out.setdefault(row["user_id"], {}).setdefault(row["application_id"], []).append(review)
-        return out
-
-    def _save_reviews(self, reviews: Mapping[str, Mapping[str, list[dict[str, Any]]]]) -> None:
-        self._conn.execute("DELETE FROM interview_reviews")
-        for user_id, by_app in reviews.items():
-            for app_id, items in by_app.items():
-                for review in items:
-                    self._conn.execute(
-                        "INSERT INTO interview_reviews(id, user_id, application_id, file_name, uploaded_at, status, polls, "
-                        "duration_sec, transcript, overall_summary, dimensions_json, improvement_advice, error) "
-                        "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (review["id"], user_id, app_id, review.get("fileName", "audio"), review.get("uploadedAt", 0),
-                         review.get("status", "transcribing"), review.get("polls", 0), review.get("durationSec"),
-                         review.get("transcript", ""), review.get("overallSummary", ""), _json(review.get("dimensions", [])),
-                         review.get("improvementAdvice", ""), review.get("error")),
-                    )
-
-    def _load_mocks(self) -> dict[str, dict[str, list[dict[str, Any]]]]:
-        out: dict[str, dict[str, list[dict[str, Any]]]] = {}
-        for row in self._conn.execute("SELECT * FROM mock_interview_sessions").fetchall():
-            session = {
-                "id": row["id"], "applicationId": row["application_id"], "jobTitle": row["job_title"],
-                "company": row["company"], "goalTitle": row["goal_title"],
-                "skills": _from_json(row["skills_json"], []), "startedAt": row["started_at"],
-                "completedAt": row["completed_at"], "durationSec": row["duration_sec"],
-                "turns": [], "transcript": row["transcript"], "overallSummary": row["overall_summary"],
-                "dimensions": _from_json(row["dimensions_json"], []),
-                "improvementAdvice": row["improvement_advice"], "questions": _from_json(row["questions_json"], []),
-                "currentIndex": row["current_index"], "status": row["status"], "error": row["error"],
-            }
-            for turn in self._conn.execute(
-                "SELECT * FROM mock_interview_turns WHERE session_id = ? ORDER BY sort_order", (row["id"],)
-            ):
-                session["turns"].append(
-                    {"id": turn["id"], "role": turn["role"], "text": turn["text"], "timestamp": turn["timestamp"]}
-                )
-            out.setdefault(row["user_id"], {}).setdefault(row["application_id"], []).append(session)
-        return out
-
-    def _save_mocks(self, mocks: Mapping[str, Mapping[str, list[dict[str, Any]]]]) -> None:
-        self._conn.execute("DELETE FROM mock_interview_turns")
-        self._conn.execute("DELETE FROM mock_interview_sessions")
-        for user_id, by_app in mocks.items():
-            for app_id, sessions in by_app.items():
-                for session in sessions:
-                    self._conn.execute(
-                        "INSERT INTO mock_interview_sessions(id, user_id, application_id, job_title, company, goal_title, "
-                        "skills_json, status, started_at, completed_at, duration_sec, transcript, overall_summary, "
-                        "dimensions_json, improvement_advice, questions_json, current_index, error) "
-                        "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (session["id"], user_id, app_id, session.get("jobTitle", ""), session.get("company", ""),
-                         session.get("goalTitle"), _json(session.get("skills", [])), session.get("status", "in_progress"),
-                         session.get("startedAt", 0), session.get("completedAt"), session.get("durationSec"),
-                         session.get("transcript", ""), session.get("overallSummary", ""),
-                         _json(session.get("dimensions", [])), session.get("improvementAdvice", ""),
-                         _json(session.get("questions", [])), session.get("currentIndex", 0), session.get("error")),
-                    )
-                    for idx, turn in enumerate(session.get("turns", [])):
-                        self._conn.execute(
-                            "INSERT INTO mock_interview_turns(id, session_id, role, text, timestamp, sort_order) "
-                            "VALUES(?, ?, ?, ?, ?, ?)",
-                            (turn["id"], session["id"], turn["role"], turn["text"], turn["timestamp"], idx),
-                        )
-
-    def _load_tts_cache(self) -> dict[str, bytes]:
-        return {row["turn_id"]: row["audio"] for row in self._conn.execute("SELECT * FROM tts_cache").fetchall()}
-
-    def _save_tts_cache(self, tts_cache: Mapping[str, bytes]) -> None:
-        self._conn.execute("DELETE FROM tts_cache")
-        for turn_id, audio in tts_cache.items():
-            self._conn.execute("INSERT INTO tts_cache(turn_id, audio, created_at) VALUES(?, ?, 0)", (turn_id, audio))
+    # NOTE: applications, interview reviews, mock interviews and the TTS cache
+    # persistence moved to app/repositories/{applications,reviews,mocks,tts_cache}.py.
+    # Their former _load/_save mirror methods were removed.
 
     # ----- meetings and notifications -----
     # NOTE: meetings and notifications persistence moved to app/repositories/
     # (P0 sample slices). Their former _load_*/_save_* mirror methods were removed.
 
     # ----- helpers -----
-    def _purge_tts_for(self, user_id: str) -> None:
-        """Drop cached TTS audio belonging to the user's mock-interview turns."""
-        for sessions in self.mocks.get(user_id, {}).values():
-            for session in sessions:
-                for turn in session.get("turns", []):
-                    self.tts_cache.pop(turn.get("id", ""), None)
-
     def reset_user_data(self, user_id: str) -> None:
         """Clear demo data but keep the account (use-case SET-07)."""
-        self._purge_tts_for(user_id)
-        self.profiles[user_id] = None
-        self.goals[user_id] = {}
-        self.tracking[user_id] = {}
-        self.saved_jobs[user_id] = {}
-        self.applications[user_id] = {}
-        self.reviews[user_id] = {}
-        self.mocks[user_id] = {}
-        # These domains now live in the repository layer, not the mirror.
+        from app.repositories import goals as goals_repo
         from app.repositories import meetings as meetings_repo
         from app.repositories import notifications as notifications_repo
         from app.repositories import onboarding_chats as onboarding_chats_repo
+        from app.repositories import profiles as profiles_repo
+        from app.repositories import tts_cache as tts_cache_repo
 
+        # Purge cached TTS audio before the goal cascade removes the mock turns it
+        # is keyed by (tts_cache has no FK to cascade through).
+        tts_cache_repo.purge_for_user(self._conn, user_id)
         meetings_repo.delete_for_user(self._conn, user_id)
         notifications_repo.delete_for_user(self._conn, user_id)
         onboarding_chats_repo.delete(self._conn, user_id)
+        profiles_repo.delete(self._conn, user_id)
+        # Deleting the user's goals cascades to tracking, saved_jobs, applications,
+        # interview reviews and mock sessions.
+        goals_repo.delete_all_for_user(self._conn, user_id)
+        # These repo deletes run outside any get_conn scope, so commit them here;
+        # otherwise a later request that rolls back would resurrect the data.
+        self._conn.commit()
 
     def delete_account(self, user_id: str) -> None:
         """Remove the account and all of its data (use-case SET-08)."""
-        self._purge_tts_for(user_id)
-        user = self.users.pop(user_id, None)
+        from app.repositories import tts_cache as tts_cache_repo
+
+        # Purge TTS audio before the user cascade drops the mock turns it keys on.
+        tts_cache_repo.purge_for_user(self._conn, user_id)
+        user = self.users.pop(user_id, None)  # _save_users cascades all the user's rows
         if user:
             self.email_index.pop(user.email.lower(), None)
         for jti, uid in list(self.refresh_jti.items()):
             if uid == user_id:
                 self.refresh_jti.pop(jti, None)
-        for bucket in (
-            self.profiles,
-            self.goals,
-            self.tracking,
-            self.saved_jobs,
-            self.applications,
-            self.reviews,
-            self.mocks,
-        ):
-            bucket.pop(user_id, None)
-        # meetings, notifications, user_settings, cv_extract_tasks and onboarding
-        # chats are removed by the users ON DELETE CASCADE once the user row is
-        # dropped (self.users.pop above).
+        # Every per-user domain is removed by the users ON DELETE CASCADE once the
+        # user row is dropped above.
+        self._conn.commit()
 
     def get_catalog_goal(self, catalog_id: str) -> dict[str, Any] | None:
         return next((g for g in self.goal_catalog if g["id"] == catalog_id), None)

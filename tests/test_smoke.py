@@ -141,6 +141,30 @@ def test_onboarding_chat_empty_answer_rejected(client):
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_profile_repository_aggregate_round_trip_and_replace(client):
+    # Regression guard for the profiles aggregate repository slice: every child
+    # table round-trips, and a later PUT REPLACES children (no stale rows leak).
+    headers = auth_headers(client)
+    full = {
+        "name": "Alex",
+        "education": [{"degree": "BSc", "school": "U", "major": "CS", "grade": 3.8, "start": "2022-09", "end": "2026-06"}],
+        "projects": [{"title": "P1", "start": "2024", "end": "2024", "description": "d"}],
+        "skills": ["Python", "React"],
+        "coursework": ["Algorithms", "Databases"],
+    }
+    got = client.put("/v1/profile", json=full, headers=headers).json()
+    assert got["education"][0]["grade"] == 3.8
+    assert got["projects"][0]["title"] == "P1"
+    assert got["skills"] == ["Python", "React"]
+    assert got["coursework"] == ["Algorithms", "Databases"]
+
+    # Shrinking the profile must drop the old education/projects/coursework rows.
+    shrunk = client.put("/v1/profile", json={"name": "Alex2", "skills": ["Go"]}, headers=headers).json()
+    assert shrunk["name"] == "Alex2"
+    assert shrunk["skills"] == ["Go"]
+    assert shrunk["education"] == [] and shrunk["projects"] == [] and shrunk["coursework"] == []
+
+
 def test_onboarding_chat_repository_turns_and_delete(client):
     # Regression guard for the onboarding_chats parent+child repository slice:
     # turns round-trip in order across save/reload, and the discard endpoint works.
@@ -218,6 +242,33 @@ def test_goals_and_tracking_progress(client):
 
 
 # --- Jobs (§6) + Tailored CV (§7) + Applications (§8) ---
+def test_delete_goal_with_application_then_reapply(client):
+    # Regression guard for the goals-cluster repository slice + the interim
+    # applications-mirror bridge: deleting a goal cascades (in DB) to its
+    # application, and a later application must not hit a stale-FK crash.
+    headers = auth_headers(client)
+    goal_id = client.post("/v1/goals", json={"catalogId": "1"}, headers=headers).json()["id"]
+    app_resp = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
+        headers=headers,
+    )
+    assert app_resp.status_code == 201
+
+    # Delete the goal that owns the application.
+    assert client.delete(f"/v1/goals/{goal_id}", headers=headers).status_code == 204
+    assert client.get("/v1/applications", headers=headers).json()["summary"]["total"] == 0
+
+    # A fresh goal + application must still work (no FK violation on the apps save).
+    goal2 = client.post("/v1/goals", json={"catalogId": "2"}, headers=headers).json()["id"]
+    reapply = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal2, "jobId": "j_102"},
+        headers=headers,
+    )
+    assert reapply.status_code == 201
+
+
 def test_jobs_applications_flow(client):
     headers = auth_headers(client)
     client.put("/v1/profile", json={"name": "Alex", "skills": ["React"]}, headers=headers)
@@ -324,6 +375,27 @@ def test_coaching_review_and_mock(client):
 
     summary = client.get("/v1/ai-coaching/summary", headers=headers)
     assert summary.json()["mockCount"] == 1
+
+
+def test_delete_application_cascades_reviews_and_mocks(client):
+    # Regression guard for the applications-cluster repository slice: deleting an
+    # application removes its interview reviews and mock sessions (FK cascade), and
+    # the coaching summary reflects zero afterwards.
+    headers = auth_headers(client)
+    goal_id = client.post("/v1/goals", json={"catalogId": "1"}, headers=headers).json()["id"]
+    app_id = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
+        headers=headers,
+    ).json()["id"]
+    # A completed mock session so there is a child row to cascade.
+    client.post(f"/v1/applications/{app_id}/mock-interviews", headers=headers)
+    assert client.get("/v1/ai-coaching/summary", headers=headers).json()["mockCount"] == 1
+
+    assert client.delete(f"/v1/applications/{app_id}", headers=headers).status_code == 204
+    assert client.delete(f"/v1/applications/{app_id}", headers=headers).status_code == 404
+    summary = client.get("/v1/ai-coaching/summary", headers=headers).json()
+    assert summary == {"applicationCount": 0, "reviewCount": 0, "mockCount": 0}
 
 
 def test_mock_end_early_requires_answer(client):

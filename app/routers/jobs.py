@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import sqlite3
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.deps import get_current_user
 from app.core.errors import not_found
 from app.core.pagination import paginate
+from app.db import get_conn
+from app.repositories import profiles as profiles_repo
 from app.schemas.jobs import JobDetail, JobListPage
 from app.services import mock_match
 from app.services.store import UserRecord, store
@@ -53,7 +57,11 @@ def list_jobs(
 
 
 @router.get("/{job_id}", response_model=JobDetail)
-def get_job(job_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+def get_job(
+    job_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
     '''
     Get a job.
 
@@ -66,6 +74,6 @@ def get_job(job_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
     job = store.get_job(job_id)
     if not job:
         raise not_found("Job not found.")
-    profile = store.profiles.get(user.id) or {}
+    profile = profiles_repo.get(conn, user.id) or {}
     score = mock_match.match_score(profile.get("skills", []), job.get("skills", []))
     return {**job, "matchScore": score}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sqlite3
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.deps import get_current_user
@@ -11,6 +13,9 @@ from app.core.errors import (
     validation_error,
 )
 from app.core.security import new_id, now_ms
+from app.db import get_conn
+from app.repositories import applications as applications_repo
+from app.repositories import goals as goals_repo
 from app.schemas.applications import (
     ApplicationListResponse,
     CreateApplicationRequest,
@@ -27,6 +32,7 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 def list_applications(
     goal_id: str | None = Query(default=None, alias="goalId"),
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
     '''
     List the applications for a goal.
@@ -36,14 +42,13 @@ def list_applications(
     **Returns**:
         - dict: The list of applications.
     '''
-    apps = list(store.applications.get(user.id, {}).values())
+    apps = applications_repo.list_for_user(conn, user.id)
     # Advance partner pipelines before reporting (use-case APP-05).
     for app in apps:
-        applications_service.advance_partner(user.id, app)
+        applications_service.advance_partner(conn, user.id, app)
     if goal_id is not None:
         apps = [a for a in apps if a["goalId"] == goal_id]
-    apps_sorted = sorted(apps, key=lambda a: a["submittedAt"], reverse=True)
-    items = [applications_service.with_counts(user.id, a) for a in apps_sorted]
+    items = [applications_service.with_counts(conn, user.id, a) for a in apps]
     summary = applications_service.summarize(apps)
     return {"items": items, "summary": summary}
 
@@ -52,6 +57,7 @@ def list_applications(
 def create_application(
     body: CreateApplicationRequest,
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
     '''
     Create an application for a goal.
@@ -61,7 +67,7 @@ def create_application(
     **Returns**:
         - dict: The application.
     '''
-    if body.goal_id not in store.goals.get(user.id, {}):
+    if not goals_repo.exists(conn, user.id, body.goal_id):
         raise validation_error("Goal not found.", "goalId")
     job = store.get_job(body.job_id)
     if not job:
@@ -69,8 +75,7 @@ def create_application(
     if body.kind == "partner" and not job.get("exclusive", False):
         raise not_exclusive_job()
 
-    bucket = store.applications.setdefault(user.id, {})
-    if any(a["jobId"] == body.job_id for a in bucket.values()):
+    if applications_repo.has_job(conn, user.id, body.job_id):
         raise already_applied()
 
     app_id = new_id("app")
@@ -85,8 +90,8 @@ def create_application(
         "partnerStatus": "referral_sent" if body.kind == "partner" else None,
         "manualStatus": "applied" if body.kind == "standard" else None,
     }
-    bucket[app_id] = app
-    return applications_service.with_counts(user.id, app)
+    applications_repo.create(conn, user.id, app)
+    return applications_service.with_counts(conn, user.id, app)
 
 
 @router.patch("/{application_id}", response_model=JobApplication)
@@ -94,6 +99,7 @@ def update_application(
     application_id: str,
     body: UpdateApplicationRequest,
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
     '''
     Update an application for a goal.
@@ -104,7 +110,7 @@ def update_application(
     **Returns**:
         - dict: The application.
     '''
-    app = store.applications.get(user.id, {}).get(application_id)
+    app = applications_repo.get(conn, user.id, application_id)
     if not app:
         raise not_found("Application not found.")
     if app["kind"] == "partner":
@@ -114,12 +120,17 @@ def update_application(
             "Partner application status is managed automatically.",
             {"field": "manualStatus"},
         )
+    applications_repo.set_manual_status(conn, user.id, application_id, body.manual_status)
     app["manualStatus"] = body.manual_status
-    return applications_service.with_counts(user.id, app)
+    return applications_service.with_counts(conn, user.id, app)
 
 
 @router.delete("/{application_id}", status_code=204, response_model=None)
-def delete_application(application_id: str, user: UserRecord = Depends(get_current_user)) -> None:
+def delete_application(
+    application_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> None:
     '''
     Delete an application for a goal.
     **Parameters**:
@@ -128,9 +139,6 @@ def delete_application(application_id: str, user: UserRecord = Depends(get_curre
     **Returns**:
         - None: The response body.
     '''
-    bucket = store.applications.get(user.id, {})
-    if application_id not in bucket:
+    # Reviews and mock sessions cascade via FK.
+    if not applications_repo.delete(conn, user.id, application_id):
         raise not_found("Application not found.")
-    bucket.pop(application_id, None)
-    store.reviews.get(user.id, {}).pop(application_id, None)
-    store.mocks.get(user.id, {}).pop(application_id, None)

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import sqlite3
 from typing import Any
 
 from app.core.security import now_ms
+from app.repositories import applications as applications_repo
+from app.repositories import mocks as mocks_repo
+from app.repositories import reviews as reviews_repo
 from app.services import notifications_service
-from app.services.store import store
 
 _HOUR_MS = 3600 * 1000
 
@@ -35,13 +38,17 @@ def partner_status_for(submitted_at: int) -> str:
     return code
 
 
-def advance_partner(user_id: str, app: dict[str, Any]) -> None:
-    """Recompute a partner application's status and notify on change (APP-05)."""
+def advance_partner(conn: sqlite3.Connection, user_id: str, app: dict[str, Any]) -> None:
+    """Recompute a partner application's status and notify on change (APP-05).
+
+    Mutates the passed app dict in place and persists the new status.
+    """
     if app["kind"] != "partner":
         return
     new_status = partner_status_for(app["submittedAt"])
     if new_status != app.get("partnerStatus"):
         app["partnerStatus"] = new_status
+        applications_repo.set_partner_status(conn, app["id"], new_status)
         notifications_service.push(
             user_id,
             type="job",
@@ -53,10 +60,10 @@ def advance_partner(user_id: str, app: dict[str, Any]) -> None:
         )
 
 
-def with_counts(user_id: str, app: dict[str, Any]) -> dict[str, Any]:
-    reviews = store.reviews.get(user_id, {}).get(app["id"], [])
-    mocks = store.mocks.get(user_id, {}).get(app["id"], [])
-    return {**app, "reviewCount": len(reviews), "mockCount": len(mocks)}
+def with_counts(conn: sqlite3.Connection, user_id: str, app: dict[str, Any]) -> dict[str, Any]:
+    review_count = reviews_repo.count_for_app(conn, user_id, app["id"])
+    mock_count = mocks_repo.count_for_app(conn, user_id, app["id"])
+    return {**app, "reviewCount": review_count, "mockCount": mock_count}
 
 
 def summarize(apps: list[dict[str, Any]]) -> dict[str, int]:
