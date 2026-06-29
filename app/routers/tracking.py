@@ -19,7 +19,7 @@ from app.schemas.tracking import (
     WeekFocusRequest,
 )
 from app.services.goals_service import recompute_progress
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/goals/{goal_id}/tracking", tags=["tracking"])
 

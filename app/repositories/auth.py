@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 
 def _row_to_user(row: sqlite3.Row) -> UserRecord:

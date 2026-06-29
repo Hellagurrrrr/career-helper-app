@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.main import app
-from app.services import store as store_module
+from app.db import reset_all
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 
@@ -67,7 +67,7 @@ def save_audio(output_dir: Path):
 def client():
     with TestClient(app) as c:
         yield c
-    store_module.store.reset_all()
+    reset_all()
 
 
 def auth_headers(client: TestClient, email: str = "llm@example.com") -> dict[str, str]:

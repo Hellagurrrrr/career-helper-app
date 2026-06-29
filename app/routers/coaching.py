@@ -36,7 +36,7 @@ from app.schemas.coaching import (
     ReviewStatusResponse,
 )
 from app.services import ai_service, applications_service
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(tags=["ai-coaching"])
 

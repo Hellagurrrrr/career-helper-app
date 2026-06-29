@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.routers import api_router
-from app.services.store import seed_catalogs
+from app.db import seed_catalogs
 
 
 @asynccontextmanager
@@ -69,22 +69,21 @@ if FRONTEND_DIST.exists() and FRONTEND_INDEX.exists():
 if settings.enable_dev_reset:
     import sqlite3
 
+    from fastapi import Depends
+
     from app.core.deps import get_current_user
     from app.db import get_conn
+    from app.models import UserRecord
     from app.services import account_service
-    from app.services.store import UserRecord
-    from fastapi import Depends
 
     @app.post("/__dev/reset", tags=["meta"], status_code=204, response_model=None)
     def dev_reset(
-        user: "UserRecord" = Depends(get_current_user),
-        conn: "sqlite3.Connection" = Depends(get_conn),
+        user: UserRecord = Depends(get_current_user),
+        conn: sqlite3.Connection = Depends(get_conn),
     ) -> None:
         """Dev-only: clear the current user's demo data (use-case SET-07)."""
         account_service.reset_user_data(conn, user.id)
 
-
-if settings.enable_dev_reset:
     @app.post("/__dev/shutdown", tags=["meta"], include_in_schema=False)
     def dev_shutdown(x_dev_action: str | None = Header(default=None)) -> dict[str, str]:
         """Dev-only: let local scripts stop the server when the OS PID is inaccessible."""

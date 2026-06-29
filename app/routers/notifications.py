@@ -13,7 +13,7 @@ from app.schemas.notifications import (
     MarkReadRequest,
     NotificationListResponse,
 )
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 

@@ -7,7 +7,7 @@ from app.core.errors import unauthorized
 from app.core.security import decode_token
 from app.db import get_connection
 from app.repositories import auth as auth_repo
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 # auto_error=False so we can raise the unified UNAUTHORIZED envelope ourselves.
 _bearer = HTTPBearer(auto_error=False)

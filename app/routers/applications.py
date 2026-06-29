@@ -24,7 +24,7 @@ from app.schemas.applications import (
     UpdateApplicationRequest,
 )
 from app.services import applications_service
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 

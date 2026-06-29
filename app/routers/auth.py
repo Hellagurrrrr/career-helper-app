@@ -32,7 +32,7 @@ from app.schemas.auth import (
     RefreshRequest,
     RegisterRequest,
 )
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

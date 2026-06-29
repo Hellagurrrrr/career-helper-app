@@ -20,7 +20,7 @@ from typing import Any
 
 
 def _normalize_skill_text(raw: str) -> str:
-    # Mirrors app.services.store._normalize_skill_text so profile skills resolve to
+    # Mirrors the catalog seeder's skill normalizer so profile skills resolve to
     # the same skill_aliases entries. (Temporary duplication until the store is gone.)
     text = raw.strip().lower()
     text = re.sub(r"[._/+-]+", " ", text)

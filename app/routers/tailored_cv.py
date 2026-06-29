@@ -12,7 +12,7 @@ from app.repositories import goals as goals_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.tailored_cv import TailoredCvRequest, TailoredCvResponse
 from app.services import ai_service
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/tailored-cv", tags=["tailored-cv"])
 

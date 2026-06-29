@@ -21,7 +21,7 @@ from app.schemas.goals import (
 )
 from app.services import mock_match
 from app.services.goals_service import recompute_progress
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(tags=["goals"])
 

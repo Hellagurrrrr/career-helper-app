@@ -11,7 +11,7 @@ from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import saved_jobs as saved_jobs_repo
 from app.schemas.jobs import JobListing, SaveJobRequest
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/saved-jobs", tags=["saved-jobs"])
 

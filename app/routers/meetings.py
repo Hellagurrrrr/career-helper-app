@@ -12,7 +12,7 @@ from app.repositories import catalogs as catalogs_repo
 from app.repositories import meetings as meetings_repo
 from app.schemas.alumni import CreateMeetingRequest, MeetingRequest, UpdateMeetingRequest
 from app.services import notifications_service
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 

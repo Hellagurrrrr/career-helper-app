@@ -19,7 +19,7 @@ from app.schemas.settings import (
     SettingsStatusResponse,
 )
 from app.services import account_service
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

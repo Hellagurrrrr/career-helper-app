@@ -12,7 +12,7 @@ from app.repositories import catalogs as catalogs_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.jobs import JobDetail, JobListPage
 from app.services import mock_match
-from app.services.store import UserRecord
+from app.models import UserRecord
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
