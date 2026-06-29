@@ -3,10 +3,10 @@ from __future__ import annotations
 import sqlite3
 import time
 
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import tracking as tracking_repo
 from app.services import progress as progress_svc
-from app.services.store import store
 
 
 def recompute_progress(conn: sqlite3.Connection, user_id: str, goal_id: str) -> None:
@@ -17,7 +17,7 @@ def recompute_progress(conn: sqlite3.Connection, user_id: str, goal_id: str) -> 
     goal = goals_repo.get(conn, user_id, goal_id)
     if not goal:
         return
-    catalog = store.get_catalog_goal(goal["catalogId"]) or {}
+    catalog = catalogs_repo.get_catalog_goal(conn, goal["catalogId"]) or {}
     tracking = tracking_repo.get(conn, goal_id)
     old_progress = goal["progress"]
     new_progress = progress_svc.compute_progress(goal["confidence"], catalog, tracking)

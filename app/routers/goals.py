@@ -9,6 +9,7 @@ from app.core.deps import get_current_user
 from app.core.errors import goal_already_added, not_found, validation_error
 from app.core.security import new_id, now_ms
 from app.db import get_conn
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.goals import (
@@ -20,7 +21,7 @@ from app.schemas.goals import (
 )
 from app.services import mock_match
 from app.services.goals_service import recompute_progress
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(tags=["goals"])
 
@@ -40,11 +41,15 @@ def get_goal_catalog(
         - list[CatalogGoal]: The goal catalog, sorted by descending match score.
     '''
     profile = profiles_repo.get(conn, user.id)
-    return mock_match.sort_catalog_goals(profile, store.goal_catalog)
+    return mock_match.sort_catalog_goals(profile, catalogs_repo.list_goal_catalog(conn))
 
 
 @router.get("/goal-catalog/{catalog_id}", response_model=CatalogGoal)
-def get_catalog_item(catalog_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+def get_catalog_item(
+    catalog_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
     '''
     Get a goal catalog item.
 
@@ -54,7 +59,7 @@ def get_catalog_item(catalog_id: str, user: UserRecord = Depends(get_current_use
     **Returns**:
         - CatalogGoal: The catalog item.
     '''
-    item = store.get_catalog_goal(catalog_id)
+    item = catalogs_repo.get_catalog_goal(conn, catalog_id)
     if not item:
         raise not_found("Catalog goal not found.")
     return item
@@ -92,7 +97,7 @@ def create_goal(
     **Returns**:
         - UserGoal: The created goal.
     '''
-    catalog = store.get_catalog_goal(body.catalog_id)
+    catalog = catalogs_repo.get_catalog_goal(conn, body.catalog_id)
     if not catalog:
         raise not_found("Catalog goal not found.")
 

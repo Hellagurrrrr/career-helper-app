@@ -15,6 +15,7 @@ from app.core.errors import (
 from app.core.security import new_id, now_ms
 from app.db import get_conn
 from app.repositories import applications as applications_repo
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.schemas.applications import (
     ApplicationListResponse,
@@ -23,7 +24,7 @@ from app.schemas.applications import (
     UpdateApplicationRequest,
 )
 from app.services import applications_service
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -69,7 +70,7 @@ def create_application(
     '''
     if not goals_repo.exists(conn, user.id, body.goal_id):
         raise validation_error("Goal not found.", "goalId")
-    job = store.get_job(body.job_id)
+    job = catalogs_repo.get_job(conn, body.job_id)
     if not job:
         raise validation_error("Job not found.", "jobId")
     if body.kind == "partner" and not job.get("exclusive", False):

@@ -22,7 +22,7 @@ from app.schemas.profile import (
     Profile,
     ProfileInput,
 )
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 

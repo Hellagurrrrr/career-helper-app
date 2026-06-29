@@ -7,11 +7,12 @@ from fastapi import APIRouter, Depends, Query
 from app.core.deps import get_current_user
 from app.core.errors import not_found
 from app.db import get_conn
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.alumni import AlumniProfile
 from app.services import mock_match
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/alumni", tags=["alumni"])
 
@@ -34,7 +35,7 @@ def list_alumni(
     **Returns**:
         - list[dict]: The list of alumni.
     '''
-    alumni = list(store.alumni)
+    alumni = catalogs_repo.list_alumni(conn)
     if expertise:
         needle = expertise.strip().lower()
         alumni = [a for a in alumni if any(needle in e.lower() for e in a.get("expertise", []))]
@@ -60,7 +61,11 @@ def list_alumni(
 
 
 @router.get("/{alumni_id}", response_model=AlumniProfile)
-def get_alumni(alumni_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
+def get_alumni(
+    alumni_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
     '''
     Get an alumni profile.
     **Parameters**:
@@ -69,7 +74,7 @@ def get_alumni(alumni_id: str, user: UserRecord = Depends(get_current_user)) -> 
     **Returns**:
         - dict: The alumni profile.
     '''
-    alum = store.get_alumni(alumni_id)
+    alum = catalogs_repo.get_alumni(conn, alumni_id)
     if not alum:
         raise not_found("Profile not found.")
     return alum

@@ -8,10 +8,11 @@ from app.core.deps import get_current_user
 from app.core.errors import not_found
 from app.core.pagination import paginate
 from app.db import get_conn
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.jobs import JobDetail, JobListPage
 from app.services import mock_match
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -25,6 +26,7 @@ def list_jobs(
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = Query(default=None),
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
     '''
     List jobs.
@@ -37,7 +39,7 @@ def list_jobs(
     **Returns**:
         - list[Job]: The list of jobs.
     '''
-    jobs = list(store.jobs)
+    jobs = catalogs_repo.list_jobs(conn)
     if catalog_goal_id is not None:
         jobs = [j for j in jobs if j["catalogGoalId"] == catalog_goal_id]
     if partner is not None:
@@ -71,7 +73,7 @@ def get_job(
     **Returns**:
         - JobDetail: The job.
     '''
-    job = store.get_job(job_id)
+    job = catalogs_repo.get_job(conn, job_id)
     if not job:
         raise not_found("Job not found.")
     profile = profiles_repo.get(conn, user.id) or {}

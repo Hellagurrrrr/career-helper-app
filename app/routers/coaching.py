@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.deps import get_current_user
 from app.db import get_conn, get_connection
 from app.repositories import applications as applications_repo
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import mocks as mocks_repo
 from app.repositories import profiles as profiles_repo
@@ -35,7 +36,7 @@ from app.schemas.coaching import (
     ReviewStatusResponse,
 )
 from app.services import ai_service, applications_service
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(tags=["ai-coaching"])
 
@@ -50,8 +51,9 @@ def _get_app_or_404(conn: sqlite3.Connection, user_id: str, application_id: str)
 
 
 def _context(user_id: str, app: dict[str, Any]) -> dict[str, Any]:
-    job = store.get_job(app["jobId"]) or {}
-    goal = goals_repo.get(get_connection(), user_id, app["goalId"]) or {}
+    conn = get_connection()
+    job = catalogs_repo.get_job(conn, app["jobId"]) or {}
+    goal = goals_repo.get(conn, user_id, app["goalId"]) or {}
     return {
         "jobTitle": app["title"],
         "company": app["company"],
@@ -410,7 +412,7 @@ def start_mock(
     '''
     app = _get_app_or_404(conn, user.id, application_id)
     ctx = _context(user.id, app)
-    job = store.get_job(app["jobId"]) or {}
+    job = catalogs_repo.get_job(conn, app["jobId"]) or {}
     profile = profiles_repo.get(conn, user.id)
     questions = ai_service.interview_questions(profile, job)
 

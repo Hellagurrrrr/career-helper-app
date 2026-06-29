@@ -7,11 +7,12 @@ from fastapi import APIRouter, Depends
 from app.core.deps import get_current_user
 from app.core.errors import not_found, validation_error
 from app.db import get_conn
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.tailored_cv import TailoredCvRequest, TailoredCvResponse
 from app.services import ai_service
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/tailored-cv", tags=["tailored-cv"])
 
@@ -30,7 +31,7 @@ def generate(
     **Returns**:
         - dict: The tailored CV.
     '''
-    job = store.get_job(body.job_id)
+    job = catalogs_repo.get_job(conn, body.job_id)
     if not job:
         raise not_found("Job not found.")
     if not goals_repo.exists(conn, user.id, body.goal_id):

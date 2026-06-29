@@ -9,6 +9,7 @@ from app.core.deps import get_current_user
 from app.core.errors import not_found, validation_error
 from app.core.security import now_ms
 from app.db import get_conn
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import tracking as tracking_repo
 from app.schemas.tracking import (
@@ -18,7 +19,7 @@ from app.schemas.tracking import (
     WeekFocusRequest,
 )
 from app.services.goals_service import recompute_progress
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/goals/{goal_id}/tracking", tags=["tracking"])
 
@@ -42,8 +43,8 @@ def _get_module(tracking: dict[str, Any], skill_id: str) -> dict[str, Any]:
     return modules[skill_id]
 
 
-def _catalog_skill(goal: dict[str, Any], skill_id: str) -> dict[str, Any]:
-    catalog = store.get_catalog_goal(goal["catalogId"]) or {}
+def _catalog_skill(conn: sqlite3.Connection, goal: dict[str, Any], skill_id: str) -> dict[str, Any]:
+    catalog = catalogs_repo.get_catalog_goal(conn, goal["catalogId"]) or {}
     skill = next((s for s in catalog.get("coreSkills", []) if s["id"] == skill_id), None)
     if not skill:
         raise not_found("Skill module not found for this goal.")
@@ -91,7 +92,7 @@ def toggle_step(
         - GoalTracking: The tracking for the goal.
     '''
     goal = _get_goal_or_404(conn, user.id, goal_id)
-    skill = _catalog_skill(goal, skill_id)
+    skill = _catalog_skill(conn, goal, skill_id)
     if not 0 <= step_index < len(skill.get("whatToDo", [])):
         raise validation_error("step_index out of range.", "stepIndex")
 
@@ -133,7 +134,7 @@ def toggle_resource(
         - GoalTracking: The tracking for the goal.
     '''
     goal = _get_goal_or_404(conn, user.id, goal_id)
-    skill = _catalog_skill(goal, skill_id)
+    skill = _catalog_skill(conn, goal, skill_id)
     if not 0 <= resource_index < len(skill.get("resources", [])):
         raise validation_error("resource_index out of range.", "resourceIndex")
 
@@ -168,7 +169,7 @@ def rerate_dismiss(
         - GoalTracking: The tracking for the goal.
     '''
     goal = _get_goal_or_404(conn, user.id, goal_id)
-    _catalog_skill(goal, skill_id)
+    _catalog_skill(conn, goal, skill_id)
     tracking = tracking_repo.get_or_default(conn, goal_id)
     module = _get_module(tracking, skill_id)
     module["rerateDismissed"] = True

@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-import base64
-import json
-import re
 import shutil
 import sqlite3
-from collections.abc import Callable, Iterable, Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from app.core.config import settings
 
@@ -22,253 +17,32 @@ class UserRecord:
     created_at: int
 
 
-StoreValue = Any
-SaveCallback = Callable[[], None]
-
-
-def _json(value: Any) -> str:
-    return json.dumps(value, separators=(",", ":"), sort_keys=True)
-
-
-def _from_json(value: str | None, default: Any) -> Any:
-    if value in (None, ""):
-        return default
-    return json.loads(value)
-
-
-def _normalize_skill_text(raw: str) -> str:
-    text = raw.strip().lower()
-    text = re.sub(r"[._/+-]+", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    if text.endswith(" js"):
-        text = text[:-3].strip()
-    return text
-
-
-def _skill_id_for(name: str) -> str:
-    normalized = _normalize_skill_text(name)
-    slug = re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")
-    return f"skill-{slug or 'unknown'}"
-
-
-def _encode_legacy(value: StoreValue) -> StoreValue:
-    if isinstance(value, UserRecord):
-        return {"__type__": "UserRecord", "value": asdict(value)}
-    if isinstance(value, bytes):
-        return {"__type__": "bytes", "value": base64.b64encode(value).decode("ascii")}
-    if isinstance(value, (PersistentSet, set)):
-        return {"__type__": "set", "value": [_encode_legacy(v) for v in value]}
-    if isinstance(value, (PersistentDict, dict)):
-        return {str(k): _encode_legacy(v) for k, v in value.items()}
-    if isinstance(value, (PersistentList, list)):
-        return [_encode_legacy(v) for v in value]
-    return value
-
-
-def _decode_legacy(value: StoreValue) -> StoreValue:
-    if isinstance(value, dict) and value.get("__type__") == "UserRecord":
-        return UserRecord(**value["value"])
-    if isinstance(value, dict) and value.get("__type__") == "bytes":
-        return base64.b64decode(value["value"].encode("ascii"))
-    if isinstance(value, dict) and value.get("__type__") == "set":
-        return set(_decode_legacy(v) for v in value["value"])
-    if isinstance(value, dict):
-        return {k: _decode_legacy(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_decode_legacy(v) for v in value]
-    return value
-
-
-def _wrap(value: StoreValue, save: SaveCallback) -> StoreValue:
-    if isinstance(value, PersistentDict | PersistentList | PersistentSet):
-        value._set_save(save)
-        return value
-    if isinstance(value, dict):
-        return PersistentDict(value, save)
-    if isinstance(value, list):
-        return PersistentList(value, save)
-    if isinstance(value, set):
-        return PersistentSet(value, save)
-    return value
-
-
-class PersistentDict(dict):
-    def __init__(self, values: Mapping[str, StoreValue] | None = None, save: SaveCallback | None = None):
-        super().__init__()
-        self._save = save or (lambda: None)
-        for key, value in (values or {}).items():
-            dict.__setitem__(self, key, _wrap(value, self._save))
-
-    def _set_save(self, save: SaveCallback) -> None:
-        self._save = save
-        for value in self.values():
-            if isinstance(value, PersistentDict | PersistentList | PersistentSet):
-                value._set_save(save)
-
-    def __setitem__(self, key: str, value: StoreValue) -> None:
-        dict.__setitem__(self, key, _wrap(value, self._save))
-        self._save()
-
-    def __delitem__(self, key: str) -> None:
-        dict.__delitem__(self, key)
-        self._save()
-
-    def clear(self) -> None:
-        dict.clear(self)
-        self._save()
-
-    def pop(self, key: str, default: StoreValue = None) -> StoreValue:
-        value = dict.pop(self, key, default)
-        self._save()
-        return value
-
-    def popitem(self) -> tuple[str, StoreValue]:
-        value = dict.popitem(self)
-        self._save()
-        return value
-
-    def setdefault(self, key: str, default: StoreValue = None) -> StoreValue:
-        if key not in self:
-            self[key] = default
-        return dict.__getitem__(self, key)
-
-    def update(self, *args: Any, **kwargs: StoreValue) -> None:
-        updates = dict(*args, **kwargs)
-        for key, value in updates.items():
-            dict.__setitem__(self, key, _wrap(value, self._save))
-        self._save()
-
-
-class PersistentList(list):
-    def __init__(self, values: Iterable[StoreValue] | None = None, save: SaveCallback | None = None):
-        self._save = save or (lambda: None)
-        super().__init__(_wrap(value, self._save) for value in (values or []))
-
-    def _set_save(self, save: SaveCallback) -> None:
-        self._save = save
-        for value in self:
-            if isinstance(value, PersistentDict | PersistentList | PersistentSet):
-                value._set_save(save)
-
-    def __setitem__(self, key: int | slice, value: StoreValue) -> None:
-        if isinstance(key, slice):
-            list.__setitem__(self, key, [_wrap(v, self._save) for v in value])
-        else:
-            list.__setitem__(self, key, _wrap(value, self._save))
-        self._save()
-
-    def __delitem__(self, key: int | slice) -> None:
-        list.__delitem__(self, key)
-        self._save()
-
-    def append(self, value: StoreValue) -> None:
-        list.append(self, _wrap(value, self._save))
-        self._save()
-
-    def clear(self) -> None:
-        list.clear(self)
-        self._save()
-
-    def extend(self, values: Iterable[StoreValue]) -> None:
-        list.extend(self, [_wrap(value, self._save) for value in values])
-        self._save()
-
-    def insert(self, index: int, value: StoreValue) -> None:
-        list.insert(self, index, _wrap(value, self._save))
-        self._save()
-
-    def pop(self, index: int = -1) -> StoreValue:
-        value = list.pop(self, index)
-        self._save()
-        return value
-
-    def remove(self, value: StoreValue) -> None:
-        list.remove(self, value)
-        self._save()
-
-
-class PersistentSet(set):
-    def __init__(self, values: Iterable[StoreValue] | None = None, save: SaveCallback | None = None):
-        self._save = save or (lambda: None)
-        super().__init__(values or [])
-
-    def _set_save(self, save: SaveCallback) -> None:
-        self._save = save
-
-    def add(self, value: StoreValue) -> None:
-        set.add(self, value)
-        self._save()
-
-    def clear(self) -> None:
-        set.clear(self)
-        self._save()
-
-    def discard(self, value: StoreValue) -> None:
-        set.discard(self, value)
-        self._save()
-
-    def pop(self) -> StoreValue:
-        value = set.pop(self)
-        self._save()
-        return value
-
-    def remove(self, value: StoreValue) -> None:
-        set.remove(self, value)
-        self._save()
-
-
 class Store:
-    """Normalized SQLite repository with a compatibility dict/list interface."""
+    """Owns the SQLite connection and schema.
 
-    _catalog_buckets = ("goal_catalog", "jobs", "alumni")
-    # Only the read-only seed catalogs remain mirrored. Every per-user domain
-    # (auth/users, profiles, goals, applications, ... ) now lives in the
-    # repository layer (app/repositories/). This mirror is a read cache for the
-    # catalogs; migrating those would let the Persistent* machinery be deleted too.
-    _bucket_defaults: dict[str, StoreValue] = {
-        "goal_catalog": [],
-        "jobs": [],
-        "alumni": [],
-    }
+    Every domain -- per-user data and the read-only catalogs alike -- is accessed
+    through ``app/repositories/*`` now; nothing is mirrored in memory. This class
+    just opens the connection, ensures the schema, and offers a test-reset helper.
+    (Transitional: ``app/db.py`` borrows this connection; the end state folds this
+    into ``app/db.py`` and deletes this module.)
+    """
 
     def __init__(self, database_path: str | Path):
-        object.__setattr__(self, "database_path", Path(database_path))
-        object.__setattr__(self, "_loading", True)
+        self.database_path = Path(database_path)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_database_file()
         conn = sqlite3.connect(self.database_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
-        object.__setattr__(self, "_conn", conn)
+        self._conn = conn
         self._ensure_schema()
-
-        legacy = self._load_legacy_buckets() if not self._has_normalized_data() else {}
-        for name, default in self._bucket_defaults.items():
-            value = legacy.get(name, self._load_bucket(name, default))
-            object.__setattr__(self, name, _wrap(value, lambda bucket=name: self._save_bucket(bucket)))
-
-        object.__setattr__(self, "_loading", False)
-        if legacy:
-            for name in self._bucket_defaults:
-                self._save_bucket(name)
-            self._conn.execute("DROP TABLE IF EXISTS store_buckets")
-            self._conn.commit()
 
     def _ensure_database_file(self) -> None:
         if self.database_path.exists():
             return
-
         initial_path = self.database_path.with_name("career_helper_initial.sqlite3")
         if initial_path.exists() and initial_path.resolve() != self.database_path.resolve():
             shutil.copyfile(initial_path, self.database_path)
-
-    def __setattr__(self, name: str, value: StoreValue) -> None:
-        if name in self._bucket_defaults:
-            object.__setattr__(self, name, _wrap(value, lambda bucket=name: self._save_bucket(bucket)))
-            if not getattr(self, "_loading", False):
-                self._save_bucket(name)
-            return
-        object.__setattr__(self, name, value)
 
     def _ensure_schema(self) -> None:
         self._conn.executescript(
@@ -672,19 +446,6 @@ class Store:
         )
         self._conn.commit()
 
-    def _has_normalized_data(self) -> bool:
-        tables = ("catalog_goals", "users", "jobs", "alumni")
-        return any(self._conn.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone() for table in tables)
-
-    def _load_legacy_buckets(self) -> dict[str, Any]:
-        exists = self._conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'store_buckets'"
-        ).fetchone()
-        if not exists:
-            return {}
-        rows = self._conn.execute("SELECT name, value FROM store_buckets").fetchall()
-        return {row["name"]: _decode_legacy(json.loads(row["value"])) for row in rows}
-
     def reset_all(self, *, preserve_catalogs: bool = True) -> None:
         """Wipe all per-user data (used to isolate tests).
 
@@ -697,324 +458,19 @@ class Store:
         self._conn.execute("DELETE FROM tts_cache")
         self._conn.commit()
 
-    def _load_bucket(self, name: str, default: StoreValue) -> StoreValue:
-        loader = getattr(self, f"_load_{name}", None)
-        if loader:
-            return loader()
-        return default.copy() if isinstance(default, (dict, list, set)) else default
-
-    def _save_bucket(self, name: str) -> None:
-        if self._loading:
-            return
-        saver = getattr(self, f"_save_{name}", None)
-        if saver:
-            saver(getattr(self, name))
-            self._conn.commit()
-
-    def _get_or_create_skill(self, name: str, source: str = "seed") -> str:
-        display = name.strip()
-        normalized = _normalize_skill_text(display)
-        if not normalized:
-            display = "Unknown"
-            normalized = "unknown"
-        row = self._conn.execute(
-            "SELECT skill_id FROM skill_aliases WHERE normalized_alias = ?", (normalized,)
-        ).fetchone()
-        if row:
-            return row["skill_id"]
-        skill_id = _skill_id_for(display)
-        now = 0
-        self._conn.execute(
-            "INSERT OR IGNORE INTO skills(id, name, normalized_name, category, created_at, updated_at) "
-            "VALUES(?, ?, ?, NULL, ?, ?)",
-            (skill_id, display, normalized, now, now),
-        )
-        self._conn.execute(
-            "INSERT OR IGNORE INTO skill_aliases(alias, normalized_alias, skill_id, source, created_at) "
-            "VALUES(?, ?, ?, ?, ?)",
-            (display, normalized, skill_id, source, now),
-        )
-        return skill_id
-
-    def _skill_name(self, skill_id: str, fallback: str = "") -> str:
-        row = self._conn.execute("SELECT name FROM skills WHERE id = ?", (skill_id,)).fetchone()
-        return row["name"] if row else fallback
-
-    # NOTE: auth state (users, email index, refresh tokens) moved to
-    # app/repositories/auth.py; account orchestration (reset/delete) moved to
-    # app/services/account_service.py. Their former mirror methods were removed.
-
-    # ----- profiles -----
-    # NOTE: profiles persistence (profile + 5 child tables) moved to
-    # app/repositories/profiles.py. Its former _load/_save_profiles were removed.
-
-    # ----- tasks and onboarding -----
-    # NOTE: cv_extract_tasks persistence moved to app/repositories/cv_tasks.py
-    # (P0 sample slice). Its former _load_cv_tasks/_save_cv_tasks were removed.
-
-    # NOTE: onboarding chat persistence moved to app/repositories/onboarding_chats.py
-    # (P0 sample slice). Its former _load/_save_onboarding_chats were removed.
-
-    # ----- public catalogs -----
-    def _load_goal_catalog(self) -> list[dict[str, Any]]:
-        goals = []
-        for row in self._conn.execute("SELECT * FROM catalog_goals ORDER BY sort_order, id").fetchall():
-            goal = {
-                "id": row["id"],
-                "title": row["title"],
-                "description": row["description"],
-                "color": row["color"],
-                "defaultStatus": row["default_status"],
-                "matchSignals": [
-                    r["signal"] for r in self._conn.execute(
-                        "SELECT signal FROM catalog_goal_match_signals WHERE catalog_goal_id = ? ORDER BY sort_order",
-                        (row["id"],),
-                    )
-                ],
-                "coreSkills": [],
-            }
-            for skill in self._conn.execute(
-                "SELECT * FROM catalog_core_skills WHERE catalog_goal_id = ? ORDER BY sort_order",
-                (row["id"],),
-            ).fetchall():
-                core = {
-                    "id": skill["id"],
-                    "name": skill["name"],
-                    "description": skill["description"],
-                    "defaultStatus": skill["default_status"],
-                    "whatToDo": [
-                        r["text"] for r in self._conn.execute(
-                            "SELECT text FROM catalog_skill_steps WHERE skill_id = ? ORDER BY step_index",
-                            (skill["id"],),
-                        )
-                    ],
-                    "resources": [
-                        {"title": r["title"], "type": r["type"], "url": r["url"]}
-                        for r in self._conn.execute(
-                            "SELECT * FROM catalog_skill_resources WHERE skill_id = ? ORDER BY resource_index",
-                            (skill["id"],),
-                        )
-                    ],
-                    "jobSkillKeywords": [
-                        self._skill_name(r["skill_id"])
-                        for r in self._conn.execute(
-                            "SELECT skill_id FROM catalog_skill_job_keywords WHERE core_skill_id = ? ORDER BY sort_order",
-                            (skill["id"],),
-                        )
-                    ],
-                }
-                goal["coreSkills"].append(core)
-            goals.append(goal)
-        return goals
-
-    def _save_goal_catalog(self, goals: Iterable[dict[str, Any]]) -> None:
-        for table in (
-            "catalog_skill_job_keywords", "catalog_skill_resources", "catalog_skill_steps",
-            "catalog_core_skills", "catalog_goal_match_signals", "catalog_goals",
-        ):
-            self._conn.execute(f"DELETE FROM {table}")
-        for idx, goal in enumerate(goals):
-            self._conn.execute(
-                "INSERT INTO catalog_goals(id, title, description, color, default_status, sort_order) "
-                "VALUES(?, ?, ?, ?, ?, ?)",
-                (goal["id"], goal["title"], goal["description"], goal["color"], goal["defaultStatus"], idx),
-            )
-            for sidx, signal in enumerate(goal.get("matchSignals", [])):
-                self._conn.execute(
-                    "INSERT INTO catalog_goal_match_signals(catalog_goal_id, signal, sort_order) VALUES(?, ?, ?)",
-                    (goal["id"], signal, sidx),
-                )
-            for cidx, core in enumerate(goal.get("coreSkills", [])):
-                self._conn.execute(
-                    "INSERT INTO catalog_core_skills(id, catalog_goal_id, name, description, default_status, sort_order) "
-                    "VALUES(?, ?, ?, ?, ?, ?)",
-                    (core["id"], goal["id"], core["name"], core["description"], core["defaultStatus"], cidx),
-                )
-                for step_idx, step in enumerate(core.get("whatToDo", [])):
-                    self._conn.execute(
-                        "INSERT INTO catalog_skill_steps(skill_id, step_index, text) VALUES(?, ?, ?)",
-                        (core["id"], step_idx, step),
-                    )
-                for ridx, res in enumerate(core.get("resources", [])):
-                    self._conn.execute(
-                        "INSERT INTO catalog_skill_resources(skill_id, resource_index, title, type, url) "
-                        "VALUES(?, ?, ?, ?, ?)",
-                        (core["id"], ridx, res["title"], res["type"], res["url"]),
-                    )
-                for kidx, keyword in enumerate(core.get("jobSkillKeywords", [])):
-                    skill_id = self._get_or_create_skill(keyword)
-                    self._conn.execute(
-                        "INSERT OR REPLACE INTO catalog_skill_job_keywords(core_skill_id, skill_id, sort_order) "
-                        "VALUES(?, ?, ?)",
-                        (core["id"], skill_id, kidx),
-                    )
-
-    def _load_jobs(self) -> list[dict[str, Any]]:
-        jobs = []
-        for row in self._conn.execute("SELECT * FROM jobs ORDER BY id").fetchall():
-            job = {
-                "id": row["id"],
-                "catalogGoalId": row["catalog_goal_id"],
-                "title": row["title"],
-                "company": row["company"],
-                "companyTagline": row["company_tagline"],
-                "location": row["location"],
-                "type": row["type"],
-                "salary": row["salary"],
-                "posted": row["posted"],
-                "skills": [
-                    self._skill_name(r["skill_id"])
-                    for r in self._conn.execute(
-                        "SELECT skill_id FROM job_skills WHERE job_id = ? ORDER BY sort_order", (row["id"],)
-                    )
-                ],
-                "partner": bool(row["partner"]),
-                "exclusive": bool(row["exclusive"]),
-                "applicationUrl": row["application_url"],
-                "description": row["description"],
-            }
-            jobs.append({k: v for k, v in job.items() if v is not None})
-        return jobs
-
-    def _save_jobs(self, jobs: Iterable[dict[str, Any]]) -> None:
-        self._conn.execute("DELETE FROM job_skills")
-        self._conn.execute("DELETE FROM jobs")
-        for job in jobs:
-            self._conn.execute(
-                "INSERT INTO jobs(id, catalog_goal_id, title, company, company_tagline, location, type, salary, "
-                "posted, partner, exclusive, application_url, description) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (job["id"], job["catalogGoalId"], job["title"], job["company"], job.get("companyTagline"),
-                 job.get("location", ""), job.get("type", ""), job.get("salary", ""), job.get("posted", ""),
-                 int(bool(job.get("partner", False))), int(bool(job.get("exclusive", False))),
-                 job.get("applicationUrl"), job.get("description")),
-            )
-            for idx, skill in enumerate(job.get("skills", [])):
-                skill_id = self._get_or_create_skill(skill)
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO job_skills(job_id, skill_id, sort_order) VALUES(?, ?, ?)",
-                    (job["id"], skill_id, idx),
-                )
-
-    def _load_alumni(self) -> list[dict[str, Any]]:
-        alumni = []
-        for row in self._conn.execute("SELECT * FROM alumni ORDER BY id").fetchall():
-            work = self._conn.execute(
-                "SELECT * FROM alumni_work_experiences WHERE alumni_id = ? ORDER BY is_current DESC, sort_order LIMIT 1",
-                (row["id"],),
-            ).fetchone()
-            edu = self._conn.execute(
-                "SELECT * FROM alumni_education WHERE alumni_id = ? ORDER BY sort_order LIMIT 1",
-                (row["id"],),
-            ).fetchone()
-            alum = {
-                "id": row["id"],
-                "firstName": row["first_name"],
-                "lastInitial": row["last_initial"],
-                "role": work["title"] if work else row["headline"] or "",
-                "company": work["company"] if work else "",
-                "industry": work["industry"] if work else "",
-                "graduationYear": edu["graduation_year"] if edu and edu["graduation_year"] is not None else 0,
-                "major": edu["major"] if edu else "",
-                "university": edu["school"] if edu else "",
-                "yearsExperience": 0,
-                "bio": row["bio"],
-                "expertise": [],
-                "topics": [],
-                "responseTime": row["response_time"],
-                "availability": row["availability"],
-                "goalAlignment": [],
-                "avatarGradient": row["avatar_gradient"],
-                "linkedinUrl": row["linkedin_url"],
-            }
-            alum["expertise"] = [
-                r["display_label"] or self._skill_name(r["skill_id"])
-                for r in self._conn.execute(
-                    "SELECT * FROM alumni_expertise WHERE alumni_id = ? ORDER BY sort_order", (row["id"],)
-                )
-            ]
-            alum["topics"] = [
-                r["topic"] for r in self._conn.execute(
-                    "SELECT topic FROM alumni_topics WHERE alumni_id = ? ORDER BY sort_order", (row["id"],)
-                )
-            ]
-            alum["goalAlignment"] = [
-                r["catalog_goal_id"] for r in self._conn.execute(
-                    "SELECT catalog_goal_id FROM alumni_goal_alignment WHERE alumni_id = ?", (row["id"],)
-                )
-            ]
-            alumni.append(alum)
-        return alumni
-
-    def _save_alumni(self, alumni: Iterable[dict[str, Any]]) -> None:
-        for table in (
-            "alumni_goal_alignment", "alumni_topics", "alumni_expertise",
-            "alumni_work_experiences", "alumni_education", "alumni",
-        ):
-            self._conn.execute(f"DELETE FROM {table}")
-        for alum in alumni:
-            self._conn.execute(
-                "INSERT INTO alumni(id, first_name, last_initial, headline, bio, response_time, availability, "
-                "avatar_gradient, linkedin_url) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (alum["id"], alum["firstName"], alum["lastInitial"], alum.get("headline") or alum.get("role"),
-                 alum.get("bio", ""), alum.get("responseTime", ""), alum.get("availability", ""),
-                 alum.get("avatarGradient", ""), alum.get("linkedinUrl", "")),
-            )
-            self._conn.execute(
-                "INSERT INTO alumni_work_experiences(alumni_id, sort_order, title, company, industry, is_current) "
-                "VALUES(?, 0, ?, ?, ?, 1)",
-                (alum["id"], alum.get("role", ""), alum.get("company", ""), alum.get("industry", "")),
-            )
-            self._conn.execute(
-                "INSERT INTO alumni_education(alumni_id, sort_order, school, major, graduation_year) VALUES(?, 0, ?, ?, ?)",
-                (alum["id"], alum.get("university", ""), alum.get("major", ""), alum.get("graduationYear")),
-            )
-            for idx, expertise in enumerate(alum.get("expertise", [])):
-                skill_id = self._get_or_create_skill(expertise)
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO alumni_expertise(alumni_id, skill_id, display_label, sort_order) "
-                    "VALUES(?, ?, NULL, ?)",
-                    (alum["id"], skill_id, idx),
-                )
-            for idx, topic in enumerate(alum.get("topics", [])):
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO alumni_topics(alumni_id, topic, sort_order) VALUES(?, ?, ?)",
-                    (alum["id"], topic, idx),
-                )
-            for catalog_id in alum.get("goalAlignment", []):
-                self._conn.execute(
-                    "INSERT OR REPLACE INTO alumni_goal_alignment(alumni_id, catalog_goal_id) VALUES(?, ?)",
-                    (alum["id"], catalog_id),
-                )
-
-    # NOTE: goals (user_goals + confidence), tracking and saved_jobs persistence
-    # moved to app/repositories/{goals,tracking,saved_jobs}.py. Their former
-    # _load/_save mirror methods were removed.
-
-    # NOTE: applications, interview reviews, mock interviews and the TTS cache
-    # persistence moved to app/repositories/{applications,reviews,mocks,tts_cache}.py.
-    # Their former _load/_save mirror methods were removed.
-
-    # ----- meetings and notifications -----
-    # NOTE: meetings and notifications persistence moved to app/repositories/
-    # (P0 sample slices). Their former _load_*/_save_* mirror methods were removed.
-
-    # ----- catalogs (read-only) -----
-    def get_catalog_goal(self, catalog_id: str) -> dict[str, Any] | None:
-        return next((g for g in self.goal_catalog if g["id"] == catalog_id), None)
-
-    def get_job(self, job_id: str) -> dict[str, Any] | None:
-        return next((j for j in self.jobs if j["id"] == job_id), None)
-
-    def get_alumni(self, alumni_id: str) -> dict[str, Any] | None:
-        return next((a for a in self.alumni if a["id"] == alumni_id), None)
-
 
 store = Store(settings.local_database_path)
 
+# Catalog table -> human label, for the startup presence check.
+_CATALOG_TABLES = {"catalog_goals": "goal catalog", "jobs": "jobs", "alumni": "alumni"}
+
 
 def seed_catalogs() -> None:
-    """Ensure public catalogs are present in the local SQLite database."""
-    missing = [name for name in Store._catalog_buckets if not getattr(store, name)]
+    """Verify the read-only catalogs are present in the local SQLite database."""
+    missing = [
+        label
+        for table, label in _CATALOG_TABLES.items()
+        if not store._conn.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone()
+    ]
     if missing:
-        joined = ", ".join(missing)
-        raise RuntimeError(f"Missing catalog data in SQLite database: {joined}")
+        raise RuntimeError(f"Missing catalog data in SQLite database: {', '.join(missing)}")

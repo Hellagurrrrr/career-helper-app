@@ -8,10 +8,11 @@ from app.core.deps import get_current_user
 from app.core.errors import meeting_already_pending, not_found, validation_error
 from app.core.security import new_id, now_ms
 from app.db import get_conn
+from app.repositories import catalogs as catalogs_repo
 from app.repositories import meetings as meetings_repo
 from app.schemas.alumni import CreateMeetingRequest, MeetingRequest, UpdateMeetingRequest
 from app.services import notifications_service
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
@@ -51,7 +52,7 @@ def create_meeting(
     **Returns**:
         - MeetingRequest: The created meeting.
     '''
-    alum = store.get_alumni(body.alumni_id)
+    alum = catalogs_repo.get_alumni(conn, body.alumni_id)
     if not alum:
         raise validation_error("Alumni not found.", "alumniId")
     if not body.topic.strip():
@@ -117,7 +118,7 @@ def update_meeting(
         raise not_found("Meeting request not found.")
 
     if body.status == "completed":
-        alum = store.get_alumni(meeting["alumni_id"]) or {}
+        alum = catalogs_repo.get_alumni(conn, meeting["alumni_id"]) or {}
         notifications_service.push(
             user.id,
             type="meeting",
