@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 
 from fastapi import APIRouter, Depends
 
@@ -21,6 +22,8 @@ from app.core.security import (
     now_ms,
     verify_password,
 )
+from app.db import get_conn
+from app.repositories import auth as auth_repo
 from app.schemas.auth import (
     AuthResponse,
     AuthTokens,
@@ -29,7 +32,7 @@ from app.schemas.auth import (
     RefreshRequest,
     RegisterRequest,
 )
-from app.services.store import UserRecord, store
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -51,16 +54,17 @@ def _to_auth_user(user: UserRecord) -> AuthUser:
     return AuthUser(id=user.id, email=user.email, name=user.name, created_at=user.created_at)
 
 
-def _issue_tokens(user_id: str) -> AuthTokens:
+def _issue_tokens(conn: sqlite3.Connection, user_id: str) -> AuthTokens:
     '''
     Issue tokens for a user.
     Args:
+        conn: sqlite3.Connection: The database connection.
         user_id: str: The user ID to issue tokens for.
     Returns:
         AuthTokens: The tokens for the user.
     '''
     jti = new_id("rt")
-    store.refresh_jti[jti] = user_id
+    auth_repo.add_refresh_token(conn, jti, user_id)
     return AuthTokens(
         access_token=create_access_token(user_id),
         refresh_token=create_refresh_token(user_id, jti),
@@ -68,7 +72,7 @@ def _issue_tokens(user_id: str) -> AuthTokens:
 
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
-def register(body: RegisterRequest) -> AuthResponse:
+def register(body: RegisterRequest, conn: sqlite3.Connection = Depends(get_conn)) -> AuthResponse:
     '''
     Register a new user.
     Args:
@@ -90,7 +94,7 @@ def register(body: RegisterRequest) -> AuthResponse:
         raise validation_error("Please enter a valid email.", "email")
     if len(body.password) < 6:
         raise validation_error("Password must be at least 6 characters.", "password")
-    if email in store.email_index:
+    if auth_repo.email_exists(conn, email):
         raise email_taken("An account with this email already exists.")
 
     user = UserRecord(
@@ -100,15 +104,13 @@ def register(body: RegisterRequest) -> AuthResponse:
         password_hash=hash_password(body.password),
         created_at=now_ms(),
     )
-    store.users[user.id] = user
-    store.email_index[email] = user.id
-    store.ensure_user_buckets(user.id)
+    auth_repo.create_user(conn, user)
 
-    return AuthResponse(user=_to_auth_user(user), tokens=_issue_tokens(user.id))
+    return AuthResponse(user=_to_auth_user(user), tokens=_issue_tokens(conn, user.id))
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(body: LoginRequest) -> AuthResponse:
+def login(body: LoginRequest, conn: sqlite3.Connection = Depends(get_conn)) -> AuthResponse:
     '''
     Login a user.
     Args:
@@ -120,17 +122,16 @@ def login(body: LoginRequest) -> AuthResponse:
         wrong_password: If the password is incorrect.
     '''
     email = _normalize_email(body.email)
-    user_id = store.email_index.get(email)
-    if not user_id:
+    user = auth_repo.get_user_by_email(conn, email)
+    if not user:
         raise account_not_found("No account found for this email.")
-    user = store.users[user_id]
     if not verify_password(body.password, user.password_hash):
         raise wrong_password("Incorrect password.")
-    return AuthResponse(user=_to_auth_user(user), tokens=_issue_tokens(user.id))
+    return AuthResponse(user=_to_auth_user(user), tokens=_issue_tokens(conn, user.id))
 
 
 @router.post("/refresh", response_model=AuthTokens)
-def refresh(body: RefreshRequest) -> AuthTokens:
+def refresh(body: RefreshRequest, conn: sqlite3.Connection = Depends(get_conn)) -> AuthTokens:
     '''
     Refresh a user's tokens.
     Args:
@@ -143,15 +144,23 @@ def refresh(body: RefreshRequest) -> AuthTokens:
     payload = decode_token(body.refresh_token, expected_type="refresh")
     jti = payload.get("jti")
     user_id = payload.get("sub")
-    if not jti or store.refresh_jti.get(jti) != user_id or user_id not in store.users:
+    if (
+        not jti
+        or auth_repo.refresh_token_user(conn, jti) != user_id
+        or auth_repo.get_user(conn, user_id) is None
+    ):
         raise unauthorized("Refresh token has been revoked.")
     # Rotate: revoke the old jti and issue a fresh pair.
-    store.refresh_jti.pop(jti, None)
-    return _issue_tokens(user_id)
+    auth_repo.revoke_refresh_token(conn, jti)
+    return _issue_tokens(conn, user_id)
 
 
 @router.post("/logout", status_code=204, response_model=None)
-def logout(body: RefreshRequest, user: UserRecord = Depends(get_current_user)) -> None:
+def logout(
+    body: RefreshRequest,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> None:
     '''
     Logout a user.
     Args:
@@ -165,7 +174,7 @@ def logout(body: RefreshRequest, user: UserRecord = Depends(get_current_user)) -
     payload = decode_token(body.refresh_token, expected_type="refresh")
     jti = payload.get("jti")
     if jti:
-        store.refresh_jti.pop(jti, None)
+        auth_repo.revoke_refresh_token(conn, jti)
 
 
 @router.get("/me", response_model=AuthUser)

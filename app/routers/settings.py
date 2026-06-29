@@ -8,6 +8,7 @@ from app.core.deps import get_current_user
 from app.core.errors import validation_error, wrong_password
 from app.core.security import hash_password, now_ms, verify_password
 from app.db import get_conn
+from app.repositories import auth as auth_repo
 from app.repositories import user_settings as user_settings_repo
 from app.schemas.settings import (
     ChangePasswordRequest,
@@ -17,7 +18,8 @@ from app.schemas.settings import (
     SettingsResponse,
     SettingsStatusResponse,
 )
-from app.services.store import UserRecord, store
+from app.services import account_service
+from app.services.store import UserRecord
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -51,6 +53,7 @@ def get_settings(
 def change_password(
     body: ChangePasswordRequest,
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> SettingsStatusResponse:
     """Change the current account password (use-cases SET-03~05)."""
     if len(body.new_password) < 6:
@@ -58,8 +61,8 @@ def change_password(
     if not verify_password(body.current_password, user.password_hash):
         raise wrong_password("Current password is incorrect.")
 
-    store.update_user_password(user.id, hash_password(body.new_password))
-    store.revoke_refresh_tokens_for_user(user.id)
+    auth_repo.update_password(conn, user.id, hash_password(body.new_password))
+    auth_repo.revoke_all_refresh_tokens(conn, user.id)
     return SettingsStatusResponse(status="updated")
 
 
@@ -77,14 +80,19 @@ def update_notification_preferences(
 
 
 @router.post("/reset-demo-data", response_model=SettingsStatusResponse)
-def reset_demo_data(user: UserRecord = Depends(get_current_user)) -> SettingsStatusResponse:
+def reset_demo_data(
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> SettingsStatusResponse:
     """Clear demo data while preserving the account and settings (use-case SET-07)."""
-    store.reset_user_data(user.id)
-    store.ensure_user_buckets(user.id)
+    account_service.reset_user_data(conn, user.id)
     return SettingsStatusResponse(status="reset")
 
 
 @router.delete("/account", status_code=204, response_model=None)
-def delete_account(user: UserRecord = Depends(get_current_user)) -> None:
+def delete_account(
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> None:
     """Delete the account and all user-owned demo data (use-case SET-08)."""
-    store.delete_account(user.id)
+    account_service.delete_account(conn, user.id)

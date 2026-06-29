@@ -5,7 +5,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.errors import unauthorized
 from app.core.security import decode_token
-from app.services.store import UserRecord, store
+from app.db import get_connection
+from app.repositories import auth as auth_repo
+from app.services.store import UserRecord
 
 # auto_error=False so we can raise the unified UNAUTHORIZED envelope ourselves.
 _bearer = HTTPBearer(auto_error=False)
@@ -18,8 +20,8 @@ def get_current_user(
         raise unauthorized("Authentication required.")
     payload = decode_token(creds.credentials, expected_type="access")
     user_id = payload.get("sub")
-    user = store.users.get(user_id) if user_id else None
+    # Read-only user lookup on the shared connection (no write transaction needed).
+    user = auth_repo.get_user(get_connection(), user_id) if user_id else None
     if user is None:
         raise unauthorized("Account no longer exists.")
-    store.ensure_user_buckets(user.id)
     return user

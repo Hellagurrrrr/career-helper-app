@@ -221,15 +221,11 @@ class Store:
     """Normalized SQLite repository with a compatibility dict/list interface."""
 
     _catalog_buckets = ("goal_catalog", "jobs", "alumni")
+    # Only the read-only seed catalogs remain mirrored. Every per-user domain
+    # (auth/users, profiles, goals, applications, ... ) now lives in the
+    # repository layer (app/repositories/). This mirror is a read cache for the
+    # catalogs; migrating those would let the Persistent* machinery be deleted too.
     _bucket_defaults: dict[str, StoreValue] = {
-        "users": {},
-        "email_index": {},
-        "refresh_jti": {},
-        # NOTE: every per-user domain (meetings, notifications, user_settings,
-        # cv_extract_tasks, onboarding chats, profiles, goals, tracking, saved_jobs,
-        # applications, reviews, mocks, tts_cache) now lives in the repository layer
-        # (app/repositories/). Only auth state and the read-only catalogs remain
-        # mirrored here, pending the #7 auth migration.
         "goal_catalog": [],
         "jobs": [],
         "alumni": [],
@@ -690,14 +686,16 @@ class Store:
         return {row["name"]: _decode_legacy(json.loads(row["value"])) for row in rows}
 
     def reset_all(self, *, preserve_catalogs: bool = True) -> None:
-        for name, default in self._bucket_defaults.items():
-            if preserve_catalogs and name in self._catalog_buckets:
-                continue
-            setattr(self, name, default.copy() if isinstance(default, (dict, list, set)) else default)
+        """Wipe all per-user data (used to isolate tests).
 
-    def ensure_user_buckets(self, user_id: str) -> None:
-        # All per-user domains are repository-owned now; nothing to pre-seed.
-        return
+        ``users`` is the root of the FK graph, so deleting it cascades every
+        per-user domain; ``tts_cache`` has no FK and is cleared explicitly. The
+        read-only catalogs are left intact (``preserve_catalogs`` is always True
+        in practice).
+        """
+        self._conn.execute("DELETE FROM users")
+        self._conn.execute("DELETE FROM tts_cache")
+        self._conn.commit()
 
     def _load_bucket(self, name: str, default: StoreValue) -> StoreValue:
         loader = getattr(self, f"_load_{name}", None)
@@ -742,74 +740,9 @@ class Store:
         row = self._conn.execute("SELECT name FROM skills WHERE id = ?", (skill_id,)).fetchone()
         return row["name"] if row else fallback
 
-    # ----- auth -----
-    def _load_users(self) -> dict[str, UserRecord]:
-        rows = self._conn.execute("SELECT * FROM users").fetchall()
-        return {
-            row["id"]: UserRecord(
-                id=row["id"],
-                email=row["email"],
-                name=row["name"],
-                password_hash=row["password_hash"],
-                created_at=row["created_at"],
-            )
-            for row in rows
-        }
-
-    def _save_users(self, users: Mapping[str, UserRecord]) -> None:
-        # Upsert present users and delete only the ones that disappeared from the
-        # mirror. The previous "DELETE FROM users; reinsert all" rewrite cascaded
-        # (ON DELETE CASCADE) into every child table on *every* save -- harmless
-        # while all children were also mirrored, but it would silently wipe rows
-        # owned by the repository layer (e.g. meetings). Targeted deletes keep the
-        # reset semantics (empty mirror -> delete all) without the collateral.
-        ids = list(users.keys())
-        if ids:
-            placeholders = ",".join("?" * len(ids))
-            self._conn.execute(f"DELETE FROM users WHERE id NOT IN ({placeholders})", ids)
-        else:
-            self._conn.execute("DELETE FROM users")
-        for user in users.values():
-            self._conn.execute(
-                "INSERT INTO users(id, email, name, password_hash, created_at) VALUES(?, ?, ?, ?, ?) "
-                "ON CONFLICT(id) DO UPDATE SET email=excluded.email, name=excluded.name, "
-                "password_hash=excluded.password_hash, created_at=excluded.created_at",
-                (user.id, user.email, user.name, user.password_hash, user.created_at),
-            )
-
-    def _load_email_index(self) -> dict[str, str]:
-        return {u.email.lower(): u.id for u in self._load_users().values()}
-
-    def _save_email_index(self, _email_index: Mapping[str, str]) -> None:
-        return
-
-    def _load_refresh_jti(self) -> dict[str, str]:
-        rows = self._conn.execute("SELECT jti, user_id FROM refresh_tokens WHERE revoked_at IS NULL").fetchall()
-        return {row["jti"]: row["user_id"] for row in rows}
-
-    def _save_refresh_jti(self, refresh_jti: Mapping[str, str]) -> None:
-        self._conn.execute("DELETE FROM refresh_tokens")
-        for jti, user_id in refresh_jti.items():
-            self._conn.execute(
-                "INSERT INTO refresh_tokens(jti, user_id, created_at) VALUES(?, ?, 0)",
-                (jti, user_id),
-            )
-
-    # NOTE: user_settings persistence moved to app/repositories/user_settings.py
-    # (P0 sample slice). Its former _load_*/_save_* mirror methods were removed.
-
-    def update_user_password(self, user_id: str, password_hash: str) -> None:
-        user = self.users.get(user_id)
-        if user is None:
-            return
-        user.password_hash = password_hash
-        self._conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
-        self._conn.commit()
-
-    def revoke_refresh_tokens_for_user(self, user_id: str) -> None:
-        for jti, uid in list(self.refresh_jti.items()):
-            if uid == user_id:
-                self.refresh_jti.pop(jti, None)
+    # NOTE: auth state (users, email index, refresh tokens) moved to
+    # app/repositories/auth.py; account orchestration (reset/delete) moved to
+    # app/services/account_service.py. Their former mirror methods were removed.
 
     # ----- profiles -----
     # NOTE: profiles persistence (profile + 5 child tables) moved to
@@ -1065,46 +998,7 @@ class Store:
     # NOTE: meetings and notifications persistence moved to app/repositories/
     # (P0 sample slices). Their former _load_*/_save_* mirror methods were removed.
 
-    # ----- helpers -----
-    def reset_user_data(self, user_id: str) -> None:
-        """Clear demo data but keep the account (use-case SET-07)."""
-        from app.repositories import goals as goals_repo
-        from app.repositories import meetings as meetings_repo
-        from app.repositories import notifications as notifications_repo
-        from app.repositories import onboarding_chats as onboarding_chats_repo
-        from app.repositories import profiles as profiles_repo
-        from app.repositories import tts_cache as tts_cache_repo
-
-        # Purge cached TTS audio before the goal cascade removes the mock turns it
-        # is keyed by (tts_cache has no FK to cascade through).
-        tts_cache_repo.purge_for_user(self._conn, user_id)
-        meetings_repo.delete_for_user(self._conn, user_id)
-        notifications_repo.delete_for_user(self._conn, user_id)
-        onboarding_chats_repo.delete(self._conn, user_id)
-        profiles_repo.delete(self._conn, user_id)
-        # Deleting the user's goals cascades to tracking, saved_jobs, applications,
-        # interview reviews and mock sessions.
-        goals_repo.delete_all_for_user(self._conn, user_id)
-        # These repo deletes run outside any get_conn scope, so commit them here;
-        # otherwise a later request that rolls back would resurrect the data.
-        self._conn.commit()
-
-    def delete_account(self, user_id: str) -> None:
-        """Remove the account and all of its data (use-case SET-08)."""
-        from app.repositories import tts_cache as tts_cache_repo
-
-        # Purge TTS audio before the user cascade drops the mock turns it keys on.
-        tts_cache_repo.purge_for_user(self._conn, user_id)
-        user = self.users.pop(user_id, None)  # _save_users cascades all the user's rows
-        if user:
-            self.email_index.pop(user.email.lower(), None)
-        for jti, uid in list(self.refresh_jti.items()):
-            if uid == user_id:
-                self.refresh_jti.pop(jti, None)
-        # Every per-user domain is removed by the users ON DELETE CASCADE once the
-        # user row is dropped above.
-        self._conn.commit()
-
+    # ----- catalogs (read-only) -----
     def get_catalog_goal(self, catalog_id: str) -> dict[str, Any] | None:
         return next((g for g in self.goal_catalog if g["id"] == catalog_id), None)
 

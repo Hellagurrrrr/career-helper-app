@@ -46,6 +46,23 @@ def test_login_cases(client):
     assert wp.status_code == 401 and wp.json()["error"]["code"] == "WRONG_PASSWORD"
 
 
+def test_auth_refresh_rotation_and_isolation(client):
+    # Regression guard for the auth repository slice (#7): refresh rotates (old
+    # token revoked), and a second account does not disturb the first.
+    a = register(client, email="a@example.com").json()
+    refresh_a = a["tokens"]["refreshToken"]
+
+    rotated = client.post("/v1/auth/refresh", json={"refreshToken": refresh_a})
+    assert rotated.status_code == 200
+    # The old refresh token is now revoked.
+    assert client.post("/v1/auth/refresh", json={"refreshToken": refresh_a}).status_code == 401
+
+    # A second registration is isolated; the first account still authenticates.
+    register(client, email="b@example.com")
+    me_a = client.get("/v1/auth/me", headers={"Authorization": f"Bearer {a['tokens']['accessToken']}"})
+    assert me_a.status_code == 200 and me_a.json()["email"] == "a@example.com"
+
+
 def test_requires_auth(client):
     # NAV-01: protected route without token
     resp = client.get("/v1/profile")

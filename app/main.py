@@ -67,14 +67,21 @@ if FRONTEND_DIST.exists() and FRONTEND_INDEX.exists():
 
 
 if settings.enable_dev_reset:
+    import sqlite3
+
     from app.core.deps import get_current_user
-    from app.services.store import UserRecord, store
+    from app.db import get_conn
+    from app.services import account_service
+    from app.services.store import UserRecord
     from fastapi import Depends
 
     @app.post("/__dev/reset", tags=["meta"], status_code=204, response_model=None)
-    def dev_reset(user: "UserRecord" = Depends(get_current_user)) -> None:
+    def dev_reset(
+        user: "UserRecord" = Depends(get_current_user),
+        conn: "sqlite3.Connection" = Depends(get_conn),
+    ) -> None:
         """Dev-only: clear the current user's demo data (use-case SET-07)."""
-        store.reset_user_data(user.id)
+        account_service.reset_user_data(conn, user.id)
 
 
 if settings.enable_dev_reset:
