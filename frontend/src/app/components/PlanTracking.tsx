@@ -337,6 +337,15 @@ function WeekFocusCard({
   );
 }
 
+// "Where you are" copy, derived from the user's actual module progress (the old
+// code showed the catalog's raw default_status enum, e.g. "not_started").
+function whereYouAreText(progress: number, stepCount: number): string {
+  if (stepCount === 0) return "No action steps yet for this module.";
+  if (progress <= 0) return "You haven't started this module yet — pick a step below to begin.";
+  if (progress >= 100) return "You've completed every step in this module. Nice work!";
+  return `You're ${progress}% through this module — keep going on the steps below.`;
+}
+
 function ModuleAccordionItem({
   goalId,
   catalogGoalId,
@@ -458,7 +467,7 @@ function ModuleAccordionItem({
               </h4>
             </div>
             <p className="text-sm leading-relaxed text-slate-700">
-              {module.defaultStatus}
+              {whereYouAreText(progress, stepCount)}
             </p>
             {(alumniCount > 0 || jobCount > 0) && (
               <div className="mt-3 flex flex-wrap gap-2">

@@ -39,28 +39,24 @@ export function useTracking() {
   const { goals } = useGoals();
   const enabled = Boolean(currentUser);
 
-  // One query per goal (the API is per-goal). useQueries handles the dynamic list.
-  const results = useQueries({
+  // One query per goal (the API is per-goal). `combine` aggregates them into the
+  // { goalId: tracking } map consumers expect; React Query memoizes the result so
+  // `state` stays referentially stable until a goal's tracking actually changes.
+  const state = useQueries({
     queries: goals.map((g) => ({
       queryKey: trackingKey(g.id),
       queryFn: () => fetchTracking(g.id),
       enabled,
     })),
+    combine: (results): TrackingState => {
+      const next: TrackingState = {};
+      goals.forEach((g, i) => {
+        const data = results[i]?.data;
+        if (data) next[g.id] = data;
+      });
+      return next;
+    },
   });
-
-  // Aggregate into the { goalId: tracking } map the consumers expect. Memoized
-  // on a (goalId, dataUpdatedAt) signature so `state` stays referentially stable
-  // unless a goal's tracking actually changes -- consumer effects depend on it.
-  const signature = goals.map((g, i) => `${g.id}:${results[i]?.dataUpdatedAt ?? 0}`).join("|");
-  const state = React.useMemo<TrackingState>(() => {
-    const next: TrackingState = {};
-    goals.forEach((g, i) => {
-      const data = results[i]?.data;
-      if (data) next[g.id] = data;
-    });
-    return next;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
 
   const refreshTracking = React.useCallback(
     async (goalId: string): Promise<GoalTracking | null> => {
@@ -83,7 +79,12 @@ export function useTracking() {
       void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/modules/${moduleId}/steps/${stepIdx}`, {
         method: "PUT",
         body: { completed: !has },
-      }).then((tracking) => queryClient.setQueryData(trackingKey(goalId), tracking));
+      }).then((tracking) => {
+        queryClient.setQueryData(trackingKey(goalId), tracking);
+        // The backend recomputes the goal's progress on step completion (NT-05),
+        // so refetch goals to keep goal-level progress in sync.
+        void queryClient.invalidateQueries({ queryKey: ["goals"] });
+      });
     },
     [state]
   );
