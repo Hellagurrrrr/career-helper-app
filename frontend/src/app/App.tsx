@@ -5,10 +5,8 @@ import { router } from "./routes";
 import { queryClient } from "./lib/query-client";
 import { AuthProvider } from "./lib/auth";
 import { GoalsProvider } from "./lib/goals";
-import { MeetingsProvider } from "./lib/alumni";
 import { TrackingProvider } from "./lib/tracking";
 import { NotificationsProvider } from "./lib/notifications";
-import { JobApplicationsProvider } from "./lib/job-applications";
 import { InterviewReviewsProvider } from "./lib/interview-reviews";
 import { MockInterviewsProvider } from "./lib/mock-interviews";
 
@@ -23,15 +21,11 @@ export default function App() {
         <NotificationsProvider>
           <GoalsProvider>
             <TrackingProvider>
-              <MeetingsProvider>
-                <JobApplicationsProvider>
-                  <InterviewReviewsProvider>
-                    <MockInterviewsProvider>
-                      <RouterProvider router={router} />
-                    </MockInterviewsProvider>
-                  </InterviewReviewsProvider>
-                </JobApplicationsProvider>
-              </MeetingsProvider>
+              <InterviewReviewsProvider>
+                <MockInterviewsProvider>
+                  <RouterProvider router={router} />
+                </MockInterviewsProvider>
+              </InterviewReviewsProvider>
             </TrackingProvider>
           </GoalsProvider>
         </NotificationsProvider>

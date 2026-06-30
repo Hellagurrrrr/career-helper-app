@@ -1,6 +1,10 @@
-import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "./api";
 import { useAuth } from "./auth";
+import { queryClient } from "./query-client";
+
+export const alumniKey = ["alumni"] as const;
+export const meetingsKey = ["meetings"] as const;
 
 export type AlumniProfile = {
   id: string;
@@ -98,121 +102,78 @@ export type MeetingRequest = {
   completedAt?: number;
 };
 
-type MeetingsContextValue = {
-  meetings: MeetingRequest[];
-  alumni: AlumniProfile[];
-  refreshMeetings: () => Promise<void>;
-  refreshAlumni: () => Promise<void>;
-  requestChat: (input: Omit<MeetingRequest, "id" | "submittedAt" | "status">) => MeetingRequest;
-  withdrawRequest: (id: string) => void;
-  completeRequest: (id: string) => void;
-  getRequestForAlumni: (alumniId: string) => MeetingRequest | undefined;
-};
+function setMeetingsCache(updater: (prev: MeetingRequest[]) => MeetingRequest[]): void {
+  queryClient.setQueryData<MeetingRequest[]>(meetingsKey, (prev) => updater(prev ?? []));
+}
 
-const MeetingsContext = React.createContext<MeetingsContextValue | null>(null);
-
-export function MeetingsProvider({ children }: { children: React.ReactNode }) {
+export function useMeetings() {
   const { currentUser } = useAuth();
-  const [meetings, setMeetings] = React.useState<MeetingRequest[]>([]);
-  const [alumni, setAlumni] = React.useState<AlumniProfile[]>([]);
+  const enabled = Boolean(currentUser);
 
-  const refreshAlumni = React.useCallback(async () => {
-    if (!currentUser) {
-      setAlumni([]);
-      setAlumniCache([]);
-      return;
-    }
-    const items = await loadAlumniCatalog();
-    setAlumni(items);
-  }, [currentUser]);
+  // loadAlumniCatalog() keeps the module-level ALUMNI_CATALOG cache warm for the
+  // imperative readers (getAlumni / rankAlumniForUser).
+  const alumniQuery = useQuery({ queryKey: alumniKey, queryFn: () => loadAlumniCatalog(), enabled });
+  const meetingsQuery = useQuery({
+    queryKey: meetingsKey,
+    queryFn: () => apiRequest<MeetingRequest[]>("/meetings"),
+    enabled,
+  });
 
-  const refreshMeetings = React.useCallback(async () => {
-    if (!currentUser) {
-      setMeetings([]);
-      return;
-    }
-    const items = await apiRequest<MeetingRequest[]>("/meetings");
-    setMeetings(items);
-  }, [currentUser]);
+  const meetings = meetingsQuery.data ?? [];
+  const alumni = alumniQuery.data ?? [];
 
-  React.useEffect(() => {
-    void refreshAlumni();
-    void refreshMeetings();
-  }, [refreshAlumni, refreshMeetings]);
+  const refreshMeetings = async () => {
+    await meetingsQuery.refetch();
+  };
 
-  const requestChat = React.useCallback<MeetingsContextValue["requestChat"]>(
-    (input) => {
+  return {
+    meetings,
+    alumni,
+    refreshMeetings,
+    refreshAlumni: async () => {
+      await alumniQuery.refetch();
+    },
+    requestChat: (input: Omit<MeetingRequest, "id" | "submittedAt" | "status">): MeetingRequest => {
       const optimistic: MeetingRequest = {
         ...input,
         id: `pending_${Date.now().toString(36)}`,
         submittedAt: Date.now(),
         status: "pending",
       };
-      setMeetings((prev) => {
+      setMeetingsCache((prev) => {
         const existing = prev.find((m) => m.alumniId === input.alumniId && m.status === "pending");
         return existing ? prev : [optimistic, ...prev];
       });
-      void apiRequest<MeetingRequest>("/meetings", {
-        method: "POST",
-        body: input,
-      })
-        .then((saved) =>
-          setMeetings((prev) => [saved, ...prev.filter((m) => m.id !== optimistic.id)])
-        )
-        .catch(() => void refreshMeetings());
+      void apiRequest<MeetingRequest>("/meetings", { method: "POST", body: input })
+        .then((saved) => setMeetingsCache((prev) => [saved, ...prev.filter((m) => m.id !== optimistic.id)]))
+        .catch(() => {
+          void refreshMeetings();
+        });
       return optimistic;
     },
-    [refreshMeetings]
-  );
-
-  const withdrawRequest = React.useCallback((id: string) => {
-    setMeetings((prev) => prev.filter((m) => m.id !== id));
-    if (!id.startsWith("pending_")) {
-      void apiRequest<MeetingRequest>(`/meetings/${id}`, {
-        method: "PATCH",
-        body: { status: "withdrawn" },
-      }).then(() => refreshMeetings());
-    }
-  }, [refreshMeetings]);
-
-  const completeRequest = React.useCallback((id: string) => {
-    setMeetings((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status: "completed", completedAt: Date.now() } : m))
-    );
-    if (!id.startsWith("pending_")) {
-      void apiRequest<MeetingRequest>(`/meetings/${id}`, {
-        method: "PATCH",
-        body: { status: "completed" },
-      }).then(() => refreshMeetings());
-    }
-  }, [refreshMeetings]);
-
-  const getRequestForAlumni = React.useCallback(
-    (alumniId: string) => meetings.find((m) => m.alumniId === alumniId && m.status === "pending"),
-    [meetings]
-  );
-
-  const value = React.useMemo(
-    () => ({
-      meetings,
-      alumni,
-      refreshMeetings,
-      refreshAlumni,
-      requestChat,
-      withdrawRequest,
-      completeRequest,
-      getRequestForAlumni,
-    }),
-    [meetings, alumni, refreshMeetings, refreshAlumni, requestChat, withdrawRequest, completeRequest, getRequestForAlumni]
-  );
-
-  return <MeetingsContext.Provider value={value}>{children}</MeetingsContext.Provider>;
-}
-
-export function useMeetings(): MeetingsContextValue {
-  const ctx = React.useContext(MeetingsContext);
-  if (!ctx) throw new Error("useMeetings must be used inside MeetingsProvider");
-  return ctx;
+    withdrawRequest: (id: string) => {
+      setMeetingsCache((prev) => prev.filter((m) => m.id !== id));
+      if (!id.startsWith("pending_")) {
+        void apiRequest<MeetingRequest>(`/meetings/${id}`, {
+          method: "PATCH",
+          body: { status: "withdrawn" },
+        }).then(() => refreshMeetings());
+      }
+    },
+    completeRequest: (id: string) => {
+      setMeetingsCache((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: "completed", completedAt: Date.now() } : m))
+      );
+      if (!id.startsWith("pending_")) {
+        void apiRequest<MeetingRequest>(`/meetings/${id}`, {
+          method: "PATCH",
+          body: { status: "completed" },
+        }).then(() => refreshMeetings());
+      }
+    },
+    getRequestForAlumni: (alumniId: string) =>
+      meetings.find((m) => m.alumniId === alumniId && m.status === "pending"),
+  };
 }
 
 export function formatRelativeDate(ts: number): string {
