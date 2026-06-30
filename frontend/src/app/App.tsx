@@ -4,9 +4,7 @@ import { RouterProvider } from "react-router";
 import { router } from "./routes";
 import { queryClient } from "./lib/query-client";
 import { AuthProvider } from "./lib/auth";
-import { GoalsProvider } from "./lib/goals";
 import { TrackingProvider } from "./lib/tracking";
-import { NotificationsProvider } from "./lib/notifications";
 import { InterviewReviewsProvider } from "./lib/interview-reviews";
 import { MockInterviewsProvider } from "./lib/mock-interviews";
 
@@ -18,17 +16,13 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <NotificationsProvider>
-          <GoalsProvider>
-            <TrackingProvider>
-              <InterviewReviewsProvider>
-                <MockInterviewsProvider>
-                  <RouterProvider router={router} />
-                </MockInterviewsProvider>
-              </InterviewReviewsProvider>
-            </TrackingProvider>
-          </GoalsProvider>
-        </NotificationsProvider>
+        <TrackingProvider>
+          <InterviewReviewsProvider>
+            <MockInterviewsProvider>
+              <RouterProvider router={router} />
+            </MockInterviewsProvider>
+          </InterviewReviewsProvider>
+        </TrackingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

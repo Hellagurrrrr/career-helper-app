@@ -1,6 +1,9 @@
-import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "./api";
 import { useAuth } from "./auth";
+import { queryClient } from "./query-client";
+
+export const notificationsKey = ["notifications"] as const;
 
 export type NotificationType = "system" | "job" | "alumni" | "meeting" | "milestone" | "week";
 export type NotificationSeverity = "info" | "success" | "warning";
@@ -32,40 +35,29 @@ type NotificationListResponse = {
   total: number;
 };
 
-type NotificationsContextValue = {
-  notifications: AppNotification[];
-  unreadCount: number;
-  refreshNotifications: () => Promise<void>;
-  notify: (input: NotifyInput) => AppNotification | null;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
-  dismiss: (id: string) => void;
-  clear: () => void;
-  hasDedupKey: (key: string) => boolean;
-};
+function setNotificationsCache(updater: (prev: AppNotification[]) => AppNotification[]): void {
+  queryClient.setQueryData<AppNotification[]>(notificationsKey, (prev) => updater(prev ?? []));
+}
 
-const NotificationsContext = React.createContext<NotificationsContextValue | null>(null);
-
-export function NotificationsProvider({ children }: { children: React.ReactNode }) {
+export function useNotifications() {
   const { currentUser } = useAuth();
-  const [notifications, setNotifications] = React.useState<AppNotification[]>([]);
 
-  const refreshNotifications = React.useCallback(async () => {
-    if (!currentUser) {
-      setNotifications([]);
-      return;
-    }
-    const response = await apiRequest<NotificationListResponse>("/notifications?limit=50");
-    setNotifications(response.items);
-  }, [currentUser]);
+  const query = useQuery({
+    queryKey: notificationsKey,
+    queryFn: async () => (await apiRequest<NotificationListResponse>("/notifications?limit=50")).items,
+    enabled: Boolean(currentUser),
+  });
+  const notifications = query.data ?? [];
 
-  React.useEffect(() => {
-    void refreshNotifications();
-  }, [refreshNotifications]);
-
-  const notify = React.useCallback<NotificationsContextValue["notify"]>(
-    (input) => {
-      if (input.dedupKey && notifications.some((n) => n.dedupKey === input.dedupKey)) return null;
+  return {
+    notifications,
+    unreadCount: notifications.filter((n) => !n.read).length,
+    refreshNotifications: async () => {
+      await query.refetch();
+    },
+    // Client-only ephemeral notification (no server round-trip). Deduped against
+    // the live cache; a later refetch replaces it with the server list (as before).
+    notify: (input: NotifyInput): AppNotification | null => {
       const local: AppNotification = {
         id: `local_${Date.now().toString(36)}`,
         type: input.type,
@@ -77,62 +69,39 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         read: false,
         dedupKey: input.dedupKey,
       };
-      setNotifications((prev) => [local, ...prev].slice(0, 50));
-      return local;
+      let inserted = false;
+      setNotificationsCache((prev) => {
+        if (input.dedupKey && prev.some((n) => n.dedupKey === input.dedupKey)) return prev;
+        inserted = true;
+        return [local, ...prev].slice(0, 50);
+      });
+      return inserted ? local : null;
     },
-    [notifications]
-  );
-
-  const markRead = React.useCallback((id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    if (!id.startsWith("local_")) {
+    markRead: (id: string) => {
+      setNotificationsCache((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      if (!id.startsWith("local_")) {
+        void apiRequest<NotificationListResponse>("/notifications/read", {
+          method: "POST",
+          body: { ids: [id] },
+        }).then((response) => setNotificationsCache(() => response.items));
+      }
+    },
+    markAllRead: () => {
+      setNotificationsCache((prev) => prev.map((n) => ({ ...n, read: true })));
       void apiRequest<NotificationListResponse>("/notifications/read", {
         method: "POST",
-        body: { ids: [id] },
-      }).then((response) => setNotifications(response.items));
-    }
-  }, []);
-
-  const markAllRead = React.useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    void apiRequest<NotificationListResponse>("/notifications/read", {
-      method: "POST",
-      body: {},
-    }).then((response) => setNotifications(response.items));
-  }, []);
-
-  const dismiss = React.useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    if (!id.startsWith("local_")) {
-      void apiRequest<void>(`/notifications/${id}`, { method: "DELETE" });
-    }
-  }, []);
-
-  const clear = React.useCallback(() => {
-    setNotifications([]);
-  }, []);
-
-  const hasDedupKey = React.useCallback(
-    (key: string) => notifications.some((n) => n.dedupKey === key),
-    [notifications]
-  );
-
-  const unreadCount = React.useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
-
-  const value = React.useMemo(
-    () => ({ notifications, unreadCount, refreshNotifications, notify, markRead, markAllRead, dismiss, clear, hasDedupKey }),
-    [notifications, unreadCount, refreshNotifications, notify, markRead, markAllRead, dismiss, clear, hasDedupKey]
-  );
-
-  return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
-}
-
-export function useNotifications(): NotificationsContextValue {
-  const ctx = React.useContext(NotificationsContext);
-  if (!ctx) {
-    throw new Error("useNotifications must be used inside a NotificationsProvider");
-  }
-  return ctx;
+        body: {},
+      }).then((response) => setNotificationsCache(() => response.items));
+    },
+    dismiss: (id: string) => {
+      setNotificationsCache((prev) => prev.filter((n) => n.id !== id));
+      if (!id.startsWith("local_")) {
+        void apiRequest<void>(`/notifications/${id}`, { method: "DELETE" });
+      }
+    },
+    clear: () => setNotificationsCache(() => []),
+    hasDedupKey: (key: string) => notifications.some((n) => n.dedupKey === key),
+  };
 }
 
 export function formatNotificationTime(ts: number): string {

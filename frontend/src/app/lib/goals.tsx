@@ -1,6 +1,11 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest, errorMessage } from "./api";
 import { useAuth } from "./auth";
+import { queryClient } from "./query-client";
+
+export const goalCatalogKey = ["goal-catalog"] as const;
+export const goalsKey = ["goals"] as const;
 
 export type SkillResource = {
   title: string;
@@ -62,86 +67,70 @@ function setCatalogCache(goals: CatalogGoal[]) {
   GOAL_CATALOG.splice(0, GOAL_CATALOG.length, ...goals.map(normalizeCatalog));
 }
 
-type GoalsContextValue = {
-  goals: UserGoal[];
-  catalog: CatalogGoal[];
-  loading: boolean;
-  error: string | null;
-  refreshGoals: () => Promise<void>;
-  addGoal: (goal: UserGoal | { catalogId: string; confidence?: Record<string, number> }) => Promise<UserGoal | null>;
-  removeGoal: (id: string) => Promise<void>;
-  reorderGoals: (fromIndex: number, toIndex: number) => Promise<void>;
-  updateConfidence: (id: string, skillId: string, value: number) => Promise<void>;
-  getGoal: (id: string) => UserGoal | undefined;
-};
+function setGoalsCache(updater: (prev: UserGoal[]) => UserGoal[]): void {
+  queryClient.setQueryData<UserGoal[]>(goalsKey, (prev) => updater(prev ?? []));
+}
 
-const GoalsContext = React.createContext<GoalsContextValue | null>(null);
-
-export function GoalsProvider({ children }: { children: React.ReactNode }) {
+export function useGoals() {
   const { currentUser } = useAuth();
-  const [goals, setGoals] = React.useState<UserGoal[]>([]);
-  const [catalog, setCatalog] = React.useState<CatalogGoal[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const enabled = Boolean(currentUser);
+  // Surfaced only for addGoal (the one mutation that reports errors inline).
+  const [mutationError, setMutationError] = React.useState<string | null>(null);
 
-  const refreshGoals = React.useCallback(async () => {
-    if (!currentUser) {
-      setGoals([]);
-      setCatalog([]);
-      setCatalogCache([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const [catalogResponse, goalsResponse] = await Promise.all([
-        apiRequest<CatalogGoal[]>("/goal-catalog"),
-        apiRequest<UserGoal[]>("/goals"),
-      ]);
-      const normalized = catalogResponse.map(normalizeCatalog);
-      setCatalog(normalized);
-      setCatalogCache(normalized);
-      setGoals(goalsResponse);
-    } catch (err) {
-      setError(errorMessage(err, "Could not load goals."));
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser]);
+  const catalogQuery = useQuery({
+    queryKey: goalCatalogKey,
+    queryFn: async () => {
+      const normalized = (await apiRequest<CatalogGoal[]>("/goal-catalog")).map(normalizeCatalog);
+      setCatalogCache(normalized); // keep the GOAL_CATALOG global warm for imperative readers
+      return normalized;
+    },
+    enabled,
+  });
 
-  React.useEffect(() => {
-    void refreshGoals();
-  }, [refreshGoals]);
+  const goalsQuery = useQuery({
+    queryKey: goalsKey,
+    queryFn: () => apiRequest<UserGoal[]>("/goals"),
+    enabled,
+  });
 
-  const addGoal = React.useCallback<GoalsContextValue["addGoal"]>(async (goal) => {
-    const catalogId = "catalogId" in goal ? goal.catalogId : goal.id;
-    try {
-      let created = await apiRequest<UserGoal>("/goals", {
-        method: "POST",
-        body: { catalogId },
-      });
-      const confidence = "confidence" in goal ? goal.confidence : undefined;
-      if (confidence && Object.keys(confidence).length > 0) {
-        created = await apiRequest<UserGoal>(`/goals/${created.id}`, {
-          method: "PATCH",
-          body: { confidence },
-        });
+  const goals = goalsQuery.data ?? [];
+  const catalog = catalogQuery.data ?? [];
+  const queryError = catalogQuery.error ?? goalsQuery.error;
+
+  return {
+    goals,
+    catalog,
+    loading: catalogQuery.isLoading || goalsQuery.isLoading,
+    error: queryError ? errorMessage(queryError, "Could not load goals.") : mutationError,
+    refreshGoals: async () => {
+      await Promise.all([catalogQuery.refetch(), goalsQuery.refetch()]);
+    },
+    addGoal: async (
+      goal: UserGoal | { catalogId: string; confidence?: Record<string, number> }
+    ): Promise<UserGoal | null> => {
+      const catalogId = "catalogId" in goal ? goal.catalogId : goal.id;
+      try {
+        let created = await apiRequest<UserGoal>("/goals", { method: "POST", body: { catalogId } });
+        const confidence = "confidence" in goal ? goal.confidence : undefined;
+        if (confidence && Object.keys(confidence).length > 0) {
+          created = await apiRequest<UserGoal>(`/goals/${created.id}`, {
+            method: "PATCH",
+            body: { confidence },
+          });
+        }
+        setGoalsCache((prev) => [...prev.filter((g) => g.id !== created.id), created]);
+        setMutationError(null);
+        return created;
+      } catch (err) {
+        setMutationError(errorMessage(err, "Could not add goal."));
+        return null;
       }
-      setGoals((prev) => [...prev.filter((g) => g.id !== created.id), created]);
-      return created;
-    } catch (err) {
-      setError(errorMessage(err, "Could not add goal."));
-      return null;
-    }
-  }, []);
-
-  const removeGoal = React.useCallback(async (id: string) => {
-    await apiRequest<void>(`/goals/${id}`, { method: "DELETE" });
-    setGoals((prev) => prev.filter((g) => g.id !== id));
-  }, []);
-
-  const reorderGoals = React.useCallback(
-    async (fromIndex: number, toIndex: number) => {
+    },
+    removeGoal: async (id: string) => {
+      await apiRequest<void>(`/goals/${id}`, { method: "DELETE" });
+      setGoalsCache((prev) => prev.filter((g) => g.id !== id));
+    },
+    reorderGoals: async (fromIndex: number, toIndex: number) => {
       if (
         fromIndex < 0 ||
         fromIndex >= goals.length ||
@@ -154,55 +143,25 @@ export function GoalsProvider({ children }: { children: React.ReactNode }) {
       const next = [...goals];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
-      setGoals(next);
+      setGoalsCache(() => next);
       const saved = await apiRequest<UserGoal[]>("/goals/order", {
         method: "PUT",
         body: { goalIds: next.map((g) => g.id) },
       });
-      setGoals(saved);
+      setGoalsCache(() => saved);
     },
-    [goals]
-  );
-
-  const updateConfidence = React.useCallback(async (id: string, skillId: string, value: number) => {
-    const current = goals.find((g) => g.id === id);
-    if (!current) return;
-    const confidence = { ...current.confidence, [skillId]: value };
-    const updated = await apiRequest<UserGoal>(`/goals/${id}`, {
-      method: "PATCH",
-      body: { confidence },
-    });
-    setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)));
-  }, [goals]);
-
-  const getGoal = React.useCallback(
-    (id: string) => goals.find((g) => g.id === id || g.catalogId === id),
-    [goals]
-  );
-
-  const value = React.useMemo(
-    () => ({
-      goals,
-      catalog,
-      loading,
-      error,
-      refreshGoals,
-      addGoal,
-      removeGoal,
-      reorderGoals,
-      updateConfidence,
-      getGoal,
-    }),
-    [goals, catalog, loading, error, refreshGoals, addGoal, removeGoal, reorderGoals, updateConfidence, getGoal]
-  );
-
-  return <GoalsContext.Provider value={value}>{children}</GoalsContext.Provider>;
-}
-
-export function useGoals(): GoalsContextValue {
-  const ctx = React.useContext(GoalsContext);
-  if (!ctx) throw new Error("useGoals must be used inside a GoalsProvider");
-  return ctx;
+    updateConfidence: async (id: string, skillId: string, value: number) => {
+      const current = goals.find((g) => g.id === id);
+      if (!current) return;
+      const confidence = { ...current.confidence, [skillId]: value };
+      const updated = await apiRequest<UserGoal>(`/goals/${id}`, {
+        method: "PATCH",
+        body: { confidence },
+      });
+      setGoalsCache((prev) => prev.map((g) => (g.id === id ? updated : g)));
+    },
+    getGoal: (id: string) => goals.find((g) => g.id === id || g.catalogId === id),
+  };
 }
 
 export function getCatalogGoal(id: string): CatalogGoal | undefined {
