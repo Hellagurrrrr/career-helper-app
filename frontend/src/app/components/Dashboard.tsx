@@ -42,8 +42,8 @@ function AnimatedProgress({ value, gradient }: { value: number; gradient: string
   return (
     <div className="h-2 overflow-hidden rounded-full bg-slate-100">
       <div
-        className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-[width] duration-700 ease-out`}
-        style={{ width: `${width}%` }}
+        className="h-full rounded-full transition-[width] duration-700 ease-out"
+        style={{ width: `${width}%`, backgroundColor: gradient }}
       />
     </div>
   );
