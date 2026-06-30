@@ -4,7 +4,6 @@ import { RouterProvider } from "react-router";
 import { router } from "./routes";
 import { queryClient } from "./lib/query-client";
 import { AuthProvider } from "./lib/auth";
-import { TrackingProvider } from "./lib/tracking";
 import { InterviewReviewsProvider } from "./lib/interview-reviews";
 import { MockInterviewsProvider } from "./lib/mock-interviews";
 
@@ -16,13 +15,11 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TrackingProvider>
-          <InterviewReviewsProvider>
-            <MockInterviewsProvider>
-              <RouterProvider router={router} />
-            </MockInterviewsProvider>
-          </InterviewReviewsProvider>
-        </TrackingProvider>
+        <InterviewReviewsProvider>
+          <MockInterviewsProvider>
+            <RouterProvider router={router} />
+          </MockInterviewsProvider>
+        </InterviewReviewsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

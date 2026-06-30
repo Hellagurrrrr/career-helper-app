@@ -1,7 +1,15 @@
 import React from "react";
+import { useQueries } from "@tanstack/react-query";
 import { apiRequest } from "./api";
 import { CatalogGoal, CoreSkill, getCatalogGoal, useGoals } from "./goals";
 import { useAuth } from "./auth";
+import { queryClient } from "./query-client";
+
+export const trackingKey = (goalId: string) => ["tracking", goalId] as const;
+
+function fetchTracking(goalId: string): Promise<GoalTracking> {
+  return apiRequest<GoalTracking>(`/goals/${goalId}/tracking`);
+}
 
 export type ModuleTracking = {
   completedSteps: number[];
@@ -26,94 +34,86 @@ function emptyTracking(): GoalTracking {
   return { modules: {}, weekStartedAt: 0, weekFocus: [] };
 }
 
-type TrackingContextValue = {
-  state: TrackingState;
-  refreshTracking: (goalId: string) => Promise<GoalTracking | null>;
-  toggleStep: (goalId: string, moduleId: string, stepIdx: number) => void;
-  toggleResource: (goalId: string, moduleId: string, resourceIdx: number) => void;
-  setWeekFocus: (goalId: string, keys: WeekFocusKey[]) => void;
-  markRerateDismissed: (goalId: string, moduleId: string) => void;
-  resetRerateCounter: (goalId: string, moduleId: string) => void;
-  getGoalTracking: (goalId: string) => GoalTracking;
-};
-
-const TrackingContext = React.createContext<TrackingContextValue | null>(null);
-
-export function TrackingProvider({ children }: { children: React.ReactNode }) {
+export function useTracking() {
   const { currentUser } = useAuth();
   const { goals } = useGoals();
-  const [state, setState] = React.useState<TrackingState>({});
+  const enabled = Boolean(currentUser);
 
-  const refreshTracking = React.useCallback(async (goalId: string): Promise<GoalTracking | null> => {
-    if (!currentUser) return null;
-    try {
-      const tracking = await apiRequest<GoalTracking>(`/goals/${goalId}/tracking`);
-      setState((prev) => ({ ...prev, [goalId]: tracking }));
-      return tracking;
-    } catch {
-      return null;
-    }
-  }, [currentUser]);
+  // One query per goal (the API is per-goal). useQueries handles the dynamic list.
+  const results = useQueries({
+    queries: goals.map((g) => ({
+      queryKey: trackingKey(g.id),
+      queryFn: () => fetchTracking(g.id),
+      enabled,
+    })),
+  });
 
-  React.useEffect(() => {
-    if (!currentUser) {
-      setState({});
-      return;
-    }
-    for (const goal of goals) {
-      if (!state[goal.id]) void refreshTracking(goal.id);
-    }
-  }, [currentUser, goals, refreshTracking, state]);
+  // Aggregate into the { goalId: tracking } map the consumers expect. Memoized
+  // on a (goalId, dataUpdatedAt) signature so `state` stays referentially stable
+  // unless a goal's tracking actually changes -- consumer effects depend on it.
+  const signature = goals.map((g, i) => `${g.id}:${results[i]?.dataUpdatedAt ?? 0}`).join("|");
+  const state = React.useMemo<TrackingState>(() => {
+    const next: TrackingState = {};
+    goals.forEach((g, i) => {
+      const data = results[i]?.data;
+      if (data) next[g.id] = data;
+    });
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
 
-  const replaceGoal = React.useCallback((goalId: string, tracking: GoalTracking) => {
-    setState((prev) => ({ ...prev, [goalId]: tracking }));
-  }, []);
+  const refreshTracking = React.useCallback(
+    async (goalId: string): Promise<GoalTracking | null> => {
+      if (!currentUser) return null;
+      try {
+        return await queryClient.fetchQuery({
+          queryKey: trackingKey(goalId),
+          queryFn: () => fetchTracking(goalId),
+        });
+      } catch {
+        return null;
+      }
+    },
+    [currentUser]
+  );
 
-  const toggleStep = React.useCallback<TrackingContextValue["toggleStep"]>(
-    (goalId, moduleId, stepIdx) => {
-      const current = state[goalId] ?? emptyTracking();
-      const has = current.modules[moduleId]?.completedSteps.includes(stepIdx) ?? false;
+  const toggleStep = React.useCallback(
+    (goalId: string, moduleId: string, stepIdx: number) => {
+      const has = state[goalId]?.modules[moduleId]?.completedSteps.includes(stepIdx) ?? false;
       void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/modules/${moduleId}/steps/${stepIdx}`, {
         method: "PUT",
         body: { completed: !has },
-      }).then((tracking) => replaceGoal(goalId, tracking));
+      }).then((tracking) => queryClient.setQueryData(trackingKey(goalId), tracking));
     },
-    [state, replaceGoal]
+    [state]
   );
 
-  const toggleResource = React.useCallback<TrackingContextValue["toggleResource"]>(
-    (goalId, moduleId, resourceIdx) => {
-      const current = state[goalId] ?? emptyTracking();
-      const has = current.modules[moduleId]?.consumedResources.includes(resourceIdx) ?? false;
+  const toggleResource = React.useCallback(
+    (goalId: string, moduleId: string, resourceIdx: number) => {
+      const has = state[goalId]?.modules[moduleId]?.consumedResources.includes(resourceIdx) ?? false;
       void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/modules/${moduleId}/resources/${resourceIdx}`, {
         method: "PUT",
         body: { consumed: !has },
-      }).then((tracking) => replaceGoal(goalId, tracking));
+      }).then((tracking) => queryClient.setQueryData(trackingKey(goalId), tracking));
     },
-    [state, replaceGoal]
+    [state]
   );
 
-  const setWeekFocus = React.useCallback<TrackingContextValue["setWeekFocus"]>(
-    (goalId, keys) => {
-      void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/week-focus`, {
-        method: "PUT",
-        body: { weekFocus: keys },
-      }).then((tracking) => replaceGoal(goalId, tracking));
-    },
-    [replaceGoal]
-  );
+  const setWeekFocus = React.useCallback((goalId: string, keys: WeekFocusKey[]) => {
+    void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/week-focus`, {
+      method: "PUT",
+      body: { weekFocus: keys },
+    }).then((tracking) => queryClient.setQueryData(trackingKey(goalId), tracking));
+  }, []);
 
-  const markRerateDismissed = React.useCallback<TrackingContextValue["markRerateDismissed"]>(
-    (goalId, moduleId) => {
-      void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/modules/${moduleId}/rerate-dismiss`, {
-        method: "POST",
-      }).then((tracking) => replaceGoal(goalId, tracking));
-    },
-    [replaceGoal]
-  );
+  const markRerateDismissed = React.useCallback((goalId: string, moduleId: string) => {
+    void apiRequest<GoalTracking>(`/goals/${goalId}/tracking/modules/${moduleId}/rerate-dismiss`, {
+      method: "POST",
+    }).then((tracking) => queryClient.setQueryData(trackingKey(goalId), tracking));
+  }, []);
 
-  const resetRerateCounter = React.useCallback<TrackingContextValue["resetRerateCounter"]>(
-    (goalId) => {
+  const resetRerateCounter = React.useCallback(
+    (goalId: string) => {
       void refreshTracking(goalId);
     },
     [refreshTracking]
@@ -124,29 +124,16 @@ export function TrackingProvider({ children }: { children: React.ReactNode }) {
     [state]
   );
 
-  const value = React.useMemo(
-    () => ({
-      state,
-      refreshTracking,
-      toggleStep,
-      toggleResource,
-      setWeekFocus,
-      markRerateDismissed,
-      resetRerateCounter,
-      getGoalTracking,
-    }),
-    [state, refreshTracking, toggleStep, toggleResource, setWeekFocus, markRerateDismissed, resetRerateCounter, getGoalTracking]
-  );
-
-  return <TrackingContext.Provider value={value}>{children}</TrackingContext.Provider>;
-}
-
-export function useTracking(): TrackingContextValue {
-  const ctx = React.useContext(TrackingContext);
-  if (!ctx) {
-    throw new Error("useTracking must be used inside TrackingProvider");
-  }
-  return ctx;
+  return {
+    state,
+    refreshTracking,
+    toggleStep,
+    toggleResource,
+    setWeekFocus,
+    markRerateDismissed,
+    resetRerateCounter,
+    getGoalTracking,
+  };
 }
 
 export function getModuleProgress(tracking: GoalTracking | undefined, module: CoreSkill): number {
