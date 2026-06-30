@@ -131,8 +131,8 @@ export function PlanTracking() {
           </p>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className={`h-full rounded-full bg-gradient-to-r ${catalogGoal.color} transition-[width] duration-500`}
-              style={{ width: `${overallProgress}%` }}
+              className="h-full rounded-full transition-[width] duration-500"
+              style={{ width: `${overallProgress}%`, backgroundColor: catalogGoal.color }}
             />
           </div>
           <p className="mt-2 text-xs text-slate-500">
