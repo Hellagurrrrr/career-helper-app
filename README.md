@@ -23,27 +23,28 @@ calls** with a single flag - see [Real AI integration](#real-ai-integration).
 
 Start the full local app with one command:
 
-```powershell
-.\scripts\start.ps1
+```bash
+python scripts/start.py
 ```
 
-The script runs inside the `career-helper-app` conda environment, syncs Python
-and Node dependencies when the requirements or lockfile change, builds the
-frontend when `frontend/dist` is missing, and then starts FastAPI.
+Works on Windows, macOS, and Linux. Run it from your project environment (e.g.
+after `conda activate career-helper-app`). It installs any missing
+backend/frontend dependencies, builds the frontend, and starts FastAPI. FastAPI
+serves both the `/v1` API and the built frontend, so the whole app runs as a
+single process. Press **Ctrl-C** to stop it — nothing is left running in the
+background, so there is no separate stop command.
 
 By default, the app starts in mock-AI mode. To start with real LLM integration,
 set `CAREER_LLM_API_KEY` in `.env` and run:
 
-```powershell
-.\scripts\start.ps1 -EnableLlm
+```bash
+python scripts/start.py --llm
 ```
 
-This installs the optional AI dependencies, sets `CAREER_ENABLE_REAL_AI=true`,
-and performs a small live model call before the server starts. If the LLM check
-fails, startup is aborted.
-
-Without `-EnableLlm`, `start.ps1` forces `CAREER_ENABLE_REAL_AI=false` for that
-run even if your shell already has the variable set.
+`--llm` installs the optional AI dependencies, sets `CAREER_ENABLE_REAL_AI=true`
+for the run, and aborts early if `CAREER_LLM_API_KEY` is missing. Without it the
+run is forced to mock mode regardless of your shell. Add `--rebuild` to force a
+fresh frontend build.
 
 Seeded demo account:
 
@@ -59,36 +60,22 @@ Password: Demo123456
 - Health check: http://127.0.0.1:8000/health
 - API base path: `/v1` (e.g. `POST /v1/auth/register`)
 
-Development mode, with FastAPI and Vite running separately:
-
-```powershell
-.\scripts\dev.ps1
-```
-
-- Backend URL: http://127.0.0.1:8000
-- Frontend dev URL: http://127.0.0.1:5173
-- For frontend dev, copy `frontend/.env.example` to `frontend/.env.local` if you
-  need to override the API URL. The default production build uses same-origin
-  `/v1`.
-
-Stop local app processes on the default ports:
-
-```powershell
-.\scripts\stop.ps1
-```
-
-Run the verification suite:
-
-```powershell
-.\scripts\test.ps1
-```
-
-Manual backend-only commands:
+Reset the local database to the shipped initial snapshot at any time:
 
 ```bash
-set CAREER_ENABLE_REAL_AI=false
-conda run -n career-helper-app python -m pip install -r requirements-dev.txt
-conda run -n career-helper-app python -m pytest tests/test_smoke.py
+python scripts/reset_db.py          # add --backup to keep a copy first
+```
+
+Frontend hot-reload (optional): run Vite separately with `cd frontend && npm run
+dev` — frontend on http://127.0.0.1:5173, backend on 8000. Copy
+`frontend/.env.example` to `frontend/.env.local` if you need to override the API
+URL; the default build uses same-origin `/v1`.
+
+Run the tests:
+
+```bash
+pip install -r requirements-dev.txt
+CAREER_ENABLE_REAL_AI=false pytest -q
 ```
 
 There is also a separate suite that exercises the **real** models - see
