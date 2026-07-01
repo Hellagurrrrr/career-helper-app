@@ -55,6 +55,13 @@ def list_jobs(
             or needle in j["company"].lower()
             or any(needle in s.lower() for s in j.get("skills", []))
         ]
+    # Attach the profile-vs-job match % per job (same score as the detail view),
+    # so the list cards can show it instead of "--".
+    profile_skills = (profiles_repo.get(conn, user.id) or {}).get("skills", [])
+    jobs = [
+        {**j, "matchScore": mock_match.match_score(profile_skills, j.get("skills", []))}
+        for j in jobs
+    ]
     return paginate(jobs, limit, cursor)
 
 

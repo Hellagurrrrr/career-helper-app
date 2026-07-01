@@ -20,6 +20,9 @@ class JobListing(CamelModel):
     exclusive: bool
     application_url: str | None = None
     description: str | None = None
+    # Profile-vs-job match %, computed per request. Optional on the base model so
+    # the list endpoint can include it; JobDetail makes it required.
+    match_score: int | None = None
 
 
 class JobDetail(JobListing):
