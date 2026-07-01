@@ -135,13 +135,33 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
       setLiveTranscript(text.trim());
     };
 
-    recognition.onerror = () => setPhase("ready");
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      const reason: Record<string, string> = {
+        "not-allowed":
+          "Microphone access is blocked. Allow mic permission for this site in your browser, then tap record again.",
+        "service-not-allowed":
+          "Speech recognition is blocked. Allow mic permission for this site, then tap record again.",
+        "audio-capture": "No microphone was found. Connect a mic and try again.",
+        "no-speech": "No speech was detected. Speak clearly into your mic, then tap record again.",
+        "network":
+          "Speech recognition needs an internet connection (Chrome streams the audio to Google to transcribe).",
+        "aborted": "Recording was interrupted. Tap record to try again.",
+      };
+      setError(
+        reason[event.error] ??
+          `Recording failed (${event.error}). Voice answers need Chrome or Edge with microphone access.`
+      );
+      setPhase("ready");
+    };
 
     try {
       recognition.start();
       setPhase("recording");
     } catch {
-      setError("Could not access microphone. Check browser permissions.");
+      setError(
+        "Could not start recording. Check that your browser allows microphone access for this site (Chrome or Edge recommended)."
+      );
+      setPhase("ready");
     }
   };
 
