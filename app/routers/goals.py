@@ -32,14 +32,7 @@ def get_goal_catalog(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    """
-    Get the goal catalog.
-
-    **Args**:
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[CatalogGoal]: The goal catalog, sorted by descending match score.
-    """
+    """Return the goal catalog, sorted by descending match score against the profile."""
     profile = profiles_repo.get(conn, user.id)
     return mock_match.sort_catalog_goals(profile, catalogs_repo.list_goal_catalog(conn))
 
@@ -50,15 +43,7 @@ def get_catalog_item(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Get a goal catalog item.
-
-    **Args**:
-        - catalog_id: str: The ID of the catalog item.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - CatalogGoal: The catalog item.
-    """
+    """Return a single catalog goal; 404 if unknown."""
     item = catalogs_repo.get_catalog_goal(conn, catalog_id)
     if not item:
         raise not_found("Catalog goal not found.")
@@ -71,14 +56,7 @@ def list_goals(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    """
-    Get the list of goals that the current user has selected.
-
-    **Args**:
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
-    """
+    """List the current user's selected goals, ordered by sortOrder."""
     return goals_repo.list_for_user(conn, user.id)
 
 
@@ -88,15 +66,7 @@ def create_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Create a new goal for the current user.
-
-    **Args**:
-        - body: CreateGoalRequest: The request body containing the catalog ID of the goal to create.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - UserGoal: The created goal.
-    """
+    """Add a catalog goal to the current user; 409 if it is already added."""
     catalog = catalogs_repo.get_catalog_goal(conn, body.catalog_id)
     if not catalog:
         raise not_found("Catalog goal not found.")
@@ -129,15 +99,7 @@ def get_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Get a goal for the current user.
-
-    **Args**:
-        - goal_id: str: The ID of the goal to get.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - UserGoal: The goal.
-    """
+    """Return one of the current user's goals; 404 if unknown."""
     goal = goals_repo.get(conn, user.id, goal_id)
     if not goal:
         raise not_found("Goal not found.")
@@ -151,16 +113,7 @@ def update_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Update a goal for the current user.
-
-    **Args**:
-        - goal_id: str: The ID of the goal to update.
-        - body: UpdateGoalRequest: The request body containing the status and confidence of the goal.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - UserGoal: The updated goal.
-    """
+    """Update a goal's status and/or confidence scores, then recompute progress."""
     if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
 
@@ -182,15 +135,7 @@ def delete_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    """
-    Delete a goal for the current user.
-
-    **Args**:
-        - goal_id: str: The ID of the goal to delete.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - None: The response is empty.
-    """
+    """Delete a goal; its tracking, saved jobs, applications and reviews cascade in the DB."""
     if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
 
@@ -206,15 +151,7 @@ def reorder_goals(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    """
-    Reorder the goals for the current user.
-
-    **Args**:
-        - body: ReorderGoalsRequest: The request body containing the IDs of the goals to reorder.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
-    """
+    """Persist a new goal ordering; the payload must list every goal exactly once."""
     current_ids = {g["id"] for g in goals_repo.list_for_user(conn, user.id)}
     if set(body.goal_ids) != current_ids:
         raise validation_error("goalIds must include every goal exactly once.", "goalIds")

@@ -25,15 +25,7 @@ def list_meetings(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    """
-    List the meetings for a user (newest first), optionally filtered by alumni.
-
-    **Parameters**:
-        - alumni_id: str | None: The ID of the alumni to filter by.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[MeetingRequest]: The list of meetings.
-    """
+    """List the user's meetings newest first, optionally filtered by alumni."""
     return meetings_repo.list_for_user(conn, user.id, alumni_id)
 
 
@@ -43,15 +35,7 @@ def create_meeting(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Create a meeting request for a user.
-
-    **Parameters**:
-        - body: CreateMeetingRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - MeetingRequest: The created meeting.
-    """
+    """Request a coffee chat with an alumni; 409 if one is already pending with them."""
     alum = catalogs_repo.get_alumni(conn, body.alumni_id)
     if not alum:
         raise validation_error("Alumni not found.", "alumniId")
@@ -95,16 +79,7 @@ def update_meeting(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Update a meeting's status for a user.
-
-    **Parameters**:
-        - meeting_id: str: The ID of the meeting.
-        - body: UpdateMeetingRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - MeetingRequest: The updated meeting.
-    """
+    """Update a meeting's status; completing it stamps completed_at and notifies the user."""
     # Only set completed_at when transitioning to "completed"; leave it untouched
     # otherwise (matches prior behavior).
     if body.status == "completed":

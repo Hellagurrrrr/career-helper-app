@@ -21,10 +21,11 @@ def now_ms() -> int:
 
 
 def new_id(prefix: str = "") -> str:
-    """
-    Generate a new unique ID.
+    """Generate a new unique ID.
+
     Args:
         prefix: The prefix for the ID.
+
     Returns:
         str: The new unique ID.
     """
@@ -41,13 +42,15 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    """
-    Verify a password.
+    """Verify a password.
+
     Args:
         password: The password to verify.
         hashed: The hashed password to verify against.
+
     Returns:
         bool: True if the password is correct, False otherwise.
+
     Raises:
         ValueError: If the password is invalid.
         TypeError: If the hashed password is invalid.
@@ -78,13 +81,15 @@ def create_refresh_token(user_id: str, jti: str) -> str:
 
 
 def decode_token(token: str, expected_type: str) -> dict[str, Any]:
-    """
-    Decode a token.
+    """Decode a token.
+
     Args:
         token: The token to decode.
         expected_type: The expected type of the token.
+
     Returns:
         dict[str, Any]: The decoded payload.
+
     Raises:
         unauthorized: If the token is invalid or expired.
         unauthorized: If the token type is invalid.

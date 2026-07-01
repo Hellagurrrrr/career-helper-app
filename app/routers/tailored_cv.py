@@ -23,14 +23,7 @@ def generate(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Generate a tailored CV for a job.
-    **Parameters**:
-        - body: TailoredCvRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The tailored CV.
-    """
+    """Generate a CV tailored to a job from the user's profile."""
     job = catalogs_repo.get_job(conn, body.job_id)
     if not job:
         raise not_found("Job not found.")

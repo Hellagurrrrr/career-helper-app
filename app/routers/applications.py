@@ -35,14 +35,7 @@ def list_applications(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    List the applications for a goal.
-    **Parameters**:
-        - goal_id: str | None: The ID of the goal.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The list of applications.
-    """
+    """List the user's applications (partner pipelines advanced first) with a status summary."""
     apps = applications_repo.list_for_user(conn, user.id)
     # Advance partner pipelines before reporting (use-case APP-05).
     for app in apps:
@@ -60,14 +53,7 @@ def create_application(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Create an application for a goal.
-    **Parameters**:
-        - body: CreateApplicationRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The application.
-    """
+    """Apply to a job under a goal; partner applications require an exclusive job (409 if already applied)."""
     if not goals_repo.exists(conn, user.id, body.goal_id):
         raise validation_error("Goal not found.", "goalId")
     job = catalogs_repo.get_job(conn, body.job_id)
@@ -102,15 +88,7 @@ def update_application(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Update an application for a goal.
-    **Parameters**:
-        - application_id: str: The ID of the application.
-        - body: UpdateApplicationRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The application.
-    """
+    """Update a standard application's manual status; partner statuses are managed automatically."""
     app = applications_repo.get(conn, user.id, application_id)
     if not app:
         raise not_found("Application not found.")
@@ -132,14 +110,7 @@ def delete_application(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    """
-    Delete an application for a goal.
-    **Parameters**:
-        - application_id: str: The ID of the application.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - None: The response body.
-    """
+    """Delete an application; its reviews and mock sessions cascade in the DB."""
     # Reviews and mock sessions cascade via FK.
     if not applications_repo.delete(conn, user.id, application_id):
         raise not_found("Application not found.")

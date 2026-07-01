@@ -28,17 +28,7 @@ def list_jobs(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    List jobs.
-
-    **Args**:
-        - catalog_goal_id: str | None: The ID of the catalog goal to filter by.
-        - partner: bool | None: Whether to filter by partner.
-        - exclusive: bool | None: Whether to filter by exclusive.
-        - q: str | None: The query to filter by.
-    **Returns**:
-        - list[Job]: The list of jobs.
-    """
+    """List jobs with optional goal/partner/exclusive/text filters, each scored against the profile."""
     jobs = catalogs_repo.list_jobs(conn)
     if catalog_goal_id is not None:
         jobs = [j for j in jobs if j["catalogGoalId"] == catalog_goal_id]
@@ -71,15 +61,7 @@ def get_job(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Get a job.
-
-    **Args**:
-        - job_id: str: The ID of the job to get.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - JobDetail: The job.
-    """
+    """Return a job's detail with the profile-vs-job match score; 404 if unknown."""
     job = catalogs_repo.get_job(conn, job_id)
     if not job:
         raise not_found("Job not found.")

@@ -26,16 +26,7 @@ def list_notifications(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    List the notifications for a user (newest first).
-    **Parameters**:
-        - unread: bool | None: Whether to filter by unread.
-        - limit: int: The limit of notifications to return.
-        - cursor: str | None: The cursor to paginate by.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - NotificationListResponse: The paginated list of notifications.
-    """
+    """List the user's notifications newest first, optionally unread-only, paginated."""
     items = notifications_repo.list_for_user(conn, user.id, unread)
     return paginate(items, limit, cursor)
 
@@ -46,14 +37,7 @@ def mark_read(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    """
-    Mark notifications as read (all of the user's when no ids are given).
-    **Parameters**:
-        - body: MarkReadRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - NotificationListResponse: The user's notifications, newest first.
-    """
+    """Mark notifications read (all of the user's when no ids are given)."""
     items = notifications_repo.mark_read(conn, user.id, body.ids)
     return {"items": items, "nextCursor": None, "total": len(items)}
 
@@ -64,13 +48,6 @@ def delete_notification(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    """
-    Delete a notification.
-    **Parameters**:
-        - notification_id: str: The ID of the notification.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - None: The response body.
-    """
+    """Delete one of the user's notifications; 404 if unknown."""
     if not notifications_repo.delete(conn, user.id, notification_id):
         raise not_found("Notification not found.")

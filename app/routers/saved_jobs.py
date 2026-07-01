@@ -22,14 +22,7 @@ def list_saved_jobs(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    """
-    List the saved jobs for a goal.
-    **Parameters**:
-        - goal_id: str: The ID of the goal.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[dict]: The list of saved jobs.
-    """
+    """List the jobs saved under a goal; 404 if the goal is unknown."""
     if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
     job_ids = saved_jobs_repo.list_job_ids(conn, user.id, goal_id)
@@ -43,15 +36,7 @@ def save_job(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    """
-    Save a job for a goal.
-    **Parameters**:
-        - job_id: str: The ID of the job.
-        - body: SaveJobRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[dict]: The list of saved jobs.
-    """
+    """Save a job under a goal and return the goal's saved-job list."""
     if not goals_repo.exists(conn, user.id, body.goal_id):
         raise validation_error("Goal not found.", "goalId")
     if not catalogs_repo.get_job(conn, job_id):
@@ -68,14 +53,6 @@ def unsave_job(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    """
-    Unsave a job for a goal.
-    **Parameters**:
-        - job_id: str: The ID of the job.
-        - goal_id: str: The ID of the goal.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - None: The response body.
-    """
+    """Remove a saved job from a goal; 404 if it was not saved."""
     if not saved_jobs_repo.remove(conn, user.id, goal_id, job_id):
         raise not_found("Saved job not found.")
