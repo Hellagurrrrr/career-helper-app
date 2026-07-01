@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import sqlite3
-import time
 
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_user
 from app.core.errors import goal_already_added, not_found, validation_error
-from app.core.security import new_id, now_ms
+from app.core.security import iso_now, new_id, now_ms
 from app.db import get_conn
 from app.models import UserRecord
 from app.repositories import catalogs as catalogs_repo
@@ -83,7 +82,7 @@ def create_goal(
         "color": catalog["color"],
         "status": catalog["defaultStatus"],
         "progress": 0,
-        "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "lastUpdated": iso_now(),
         "createdAt": now_ms(),
         "confidence": {},
         "sortOrder": goals_repo.count_for_user(conn, user.id),

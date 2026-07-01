@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
-import time
 
+from app.core.security import iso_now
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import tracking as tracking_repo
@@ -21,7 +21,7 @@ def recompute_progress(conn: sqlite3.Connection, user_id: str, goal_id: str) -> 
     tracking = tracking_repo.get(conn, goal_id)
     old_progress = goal["progress"]
     new_progress = progress_svc.compute_progress(goal["confidence"], catalog, tracking)
-    goals_repo.set_progress(conn, goal_id, new_progress, _iso_now())
+    goals_repo.set_progress(conn, goal_id, new_progress, iso_now())
 
     if new_progress > old_progress:
         from app.services import notifications_service
@@ -29,7 +29,3 @@ def recompute_progress(conn: sqlite3.Connection, user_id: str, goal_id: str) -> 
         notifications_service.check_milestone(
             user_id, goal_id, old_progress, new_progress, goal["title"]
         )
-
-
-def _iso_now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

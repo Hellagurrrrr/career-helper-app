@@ -20,6 +20,11 @@ def now_ms() -> int:
     return int(time.time() * 1000)
 
 
+def iso_now() -> str:
+    """Current UTC time as an ISO-8601 ``YYYY-MM-DDTHH:MM:SSZ`` string."""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def new_id(prefix: str = "") -> str:
     """Generate a new unique ID.
 
