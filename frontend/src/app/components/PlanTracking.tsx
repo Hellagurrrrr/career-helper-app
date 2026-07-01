@@ -63,6 +63,8 @@ export function PlanTracking() {
         tracking.setWeekFocus(trackingGoalId, focus);
       }
     }
+    // Seed the week focus only when the goal/catalog changes; goalTracking and
+    // confidence are read but excluded on purpose so setWeekFocus can't re-trigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackingGoalId, catalogGoal]);
 

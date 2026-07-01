@@ -16,6 +16,30 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # Backend lint/format gate: enforces the ruff config in pyproject.toml so
+  # style (quotes, imports, docstrings, formatting) can't drift back.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install ruff
+        run: pip install ruff==0.15.20
+
+      - name: Ruff check
+        run: ruff check app tests
+
+      - name: Ruff format check
+        run: ruff format --check app tests
+
+  # ---------------------------------------------------------------------------
   # Mock-mode tests: deterministic, no API key, no network. This is the gate
   # that runs on every push / PR. The real-AI suite under tests/test_llm is
   # collected too, but auto-skips because CAREER_ENABLE_REAL_AI is false.

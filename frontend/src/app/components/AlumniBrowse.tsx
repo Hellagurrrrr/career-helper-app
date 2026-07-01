@@ -69,6 +69,8 @@ export function AlumniBrowse() {
     else next.delete("q");
     next.delete("expertise");
     setSearchParams(next, { replace: true });
+    // Sync URL only on tab/query changes; depending on searchParams/setSearchParams
+    // would loop, since this effect itself writes them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, query]);
 
