@@ -48,8 +48,6 @@ export type UserGoal = {
   sortOrder?: number;
 };
 
-export const GOAL_CATALOG: CatalogGoal[] = [];
-
 function normalizeCatalog(goal: CatalogGoal): CatalogGoal {
   return {
     ...goal,
@@ -63,8 +61,10 @@ function normalizeCatalog(goal: CatalogGoal): CatalogGoal {
   };
 }
 
-function setCatalogCache(goals: CatalogGoal[]) {
-  GOAL_CATALOG.splice(0, GOAL_CATALOG.length, ...goals.map(normalizeCatalog));
+// Single source of truth: the (already normalized) catalog held by React Query.
+// Lets the module-level readers below work outside of a component/hook.
+function cachedCatalog(): CatalogGoal[] {
+  return queryClient.getQueryData<CatalogGoal[]>(goalCatalogKey) ?? [];
 }
 
 function setGoalsCache(updater: (prev: UserGoal[]) => UserGoal[]): void {
@@ -79,11 +79,7 @@ export function useGoals() {
 
   const catalogQuery = useQuery({
     queryKey: goalCatalogKey,
-    queryFn: async () => {
-      const normalized = (await apiRequest<CatalogGoal[]>("/goal-catalog")).map(normalizeCatalog);
-      setCatalogCache(normalized); // keep the GOAL_CATALOG global warm for imperative readers
-      return normalized;
-    },
+    queryFn: async () => (await apiRequest<CatalogGoal[]>("/goal-catalog")).map(normalizeCatalog),
     enabled,
   });
 
@@ -165,7 +161,7 @@ export function useGoals() {
 }
 
 export function getCatalogGoal(id: string): CatalogGoal | undefined {
-  return GOAL_CATALOG.find((g) => g.id === id);
+  return cachedCatalog().find((g) => g.id === id);
 }
 
 export function getCatalogSkill(goalId: string, skillId: string): CoreSkill | undefined {
@@ -191,7 +187,9 @@ export function rankGoalsForProfile(
     return score;
   };
 
-  return GOAL_CATALOG.map((goal) => ({ goal, score: scoreOf(goal) })).sort((a, b) => b.score - a.score);
+  return cachedCatalog()
+    .map((goal) => ({ goal, score: scoreOf(goal) }))
+    .sort((a, b) => b.score - a.score);
 }
 
 export function confidenceLabel(value: number): string {
