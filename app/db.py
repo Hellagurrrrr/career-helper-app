@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import shutil
 import sqlite3
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -42,11 +43,22 @@ def _create_connection() -> sqlite3.Connection:
     return conn
 
 
-_connection = _create_connection()
+_connection: sqlite3.Connection | None = None
+_connection_lock = threading.Lock()
 
 
 def get_connection() -> sqlite3.Connection:
-    """Return the process-wide SQLite connection."""
+    """Return the process-wide SQLite connection, opening it on first use.
+
+    Initialization is lazy (not an import-time side effect) so importing this
+    module never touches the filesystem or runs the schema. The lock makes the
+    one-time open safe under the thread pool ``check_same_thread=False`` allows.
+    """
+    global _connection
+    if _connection is None:
+        with _connection_lock:
+            if _connection is None:
+                _connection = _create_connection()
     return _connection
 
 
@@ -57,11 +69,12 @@ def get_conn() -> Iterator[sqlite3.Connection]:
 
         def endpoint(conn: sqlite3.Connection = Depends(get_conn)): ...
     """
+    conn = get_connection()
     try:
-        yield _connection
-        _connection.commit()
+        yield conn
+        conn.commit()
     except Exception:
-        _connection.rollback()
+        conn.rollback()
         raise
 
 
@@ -72,17 +85,19 @@ def reset_all() -> None:
     domain; ``tts_cache`` has no FK and is cleared explicitly. The read-only
     catalogs are left intact.
     """
-    _connection.execute("DELETE FROM users")
-    _connection.execute("DELETE FROM tts_cache")
-    _connection.commit()
+    conn = get_connection()
+    conn.execute("DELETE FROM users")
+    conn.execute("DELETE FROM tts_cache")
+    conn.commit()
 
 
 def seed_catalogs() -> None:
     """Verify the read-only catalogs are present in the local SQLite database."""
+    conn = get_connection()
     missing = [
         label
         for table, label in _CATALOG_TABLES.items()
-        if not _connection.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone()
+        if not conn.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone()
     ]
     if missing:
         raise RuntimeError(f"Missing catalog data in SQLite database: {', '.join(missing)}")
