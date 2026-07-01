@@ -50,8 +50,7 @@ def _get_app_or_404(conn: sqlite3.Connection, user_id: str, application_id: str)
     return app
 
 
-def _context(user_id: str, app: dict[str, Any]) -> dict[str, Any]:
-    conn = get_connection()
+def _context(conn: sqlite3.Connection, user_id: str, app: dict[str, Any]) -> dict[str, Any]:
     job = catalogs_repo.get_job(conn, app["jobId"]) or {}
     goal = goals_repo.get(conn, user_id, app["goalId"]) or {}
     return {
@@ -362,7 +361,7 @@ def start_mock(
 ) -> dict:
     """Start a mock interview: generate questions from the profile + job and return the first."""
     app = _get_app_or_404(conn, user.id, application_id)
-    ctx = _context(user.id, app)
+    ctx = _context(conn, user.id, app)
     job = catalogs_repo.get_job(conn, app["jobId"]) or {}
     profile = profiles_repo.get(conn, user.id)
     questions = ai_service.interview_questions(profile, job)
