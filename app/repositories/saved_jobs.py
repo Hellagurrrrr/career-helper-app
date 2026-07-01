@@ -23,10 +23,13 @@ def list_job_ids(conn: sqlite3.Connection, user_id: str, goal_id: str) -> list[s
 
 
 def is_saved(conn: sqlite3.Connection, user_id: str, goal_id: str, job_id: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM saved_jobs WHERE user_id = ? AND goal_id = ? AND job_id = ? LIMIT 1",
-        (user_id, goal_id, job_id),
-    ).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM saved_jobs WHERE user_id = ? AND goal_id = ? AND job_id = ? LIMIT 1",
+            (user_id, goal_id, job_id),
+        ).fetchone()
+        is not None
+    )
 
 
 def add(conn: sqlite3.Connection, user_id: str, goal_id: str, job_id: str) -> None:

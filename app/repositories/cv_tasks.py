@@ -29,9 +29,7 @@ def _row_to_task(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def get(conn: sqlite3.Connection, task_id: str) -> dict[str, Any] | None:
-    row = conn.execute(
-        "SELECT * FROM cv_extract_tasks WHERE id = ?", (task_id,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM cv_extract_tasks WHERE id = ?", (task_id,)).fetchone()
     return _row_to_task(row) if row else None
 
 
@@ -56,14 +54,10 @@ def create(
 
 def increment_polls(conn: sqlite3.Connection, task_id: str) -> int | None:
     """Bump the mock poll counter and return the new value (None if missing)."""
-    cur = conn.execute(
-        "UPDATE cv_extract_tasks SET polls = polls + 1 WHERE id = ?", (task_id,)
-    )
+    cur = conn.execute("UPDATE cv_extract_tasks SET polls = polls + 1 WHERE id = ?", (task_id,))
     if cur.rowcount == 0:
         return None
-    row = conn.execute(
-        "SELECT polls FROM cv_extract_tasks WHERE id = ?", (task_id,)
-    ).fetchone()
+    row = conn.execute("SELECT polls FROM cv_extract_tasks WHERE id = ?", (task_id,)).fetchone()
     return row["polls"]
 
 

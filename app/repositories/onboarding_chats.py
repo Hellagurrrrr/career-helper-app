@@ -81,7 +81,5 @@ def save(conn: sqlite3.Connection, user_id: str, session: dict[str, Any]) -> Non
 
 def delete(conn: sqlite3.Connection, user_id: str) -> bool:
     """Discard a user's onboarding session (turns cascade). True if one existed."""
-    cur = conn.execute(
-        "DELETE FROM onboarding_chat_sessions WHERE user_id = ?", (user_id,)
-    )
+    cur = conn.execute("DELETE FROM onboarding_chat_sessions WHERE user_id = ?", (user_id,))
     return cur.rowcount > 0

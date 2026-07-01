@@ -10,10 +10,10 @@ from app.core.deps import get_current_user
 from app.core.errors import APIError, file_too_large, not_found, validation_error
 from app.core.security import new_id, now_ms
 from app.db import get_conn, get_connection
+from app.models import UserRecord
 from app.repositories import cv_tasks as cv_tasks_repo
 from app.repositories import onboarding_chats as onboarding_chats_repo
 from app.repositories import profiles as profiles_repo
-from app.services import ai_service, notifications_service
 from app.schemas.profile import (
     CvExtractResult,
     CvExtractTask,
@@ -22,7 +22,7 @@ from app.schemas.profile import (
     Profile,
     ProfileInput,
 )
-from app.models import UserRecord
+from app.services import ai_service, notifications_service
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -83,7 +83,7 @@ def get_profile(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> Profile:
-    '''
+    """
     Get the profile of the current user.
 
     **Args**:
@@ -92,7 +92,7 @@ def get_profile(
         - Profile: The profile of the current user.
     **Raises**:
         - not_found: If the profile has not been created yet.
-    '''
+    """
     data = profiles_repo.get(conn, user.id)
     if not data:
         raise not_found("Profile has not been created yet.")
@@ -105,7 +105,7 @@ def put_profile(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> Profile:
-    '''
+    """
     Put the profile of the current user.
 
     **Args**:
@@ -113,7 +113,7 @@ def put_profile(
         - user: UserRecord: The current user.
     **Returns**:
         - Profile: The profile of the current user.
-    '''
+    """
     was_empty = not profiles_repo.get(conn, user.id)
     record = _normalize_profile(body.model_dump(by_alias=True))
     record["updatedAt"] = now_ms()
@@ -131,7 +131,7 @@ def extract_cv(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> CvExtractTask:
-    '''
+    """
     Extract the CV of the current user:
     - Upload a CV file and start the extraction process.
     - The extraction process is asynchronous and the result will be returned via a polling endpoint.
@@ -141,7 +141,7 @@ def extract_cv(
         - user: UserRecord: The current user.
     **Returns**:
         - CvExtractTask: The task of the CV extraction.
-    '''
+    """
     name = (file.filename or "").lower()
     if not name.endswith(_ALLOWED_CV_EXT):
         raise validation_error("Unsupported file type. Use PDF, DOC, DOCX, or TXT.", "file")
@@ -165,7 +165,7 @@ def get_extract_cv(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> CvExtractResult:
-    '''
+    """
     Get the result of the CV extraction task.
 
     **Args**:
@@ -173,7 +173,7 @@ def get_extract_cv(
         - user: UserRecord: The current user.
     **Returns**:
         - CvExtractResult: The result of the CV extraction task.
-    '''
+    """
     task = cv_tasks_repo.get(conn, task_id)
     if not task or task["user_id"] != user.id:
         raise not_found("Extraction task not found.")
@@ -278,13 +278,13 @@ def start_onboarding_chat(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Start or resume the conversational onboarding session.
 
     If an in-progress session already exists it is returned as-is so the user
     continues from where they left off (use-case OB-12); otherwise a new session
     is created with the first assistant question.
-    '''
+    """
     existing = onboarding_chats_repo.get(conn, user.id)
     if existing and existing.get("status") == "in_progress":
         return existing
@@ -298,7 +298,7 @@ def get_onboarding_chat(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''Get the current onboarding chat session; 404 if none exists.'''
+    """Get the current onboarding chat session; 404 if none exists."""
     session = onboarding_chats_repo.get(conn, user.id)
     if not session:
         raise not_found("No onboarding chat session.")
@@ -311,11 +311,11 @@ def answer_onboarding_chat(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Submit an answer to the current question. The assistant records it and either
     asks the next question or, once enough info is collected, completes the
     session and returns a profile `draft` for the Review step (use-case OB-10).
-    '''
+    """
     session = onboarding_chats_repo.get(conn, user.id)
     if not session:
         raise not_found("No onboarding chat session.")
@@ -344,6 +344,6 @@ def delete_onboarding_chat(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''Discard the current onboarding chat session (restart / leave chat mode).'''
+    """Discard the current onboarding chat session (restart / leave chat mode)."""
     if not onboarding_chats_repo.delete(conn, user.id):
         raise not_found("No onboarding chat session.")

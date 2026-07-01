@@ -16,8 +16,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.main import app
 from app.db import reset_all
+from app.main import app
 
 OUTPUT_DIR = Path(__file__).parent / "output"
 

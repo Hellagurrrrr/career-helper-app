@@ -54,7 +54,9 @@ def welcome(user_id: str, name: str) -> dict[str, Any] | None:
     )
 
 
-def check_milestone(user_id: str, goal_id: str, old_progress: int, new_progress: int, goal_title: str) -> None:
+def check_milestone(
+    user_id: str, goal_id: str, old_progress: int, new_progress: int, goal_title: str
+) -> None:
     """Emit milestone notifications when progress crosses 25/50/75/100 (NT-05)."""
     for milestone in (25, 50, 75, 100):
         if old_progress < milestone <= new_progress:

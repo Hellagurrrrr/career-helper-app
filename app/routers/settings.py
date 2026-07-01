@@ -8,6 +8,7 @@ from app.core.deps import get_current_user
 from app.core.errors import validation_error, wrong_password
 from app.core.security import hash_password, now_ms, verify_password
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import auth as auth_repo
 from app.repositories import user_settings as user_settings_repo
 from app.schemas.settings import (
@@ -19,7 +20,6 @@ from app.schemas.settings import (
     SettingsStatusResponse,
 )
 from app.services import account_service
-from app.models import UserRecord
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

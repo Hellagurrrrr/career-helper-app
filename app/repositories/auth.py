@@ -39,9 +39,9 @@ def get_user_by_email(conn: sqlite3.Connection, email: str) -> UserRecord | None
 
 
 def email_exists(conn: sqlite3.Connection, email: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM users WHERE email = ? LIMIT 1", (email,)
-    ).fetchone() is not None
+    return (
+        conn.execute("SELECT 1 FROM users WHERE email = ? LIMIT 1", (email,)).fetchone() is not None
+    )
 
 
 def create_user(conn: sqlite3.Connection, user: UserRecord) -> UserRecord:

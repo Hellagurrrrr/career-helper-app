@@ -55,10 +55,14 @@ def test_settings_change_password_validation_and_login(client):
     assert changed.status_code == 200
     assert changed.json()["status"] == "updated"
 
-    old_login = client.post("/v1/auth/login", json={"email": body["user"]["email"], "password": "secret123"})
+    old_login = client.post(
+        "/v1/auth/login", json={"email": body["user"]["email"], "password": "secret123"}
+    )
     assert old_login.status_code == 401
 
-    new_login = client.post("/v1/auth/login", json={"email": body["user"]["email"], "password": "newsecret123"})
+    new_login = client.post(
+        "/v1/auth/login", json={"email": body["user"]["email"], "password": "newsecret123"}
+    )
     assert new_login.status_code == 200
 
     refresh = client.post("/v1/auth/refresh", json={"refreshToken": body["tokens"]["refreshToken"]})
@@ -106,6 +110,8 @@ def test_settings_delete_account_removes_auth_and_data(client):
     me = client.get("/v1/auth/me", headers=headers)
     assert me.status_code == 401
 
-    login = client.post("/v1/auth/login", json={"email": body["user"]["email"], "password": "secret123"})
+    login = client.post(
+        "/v1/auth/login", json={"email": body["user"]["email"], "password": "secret123"}
+    )
     assert login.status_code == 404
     assert login.json()["error"]["code"] == "ACCOUNT_NOT_FOUND"

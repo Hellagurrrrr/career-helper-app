@@ -9,6 +9,7 @@ from app.core.deps import get_current_user
 from app.core.errors import goal_already_added, not_found, validation_error
 from app.core.security import new_id, now_ms
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import profiles as profiles_repo
@@ -21,7 +22,6 @@ from app.schemas.goals import (
 )
 from app.services import mock_match
 from app.services.goals_service import recompute_progress
-from app.models import UserRecord
 
 router = APIRouter(tags=["goals"])
 
@@ -32,14 +32,14 @@ def get_goal_catalog(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     Get the goal catalog.
 
     **Args**:
         - user: UserRecord: The current user.
     **Returns**:
         - list[CatalogGoal]: The goal catalog, sorted by descending match score.
-    '''
+    """
     profile = profiles_repo.get(conn, user.id)
     return mock_match.sort_catalog_goals(profile, catalogs_repo.list_goal_catalog(conn))
 
@@ -50,7 +50,7 @@ def get_catalog_item(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get a goal catalog item.
 
     **Args**:
@@ -58,7 +58,7 @@ def get_catalog_item(
         - user: UserRecord: The current user.
     **Returns**:
         - CatalogGoal: The catalog item.
-    '''
+    """
     item = catalogs_repo.get_catalog_goal(conn, catalog_id)
     if not item:
         raise not_found("Catalog goal not found.")
@@ -71,14 +71,14 @@ def list_goals(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     Get the list of goals that the current user has selected.
 
     **Args**:
         - user: UserRecord: The current user.
     **Returns**:
         - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
-    '''
+    """
     return goals_repo.list_for_user(conn, user.id)
 
 
@@ -88,7 +88,7 @@ def create_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Create a new goal for the current user.
 
     **Args**:
@@ -96,7 +96,7 @@ def create_goal(
         - user: UserRecord: The current user.
     **Returns**:
         - UserGoal: The created goal.
-    '''
+    """
     catalog = catalogs_repo.get_catalog_goal(conn, body.catalog_id)
     if not catalog:
         raise not_found("Catalog goal not found.")
@@ -129,7 +129,7 @@ def get_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get a goal for the current user.
 
     **Args**:
@@ -137,7 +137,7 @@ def get_goal(
         - user: UserRecord: The current user.
     **Returns**:
         - UserGoal: The goal.
-    '''
+    """
     goal = goals_repo.get(conn, user.id, goal_id)
     if not goal:
         raise not_found("Goal not found.")
@@ -151,7 +151,7 @@ def update_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Update a goal for the current user.
 
     **Args**:
@@ -160,7 +160,7 @@ def update_goal(
         - user: UserRecord: The current user.
     **Returns**:
         - UserGoal: The updated goal.
-    '''
+    """
     if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
 
@@ -182,7 +182,7 @@ def delete_goal(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Delete a goal for the current user.
 
     **Args**:
@@ -190,7 +190,7 @@ def delete_goal(
         - user: UserRecord: The current user.
     **Returns**:
         - None: The response is empty.
-    '''
+    """
     if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
 
@@ -206,7 +206,7 @@ def reorder_goals(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     Reorder the goals for the current user.
 
     **Args**:
@@ -214,7 +214,7 @@ def reorder_goals(
         - user: UserRecord: The current user.
     **Returns**:
         - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
-    '''
+    """
     current_ids = {g["id"] for g in goals_repo.list_for_user(conn, user.id)}
     if set(body.goal_ids) != current_ids:
         raise validation_error("goalIds must include every goal exactly once.", "goalIds")

@@ -26,9 +26,7 @@ def _row_to_settings(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def get(conn: sqlite3.Connection, user_id: str) -> dict[str, Any]:
-    row = conn.execute(
-        "SELECT * FROM user_settings WHERE user_id = ?", (user_id,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
     return _row_to_settings(row) if row else dict(DEFAULT)
 
 

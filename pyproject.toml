@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["frontend", "app/data"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, Q: flake8-quotes, UP: pyupgrade.
+# D (pydocstyle) is added in a later PR once existing docstrings are converted.
+select = ["E", "W", "F", "I", "Q", "UP"]
+ignore = [
+    # `ruff format` owns line length; it intentionally does not split string
+    # literals (long SQL / message strings), so E501 would flag only those.
+    "E501",
+    # `str, Enum` -> `StrEnum` changes `str()` semantics; revisit deliberately,
+    # not as part of a mechanical formatting pass.
+    "UP042",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+
+[tool.ruff.format]
+docstring-code-format = true

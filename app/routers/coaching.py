@@ -7,14 +7,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Response, U
 
 from app.core.config import settings
 from app.core.deps import get_current_user
-from app.db import get_conn, get_connection
-from app.repositories import applications as applications_repo
-from app.repositories import catalogs as catalogs_repo
-from app.repositories import goals as goals_repo
-from app.repositories import mocks as mocks_repo
-from app.repositories import profiles as profiles_repo
-from app.repositories import reviews as reviews_repo
-from app.repositories import tts_cache as tts_cache_repo
 from app.core.errors import (
     file_too_large,
     mock_session_incomplete,
@@ -24,6 +16,15 @@ from app.core.errors import (
     validation_error,
 )
 from app.core.security import new_id, now_ms
+from app.db import get_conn, get_connection
+from app.models import UserRecord
+from app.repositories import applications as applications_repo
+from app.repositories import catalogs as catalogs_repo
+from app.repositories import goals as goals_repo
+from app.repositories import mocks as mocks_repo
+from app.repositories import profiles as profiles_repo
+from app.repositories import reviews as reviews_repo
+from app.repositories import tts_cache as tts_cache_repo
 from app.schemas.applications import JobApplication
 from app.schemas.coaching import (
     CoachingSummary,
@@ -36,7 +37,6 @@ from app.schemas.coaching import (
     ReviewStatusResponse,
 )
 from app.services import ai_service, applications_service
-from app.models import UserRecord
 
 router = APIRouter(tags=["ai-coaching"])
 
@@ -100,13 +100,13 @@ def coaching_summary(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get the coaching summary.
     **Parameters**:
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The coaching summary.
-    '''
+    """
     return {
         "applicationCount": applications_repo.count_for_user(conn, user.id),
         "reviewCount": reviews_repo.count_complete_for_user(conn, user.id),
@@ -119,13 +119,13 @@ def coaching_applications(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     Get the coaching applications.
     **Parameters**:
         - user: UserRecord: The current user.
     **Returns**:
         - list[dict]: The list of coaching applications.
-    '''
+    """
     apps = applications_repo.list_for_user(conn, user.id)
     for app in apps:
         applications_service.advance_partner(conn, user.id, app)
@@ -135,20 +135,22 @@ def coaching_applications(
 # ---------------------------------------------------------------------------
 # Interview reviews (api-design 9.4 / 9.5)
 # ---------------------------------------------------------------------------
-@router.get("/applications/{application_id}/interview-reviews", response_model=list[InterviewReview])
+@router.get(
+    "/applications/{application_id}/interview-reviews", response_model=list[InterviewReview]
+)
 def list_reviews(
     application_id: str,
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     List the interview reviews for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
         - user: UserRecord: The current user.
     **Returns**:
         - list[dict]: The list of interview reviews.
-    '''
+    """
     _get_app_or_404(conn, user.id, application_id)
     reviews = reviews_repo.list_for_app(conn, user.id, application_id)
     return [r for r in reviews if r.get("status") == "complete"]
@@ -166,7 +168,7 @@ def create_review(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Create an interview review for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -174,7 +176,7 @@ def create_review(
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The interview review.
-    '''
+    """
     _get_app_or_404(conn, user.id, application_id)
     name = (file.filename or "").lower()
     if not name.endswith(_ALLOWED_AUDIO_EXT):
@@ -214,7 +216,7 @@ def get_review(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get the status of an interview review.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -222,7 +224,7 @@ def get_review(
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The status of the interview review.
-    '''
+    """
     _get_app_or_404(conn, user.id, application_id)
     review = reviews_repo.get(conn, user.id, review_id)
     if not review or review["applicationId"] != application_id:
@@ -239,7 +241,11 @@ def get_review(
             if review["polls"] <= settings.async_processing_polls:
                 review["status"] = ai_service.review_stage(review["polls"])
                 reviews_repo.save(conn, review)
-                return {"id": review_id, "applicationId": application_id, "status": review["status"]}
+                return {
+                    "id": review_id,
+                    "applicationId": application_id,
+                    "status": review["status"],
+                }
             analysis = ai_service.mock_review_analysis(review["fileName"])
             review.update(analysis)
             review["durationSec"] = 180
@@ -265,7 +271,7 @@ def delete_review(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Delete an interview review for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -273,7 +279,7 @@ def delete_review(
         - user: UserRecord: The current user.
     **Returns**:
         - None: The response body.
-    '''
+    """
     if not reviews_repo.delete(conn, user.id, application_id, review_id):
         raise not_found("Review not found.")
 
@@ -316,7 +322,9 @@ def _finalize_mock(session: dict[str, Any], background_tasks: BackgroundTasks) -
         session["status"] = "complete"
 
 
-def _finalize_response(session: dict[str, Any], background_tasks: BackgroundTasks) -> dict[str, Any]:
+def _finalize_response(
+    session: dict[str, Any], background_tasks: BackgroundTasks
+) -> dict[str, Any]:
     _finalize_mock(session, background_tasks)
     return {"status": session["status"], "session": MockInterviewSession.model_validate(session)}
 
@@ -380,14 +388,14 @@ def list_mocks(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     List the mock interviews for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
         - user: UserRecord: The current user.
     **Returns**:
         - list[dict]: The list of mock interviews.
-    '''
+    """
     _get_app_or_404(conn, user.id, application_id)
     return mocks_repo.list_for_app(conn, user.id, application_id)
 
@@ -402,14 +410,14 @@ def start_mock(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Start a mock interview for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The mock interview.
-    '''
+    """
     app = _get_app_or_404(conn, user.id, application_id)
     ctx = _context(user.id, app)
     job = catalogs_repo.get_job(conn, app["jobId"]) or {}
@@ -428,9 +436,7 @@ def start_mock(
         "startedAt": ts,
         "completedAt": None,
         "durationSec": None,
-        "turns": [
-            {"id": new_id("t"), "role": "coach", "text": questions[0], "timestamp": ts}
-        ],
+        "turns": [{"id": new_id("t"), "role": "coach", "text": questions[0], "timestamp": ts}],
         "transcript": "",
         "overallSummary": "",
         "dimensions": [],
@@ -461,7 +467,7 @@ def submit_turn(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Submit a text answer for a mock interview turn.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -470,7 +476,7 @@ def submit_turn(
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The next question, or the (scoring/complete) session.
-    '''
+    """
     _get_app_or_404(conn, user.id, application_id)
     session = _find_mock(conn, user.id, application_id, session_id)
     result = _process_turn(session, body.text, body.end, background_tasks)
@@ -491,12 +497,12 @@ def submit_turn_voice(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Submit a *spoken* answer for a mock interview turn.
 
     The uploaded audio is transcribed (STT) and then handled exactly like a text
     answer. Only available in real-AI mode.
-    '''
+    """
     if not ai_service.real_enabled():
         raise speech_not_supported()
     _get_app_or_404(conn, user.id, application_id)
@@ -523,10 +529,10 @@ def get_turn_audio(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> Response:
-    '''
+    """
     Return the synthesized speech (TTS) for a coach turn. Audio is generated on
     demand and cached by turn id. Only available in real-AI mode.
-    '''
+    """
     if not ai_service.real_enabled():
         raise speech_not_supported()
     _get_app_or_404(conn, user.id, application_id)
@@ -552,7 +558,7 @@ def get_mock(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get a mock interview for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -560,7 +566,7 @@ def get_mock(
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The mock interview.
-    '''
+    """
     _get_app_or_404(conn, user.id, application_id)
     return _find_mock(conn, user.id, application_id, session_id)
 
@@ -576,7 +582,7 @@ def delete_mock(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Delete a mock interview for an application.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -584,6 +590,6 @@ def delete_mock(
         - user: UserRecord: The current user.
     **Returns**:
         - None: The response body.
-    '''
+    """
     if not mocks_repo.delete(conn, user.id, application_id, session_id):
         raise not_found("Mock session not found.")

@@ -43,7 +43,12 @@ def _row_to_session(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any
         "SELECT * FROM mock_interview_turns WHERE session_id = ? ORDER BY sort_order", (row["id"],)
     ):
         session["turns"].append(
-            {"id": turn["id"], "role": turn["role"], "text": turn["text"], "timestamp": turn["timestamp"]}
+            {
+                "id": turn["id"],
+                "role": turn["role"],
+                "text": turn["text"],
+                "timestamp": turn["timestamp"],
+            }
         )
     return session
 
@@ -84,12 +89,26 @@ def create(conn: sqlite3.Connection, user_id: str, session: dict[str, Any]) -> d
         "completed_at, duration_sec, transcript, overall_summary, dimensions_json, improvement_advice, "
         "questions_json, current_index, error) "
         "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (session["id"], user_id, session["applicationId"], session.get("jobTitle", ""),
-         session.get("company", ""), session.get("goalTitle"), json.dumps(session.get("skills", [])),
-         session.get("status", "in_progress"), session.get("startedAt", 0), session.get("completedAt"),
-         session.get("durationSec"), session.get("transcript", ""), session.get("overallSummary", ""),
-         json.dumps(session.get("dimensions", [])), session.get("improvementAdvice", ""),
-         json.dumps(session.get("questions", [])), session.get("currentIndex", 0), session.get("error")),
+        (
+            session["id"],
+            user_id,
+            session["applicationId"],
+            session.get("jobTitle", ""),
+            session.get("company", ""),
+            session.get("goalTitle"),
+            json.dumps(session.get("skills", [])),
+            session.get("status", "in_progress"),
+            session.get("startedAt", 0),
+            session.get("completedAt"),
+            session.get("durationSec"),
+            session.get("transcript", ""),
+            session.get("overallSummary", ""),
+            json.dumps(session.get("dimensions", [])),
+            session.get("improvementAdvice", ""),
+            json.dumps(session.get("questions", [])),
+            session.get("currentIndex", 0),
+            session.get("error"),
+        ),
     )
     _replace_turns(conn, session)
     return session
@@ -101,11 +120,19 @@ def save(conn: sqlite3.Connection, session: dict[str, Any]) -> None:
         "UPDATE mock_interview_sessions SET status = ?, completed_at = ?, duration_sec = ?, "
         "transcript = ?, overall_summary = ?, dimensions_json = ?, improvement_advice = ?, "
         "questions_json = ?, current_index = ?, error = ? WHERE id = ?",
-        (session.get("status", "in_progress"), session.get("completedAt"), session.get("durationSec"),
-         session.get("transcript", ""), session.get("overallSummary", ""),
-         json.dumps(session.get("dimensions", [])), session.get("improvementAdvice", ""),
-         json.dumps(session.get("questions", [])), session.get("currentIndex", 0), session.get("error"),
-         session["id"]),
+        (
+            session.get("status", "in_progress"),
+            session.get("completedAt"),
+            session.get("durationSec"),
+            session.get("transcript", ""),
+            session.get("overallSummary", ""),
+            json.dumps(session.get("dimensions", [])),
+            session.get("improvementAdvice", ""),
+            json.dumps(session.get("questions", [])),
+            session.get("currentIndex", 0),
+            session.get("error"),
+            session["id"],
+        ),
     )
     _replace_turns(conn, session)
 

@@ -13,8 +13,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
-from app.routers import api_router
 from app.db import seed_catalogs
+from app.routers import api_router
 
 
 @asynccontextmanager

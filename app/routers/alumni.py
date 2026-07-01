@@ -7,12 +7,12 @@ from fastapi import APIRouter, Depends, Query
 from app.core.deps import get_current_user
 from app.core.errors import not_found
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import profiles as profiles_repo
 from app.schemas.alumni import AlumniProfile
 from app.services import mock_match
-from app.models import UserRecord
 
 router = APIRouter(prefix="/alumni", tags=["alumni"])
 
@@ -25,7 +25,7 @@ def list_alumni(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     List the alumni for a goal.
     **Parameters**:
         - goal_id: str | None: The ID of the goal.
@@ -34,7 +34,7 @@ def list_alumni(
         - user: UserRecord: The current user.
     **Returns**:
         - list[dict]: The list of alumni.
-    '''
+    """
     alumni = catalogs_repo.list_alumni(conn)
     if expertise:
         needle = expertise.strip().lower()
@@ -66,14 +66,14 @@ def get_alumni(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get an alumni profile.
     **Parameters**:
         - alumni_id: str: The ID of the alumni.
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The alumni profile.
-    '''
+    """
     alum = catalogs_repo.get_alumni(conn, alumni_id)
     if not alum:
         raise not_found("Profile not found.")

@@ -23,6 +23,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import auth as auth_repo
 from app.schemas.auth import (
     AuthResponse,
@@ -32,7 +33,6 @@ from app.schemas.auth import (
     RefreshRequest,
     RegisterRequest,
 )
-from app.models import UserRecord
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,25 +44,25 @@ def _normalize_email(email: str) -> str:
 
 
 def _to_auth_user(user: UserRecord) -> AuthUser:
-    '''
+    """
     Convert a user record to an auth user.
     Args:
         user: UserRecord: The user record to convert.
     Returns:
         AuthUser: The auth user.
-    '''
+    """
     return AuthUser(id=user.id, email=user.email, name=user.name, created_at=user.created_at)
 
 
 def _issue_tokens(conn: sqlite3.Connection, user_id: str) -> AuthTokens:
-    '''
+    """
     Issue tokens for a user.
     Args:
         conn: sqlite3.Connection: The database connection.
         user_id: str: The user ID to issue tokens for.
     Returns:
         AuthTokens: The tokens for the user.
-    '''
+    """
     jti = new_id("rt")
     auth_repo.add_refresh_token(conn, jti, user_id)
     return AuthTokens(
@@ -73,7 +73,7 @@ def _issue_tokens(conn: sqlite3.Connection, user_id: str) -> AuthTokens:
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
 def register(body: RegisterRequest, conn: sqlite3.Connection = Depends(get_conn)) -> AuthResponse:
-    '''
+    """
     Register a new user.
     Args:
         body: RegisterRequest: The request body containing the user's name, email, and password.
@@ -82,7 +82,7 @@ def register(body: RegisterRequest, conn: sqlite3.Connection = Depends(get_conn)
     Raises:
         validation_error: If the name, email, or password is invalid.
         email_taken: If the email is already taken.
-    '''
+    """
     name = body.name.strip()
     email = _normalize_email(body.email)
 
@@ -111,7 +111,7 @@ def register(body: RegisterRequest, conn: sqlite3.Connection = Depends(get_conn)
 
 @router.post("/login", response_model=AuthResponse)
 def login(body: LoginRequest, conn: sqlite3.Connection = Depends(get_conn)) -> AuthResponse:
-    '''
+    """
     Login a user.
     Args:
         body: LoginRequest: The request body containing the user's email and password.
@@ -120,7 +120,7 @@ def login(body: LoginRequest, conn: sqlite3.Connection = Depends(get_conn)) -> A
     Raises:
         account_not_found: If the email is not found.
         wrong_password: If the password is incorrect.
-    '''
+    """
     email = _normalize_email(body.email)
     user = auth_repo.get_user_by_email(conn, email)
     if not user:
@@ -132,7 +132,7 @@ def login(body: LoginRequest, conn: sqlite3.Connection = Depends(get_conn)) -> A
 
 @router.post("/refresh", response_model=AuthTokens)
 def refresh(body: RefreshRequest, conn: sqlite3.Connection = Depends(get_conn)) -> AuthTokens:
-    '''
+    """
     Refresh a user's tokens.
     Args:
         body: RefreshRequest: The request body containing the refresh token.
@@ -140,7 +140,7 @@ def refresh(body: RefreshRequest, conn: sqlite3.Connection = Depends(get_conn)) 
         AuthTokens: The new tokens for the user.
     Raises:
         unauthorized: If the refresh token has been revoked.
-    '''
+    """
     payload = decode_token(body.refresh_token, expected_type="refresh")
     jti = payload.get("jti")
     user_id = payload.get("sub")
@@ -161,7 +161,7 @@ def logout(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Logout a user.
     Args:
         body: RefreshRequest: The request body containing the refresh token.
@@ -170,7 +170,7 @@ def logout(
         None: The response is empty.
     Raises:
         unauthorized: If the refresh token has been revoked.
-    '''
+    """
     payload = decode_token(body.refresh_token, expected_type="refresh")
     jti = payload.get("jti")
     if jti:
@@ -179,11 +179,11 @@ def logout(
 
 @router.get("/me", response_model=AuthUser)
 def me(user: UserRecord = Depends(get_current_user)) -> AuthUser:
-    '''
+    """
     Get the current user.
     Args:
         user: UserRecord: The current user.
     Returns:
         AuthUser: The current user in auth user schema.
-    '''
+    """
     return _to_auth_user(user)

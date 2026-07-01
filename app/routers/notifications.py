@@ -8,12 +8,12 @@ from app.core.deps import get_current_user
 from app.core.errors import not_found
 from app.core.pagination import paginate
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import notifications as notifications_repo
 from app.schemas.notifications import (
     MarkReadRequest,
     NotificationListResponse,
 )
-from app.models import UserRecord
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -26,7 +26,7 @@ def list_notifications(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     List the notifications for a user (newest first).
     **Parameters**:
         - unread: bool | None: Whether to filter by unread.
@@ -35,7 +35,7 @@ def list_notifications(
         - user: UserRecord: The current user.
     **Returns**:
         - NotificationListResponse: The paginated list of notifications.
-    '''
+    """
     items = notifications_repo.list_for_user(conn, user.id, unread)
     return paginate(items, limit, cursor)
 
@@ -46,14 +46,14 @@ def mark_read(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Mark notifications as read (all of the user's when no ids are given).
     **Parameters**:
         - body: MarkReadRequest: The request body.
         - user: UserRecord: The current user.
     **Returns**:
         - NotificationListResponse: The user's notifications, newest first.
-    '''
+    """
     items = notifications_repo.mark_read(conn, user.id, body.ids)
     return {"items": items, "nextCursor": None, "total": len(items)}
 
@@ -64,13 +64,13 @@ def delete_notification(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Delete a notification.
     **Parameters**:
         - notification_id: str: The ID of the notification.
         - user: UserRecord: The current user.
     **Returns**:
         - None: The response body.
-    '''
+    """
     if not notifications_repo.delete(conn, user.id, notification_id):
         raise not_found("Notification not found.")

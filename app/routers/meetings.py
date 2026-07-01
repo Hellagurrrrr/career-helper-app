@@ -8,11 +8,11 @@ from app.core.deps import get_current_user
 from app.core.errors import meeting_already_pending, not_found, validation_error
 from app.core.security import new_id, now_ms
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import meetings as meetings_repo
 from app.schemas.alumni import CreateMeetingRequest, MeetingRequest, UpdateMeetingRequest
 from app.services import notifications_service
-from app.models import UserRecord
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
@@ -25,7 +25,7 @@ def list_meetings(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     List the meetings for a user (newest first), optionally filtered by alumni.
 
     **Parameters**:
@@ -33,7 +33,7 @@ def list_meetings(
         - user: UserRecord: The current user.
     **Returns**:
         - list[MeetingRequest]: The list of meetings.
-    '''
+    """
     return meetings_repo.list_for_user(conn, user.id, alumni_id)
 
 
@@ -43,7 +43,7 @@ def create_meeting(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Create a meeting request for a user.
 
     **Parameters**:
@@ -51,7 +51,7 @@ def create_meeting(
         - user: UserRecord: The current user.
     **Returns**:
         - MeetingRequest: The created meeting.
-    '''
+    """
     alum = catalogs_repo.get_alumni(conn, body.alumni_id)
     if not alum:
         raise validation_error("Alumni not found.", "alumniId")
@@ -95,7 +95,7 @@ def update_meeting(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Update a meeting's status for a user.
 
     **Parameters**:
@@ -104,7 +104,7 @@ def update_meeting(
         - user: UserRecord: The current user.
     **Returns**:
         - MeetingRequest: The updated meeting.
-    '''
+    """
     # Only set completed_at when transitioning to "completed"; leave it untouched
     # otherwise (matches prior behavior).
     if body.status == "completed":

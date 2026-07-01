@@ -9,6 +9,7 @@ from app.core.deps import get_current_user
 from app.core.errors import not_found, validation_error
 from app.core.security import now_ms
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import tracking as tracking_repo
@@ -19,7 +20,6 @@ from app.schemas.tracking import (
     WeekFocusRequest,
 )
 from app.services.goals_service import recompute_progress
-from app.models import UserRecord
 
 router = APIRouter(prefix="/goals/{goal_id}/tracking", tags=["tracking"])
 
@@ -57,7 +57,7 @@ def get_tracking(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Get the tracking for a goal.
 
     **Args**:
@@ -65,7 +65,7 @@ def get_tracking(
         - user: UserRecord: The current user.
     **Returns**:
         - GoalTracking: The tracking for the goal.
-    '''
+    """
     _get_goal_or_404(conn, user.id, goal_id)
     return tracking_repo.get_or_default(conn, goal_id)
 
@@ -79,7 +79,7 @@ def toggle_step(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Toggle a step for a goal.
 
     **Args**:
@@ -90,7 +90,7 @@ def toggle_step(
         - user: UserRecord: The current user.
     **Returns**:
         - GoalTracking: The tracking for the goal.
-    '''
+    """
     goal = _get_goal_or_404(conn, user.id, goal_id)
     skill = _catalog_skill(conn, goal, skill_id)
     if not 0 <= step_index < len(skill.get("whatToDo", [])):
@@ -121,7 +121,7 @@ def toggle_resource(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Toggle a resource for a goal.
 
     **Args**:
@@ -132,7 +132,7 @@ def toggle_resource(
         - user: UserRecord: The current user.
     **Returns**:
         - GoalTracking: The tracking for the goal.
-    '''
+    """
     goal = _get_goal_or_404(conn, user.id, goal_id)
     skill = _catalog_skill(conn, goal, skill_id)
     if not 0 <= resource_index < len(skill.get("resources", [])):
@@ -158,7 +158,7 @@ def rerate_dismiss(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Dismiss the rerate for a goal.
 
     **Args**:
@@ -167,7 +167,7 @@ def rerate_dismiss(
         - user: UserRecord: The current user.
     **Returns**:
         - GoalTracking: The tracking for the goal.
-    '''
+    """
     goal = _get_goal_or_404(conn, user.id, goal_id)
     _catalog_skill(conn, goal, skill_id)
     tracking = tracking_repo.get_or_default(conn, goal_id)
@@ -186,7 +186,7 @@ def set_week_focus(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Set the week focus for a goal.
 
     **Args**:
@@ -195,7 +195,7 @@ def set_week_focus(
         - user: UserRecord: The current user.
     **Returns**:
         - GoalTracking: The tracking for the goal.
-    '''
+    """
     _get_goal_or_404(conn, user.id, goal_id)
     tracking = tracking_repo.get_or_default(conn, goal_id)
     tracking["weekFocus"] = body.week_focus

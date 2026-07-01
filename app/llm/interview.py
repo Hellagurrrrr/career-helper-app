@@ -22,7 +22,10 @@ def generate_questions(profile: dict[str, Any] | None, job: dict[str, Any]) -> l
     llm = get_llm(Purpose.INTERVIEW).with_structured_output(InterviewQuestions)
     result: InterviewQuestions = llm.invoke(
         [
-            ("system", INTERVIEW_QUESTIONS_SYSTEM + f" Produce {settings.mock_question_count} questions."),
+            (
+                "system",
+                INTERVIEW_QUESTIONS_SYSTEM + f" Produce {settings.mock_question_count} questions.",
+            ),
             ("human", f"Candidate profile:\n{profile_json}\n\nTarget job:\n{job_json}"),
         ]
     )

@@ -51,8 +51,8 @@ class CvExtractTask(CamelModel):
 
 class CvExtractResult(CamelModel):
     task_id: str
-    status: str            # processing | complete | failed
-    stage: str             # parsing | extracting | structuring
+    status: str  # processing | complete | failed
+    stage: str  # parsing | extracting | structuring
     draft: dict | None = None
 
 

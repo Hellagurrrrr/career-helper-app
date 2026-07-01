@@ -10,7 +10,7 @@ mock mode; only ``get_llm`` requires the package to be installed.
 from __future__ import annotations
 
 from enum import Enum
-from functools import lru_cache
+from functools import cache
 from typing import Any
 
 from app.core.config import settings
@@ -33,7 +33,7 @@ _MODEL_FOR: dict[Purpose, str] = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_llm(purpose: Purpose) -> Any:
     """Build (and cache) a ChatOpenAI instance for the given purpose.
 

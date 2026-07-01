@@ -125,7 +125,8 @@ def _row_to_alumni(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]
         (row["id"],),
     ).fetchone()
     edu = conn.execute(
-        "SELECT * FROM alumni_education WHERE alumni_id = ? ORDER BY sort_order LIMIT 1", (row["id"],)
+        "SELECT * FROM alumni_education WHERE alumni_id = ? ORDER BY sort_order LIMIT 1",
+        (row["id"],),
     ).fetchone()
     return {
         "id": row["id"],
@@ -134,7 +135,9 @@ def _row_to_alumni(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]
         "role": work["title"] if work else row["headline"] or "",
         "company": work["company"] if work else "",
         "industry": work["industry"] if work else "",
-        "graduationYear": edu["graduation_year"] if edu and edu["graduation_year"] is not None else 0,
+        "graduationYear": edu["graduation_year"]
+        if edu and edu["graduation_year"] is not None
+        else 0,
         "major": edu["major"] if edu else "",
         "university": edu["school"] if edu else "",
         "yearsExperience": 0,
@@ -142,13 +145,15 @@ def _row_to_alumni(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]
         "expertise": [
             r["display_label"] or _skill_name(conn, r["skill_id"])
             for r in conn.execute(
-                "SELECT * FROM alumni_expertise WHERE alumni_id = ? ORDER BY sort_order", (row["id"],)
+                "SELECT * FROM alumni_expertise WHERE alumni_id = ? ORDER BY sort_order",
+                (row["id"],),
             )
         ],
         "topics": [
             r["topic"]
             for r in conn.execute(
-                "SELECT topic FROM alumni_topics WHERE alumni_id = ? ORDER BY sort_order", (row["id"],)
+                "SELECT topic FROM alumni_topics WHERE alumni_id = ? ORDER BY sort_order",
+                (row["id"],),
             )
         ],
         "responseTime": row["response_time"],
@@ -156,7 +161,8 @@ def _row_to_alumni(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]
         "goalAlignment": [
             r["catalog_goal_id"]
             for r in conn.execute(
-                "SELECT catalog_goal_id FROM alumni_goal_alignment WHERE alumni_id = ?", (row["id"],)
+                "SELECT catalog_goal_id FROM alumni_goal_alignment WHERE alumni_id = ?",
+                (row["id"],),
             )
         ],
         "avatarGradient": row["avatar_gradient"],

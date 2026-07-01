@@ -27,9 +27,7 @@ def default_tracking() -> dict[str, Any]:
 
 
 def get(conn: sqlite3.Connection, goal_id: str) -> dict[str, Any] | None:
-    row = conn.execute(
-        "SELECT * FROM goal_tracking WHERE goal_id = ?", (goal_id,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM goal_tracking WHERE goal_id = ?", (goal_id,)).fetchone()
     if row is None:
         return None
     tracking: dict[str, Any] = {
@@ -37,9 +35,7 @@ def get(conn: sqlite3.Connection, goal_id: str) -> dict[str, Any] | None:
         "weekStartedAt": row["week_started_at"],
         "weekFocus": [],
     }
-    for mod in conn.execute(
-        "SELECT * FROM goal_tracking_modules WHERE goal_id = ?", (goal_id,)
-    ):
+    for mod in conn.execute("SELECT * FROM goal_tracking_modules WHERE goal_id = ?", (goal_id,)):
         skill_id = mod["skill_id"]
         tracking["modules"][skill_id] = {
             "completedSteps": [
@@ -87,8 +83,12 @@ def save(conn: sqlite3.Connection, goal_id: str, tracking: dict[str, Any]) -> No
         conn.execute(
             "INSERT INTO goal_tracking_modules"
             "(goal_id, skill_id, steps_completed_since_rerate, rerate_dismissed) VALUES(?, ?, ?, ?)",
-            (goal_id, skill_id, mod.get("stepsCompletedSinceRerate", 0),
-             int(bool(mod.get("rerateDismissed", False)))),
+            (
+                goal_id,
+                skill_id,
+                mod.get("stepsCompletedSinceRerate", 0),
+                int(bool(mod.get("rerateDismissed", False))),
+            ),
         )
         for step in mod.get("completedSteps", []):
             conn.execute(

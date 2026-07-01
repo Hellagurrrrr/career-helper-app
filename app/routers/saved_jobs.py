@@ -7,11 +7,11 @@ from fastapi import APIRouter, Depends, Query
 from app.core.deps import get_current_user
 from app.core.errors import not_found, validation_error
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
 from app.repositories import saved_jobs as saved_jobs_repo
 from app.schemas.jobs import JobListing, SaveJobRequest
-from app.models import UserRecord
 
 router = APIRouter(prefix="/saved-jobs", tags=["saved-jobs"])
 
@@ -22,14 +22,14 @@ def list_saved_jobs(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     List the saved jobs for a goal.
     **Parameters**:
         - goal_id: str: The ID of the goal.
         - user: UserRecord: The current user.
     **Returns**:
         - list[dict]: The list of saved jobs.
-    '''
+    """
     if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
     job_ids = saved_jobs_repo.list_job_ids(conn, user.id, goal_id)
@@ -43,7 +43,7 @@ def save_job(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
+    """
     Save a job for a goal.
     **Parameters**:
         - job_id: str: The ID of the job.
@@ -51,7 +51,7 @@ def save_job(
         - user: UserRecord: The current user.
     **Returns**:
         - list[dict]: The list of saved jobs.
-    '''
+    """
     if not goals_repo.exists(conn, user.id, body.goal_id):
         raise validation_error("Goal not found.", "goalId")
     if not catalogs_repo.get_job(conn, job_id):
@@ -68,7 +68,7 @@ def unsave_job(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Unsave a job for a goal.
     **Parameters**:
         - job_id: str: The ID of the job.
@@ -76,6 +76,6 @@ def unsave_job(
         - user: UserRecord: The current user.
     **Returns**:
         - None: The response body.
-    '''
+    """
     if not saved_jobs_repo.remove(conn, user.id, goal_id, job_id):
         raise not_found("Saved job not found.")

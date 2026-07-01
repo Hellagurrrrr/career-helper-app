@@ -52,22 +52,28 @@ def get(conn: sqlite3.Connection, user_id: str, goal_id: str) -> dict[str, Any] 
 
 
 def exists(conn: sqlite3.Connection, user_id: str, goal_id: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM user_goals WHERE user_id = ? AND id = ? LIMIT 1", (user_id, goal_id)
-    ).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM user_goals WHERE user_id = ? AND id = ? LIMIT 1", (user_id, goal_id)
+        ).fetchone()
+        is not None
+    )
 
 
 def has_catalog(conn: sqlite3.Connection, user_id: str, catalog_id: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM user_goals WHERE user_id = ? AND catalog_id = ? LIMIT 1",
-        (user_id, catalog_id),
-    ).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM user_goals WHERE user_id = ? AND catalog_id = ? LIMIT 1",
+            (user_id, catalog_id),
+        ).fetchone()
+        is not None
+    )
 
 
 def count_for_user(conn: sqlite3.Connection, user_id: str) -> int:
-    return conn.execute(
-        "SELECT COUNT(*) FROM user_goals WHERE user_id = ?", (user_id,)
-    ).fetchone()[0]
+    return conn.execute("SELECT COUNT(*) FROM user_goals WHERE user_id = ?", (user_id,)).fetchone()[
+        0
+    ]
 
 
 def create(conn: sqlite3.Connection, user_id: str, goal: dict[str, Any]) -> dict[str, Any]:
@@ -75,9 +81,19 @@ def create(conn: sqlite3.Connection, user_id: str, goal: dict[str, Any]) -> dict
         "INSERT INTO user_goals"
         "(id, user_id, catalog_id, title, description, color, status, progress, last_updated, created_at, sort_order) "
         "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (goal["id"], user_id, goal["catalogId"], goal["title"], goal["description"], goal["color"],
-         goal["status"], goal.get("progress", 0), goal.get("lastUpdated", ""), goal.get("createdAt", 0),
-         goal.get("sortOrder", 0)),
+        (
+            goal["id"],
+            user_id,
+            goal["catalogId"],
+            goal["title"],
+            goal["description"],
+            goal["color"],
+            goal["status"],
+            goal.get("progress", 0),
+            goal.get("lastUpdated", ""),
+            goal.get("createdAt", 0),
+            goal.get("sortOrder", 0),
+        ),
     )
     for skill_id, score in goal.get("confidence", {}).items():
         conn.execute(
@@ -110,9 +126,7 @@ def set_progress(conn: sqlite3.Connection, goal_id: str, progress: int, last_upd
 
 def delete(conn: sqlite3.Connection, user_id: str, goal_id: str) -> bool:
     """Delete a goal. Confidence/tracking/saved-jobs/applications cascade via FK."""
-    cur = conn.execute(
-        "DELETE FROM user_goals WHERE user_id = ? AND id = ?", (user_id, goal_id)
-    )
+    cur = conn.execute("DELETE FROM user_goals WHERE user_id = ? AND id = ?", (user_id, goal_id))
     return cur.rowcount > 0
 
 

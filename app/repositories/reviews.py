@@ -72,10 +72,21 @@ def create(conn: sqlite3.Connection, user_id: str, review: dict[str, Any]) -> di
         "(id, user_id, application_id, file_name, uploaded_at, status, polls, duration_sec, "
         "transcript, overall_summary, dimensions_json, improvement_advice, error) "
         "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (review["id"], user_id, review["applicationId"], review.get("fileName", "audio"),
-         review.get("uploadedAt", 0), review.get("status", "transcribing"), review.get("polls", 0),
-         review.get("durationSec"), review.get("transcript", ""), review.get("overallSummary", ""),
-         json.dumps(review.get("dimensions", [])), review.get("improvementAdvice", ""), review.get("error")),
+        (
+            review["id"],
+            user_id,
+            review["applicationId"],
+            review.get("fileName", "audio"),
+            review.get("uploadedAt", 0),
+            review.get("status", "transcribing"),
+            review.get("polls", 0),
+            review.get("durationSec"),
+            review.get("transcript", ""),
+            review.get("overallSummary", ""),
+            json.dumps(review.get("dimensions", [])),
+            review.get("improvementAdvice", ""),
+            review.get("error"),
+        ),
     )
     return review
 
@@ -85,10 +96,17 @@ def save(conn: sqlite3.Connection, review: dict[str, Any]) -> None:
     conn.execute(
         "UPDATE interview_reviews SET status = ?, polls = ?, duration_sec = ?, transcript = ?, "
         "overall_summary = ?, dimensions_json = ?, improvement_advice = ?, error = ? WHERE id = ?",
-        (review.get("status", "transcribing"), review.get("polls", 0), review.get("durationSec"),
-         review.get("transcript", ""), review.get("overallSummary", ""),
-         json.dumps(review.get("dimensions", [])), review.get("improvementAdvice", ""),
-         review.get("error"), review["id"]),
+        (
+            review.get("status", "transcribing"),
+            review.get("polls", 0),
+            review.get("durationSec"),
+            review.get("transcript", ""),
+            review.get("overallSummary", ""),
+            json.dumps(review.get("dimensions", [])),
+            review.get("improvementAdvice", ""),
+            review.get("error"),
+            review["id"],
+        ),
     )
 
 

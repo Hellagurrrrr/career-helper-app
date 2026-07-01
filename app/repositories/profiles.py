@@ -103,22 +103,43 @@ def save(conn: sqlite3.Connection, user_id: str, profile: dict[str, Any] | None)
         conn.execute(
             "INSERT INTO profile_education(user_id, sort_order, degree, school, major, grade, start, end) "
             "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (user_id, idx, edu.get("degree", ""), edu.get("school", ""), edu.get("major", ""),
-             edu.get("grade"), edu.get("start", ""), edu.get("end")),
+            (
+                user_id,
+                idx,
+                edu.get("degree", ""),
+                edu.get("school", ""),
+                edu.get("major", ""),
+                edu.get("grade"),
+                edu.get("start", ""),
+                edu.get("end"),
+            ),
         )
     for idx, intern in enumerate(profile.get("internships", [])):
         conn.execute(
             "INSERT INTO profile_internships(user_id, sort_order, title, company, start, end, description) "
             "VALUES(?, ?, ?, ?, ?, ?, ?)",
-            (user_id, idx, intern.get("title", ""), intern.get("company", ""), intern.get("start", ""),
-             intern.get("end"), intern.get("description", "")),
+            (
+                user_id,
+                idx,
+                intern.get("title", ""),
+                intern.get("company", ""),
+                intern.get("start", ""),
+                intern.get("end"),
+                intern.get("description", ""),
+            ),
         )
     for idx, project in enumerate(profile.get("projects", [])):
         conn.execute(
             "INSERT INTO profile_projects(user_id, sort_order, title, start, end, description) "
             "VALUES(?, ?, ?, ?, ?, ?)",
-            (user_id, idx, project.get("title", ""), project.get("start", ""),
-             project.get("end"), project.get("description", "")),
+            (
+                user_id,
+                idx,
+                project.get("title", ""),
+                project.get("start", ""),
+                project.get("end"),
+                project.get("description", ""),
+            ),
         )
     for idx, skill in enumerate(profile.get("skills", [])):
         normalized = _normalize_skill_text(skill)

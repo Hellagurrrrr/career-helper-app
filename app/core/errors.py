@@ -41,15 +41,21 @@ def validation_error(message: str, field: str | None = None) -> APIError:
     return APIError("VALIDATION_ERROR", 400, message, details)
 
 
-def unsupported_audio_format(message: str = "Please upload an audio file (MP3, WAV, M4A, or WebM).") -> APIError:
+def unsupported_audio_format(
+    message: str = "Please upload an audio file (MP3, WAV, M4A, or WebM).",
+) -> APIError:
     return APIError("UNSUPPORTED_AUDIO_FORMAT", 400, message)
 
 
-def speech_not_supported(message: str = "Speech features are not supported in this environment.") -> APIError:
+def speech_not_supported(
+    message: str = "Speech features are not supported in this environment.",
+) -> APIError:
     return APIError("SPEECH_NOT_SUPPORTED", 422, message)
 
 
-def mock_session_incomplete(message: str = "The mock interview has no valid answers to evaluate.") -> APIError:
+def mock_session_incomplete(
+    message: str = "The mock interview has no valid answers to evaluate.",
+) -> APIError:
     return APIError("MOCK_SESSION_INCOMPLETE", 422, message)
 
 
@@ -85,7 +91,9 @@ def already_applied(message: str = "You have already applied to this job.") -> A
     return APIError("ALREADY_APPLIED", 409, message)
 
 
-def meeting_already_pending(message: str = "You already have a pending request for this alumni.") -> APIError:
+def meeting_already_pending(
+    message: str = "You already have a pending request for this alumni.",
+) -> APIError:
     return APIError("MEETING_ALREADY_PENDING", 409, message)
 
 
@@ -93,7 +101,9 @@ def file_too_large(message: str = "File is too large.") -> APIError:
     return APIError("FILE_TOO_LARGE", 413, message)
 
 
-def not_exclusive_job(message: str = "Referrals are only available for exclusive jobs.") -> APIError:
+def not_exclusive_job(
+    message: str = "Referrals are only available for exclusive jobs.",
+) -> APIError:
     return APIError("NOT_EXCLUSIVE_JOB", 422, message)
 
 

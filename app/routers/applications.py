@@ -14,6 +14,7 @@ from app.core.errors import (
 )
 from app.core.security import new_id, now_ms
 from app.db import get_conn
+from app.models import UserRecord
 from app.repositories import applications as applications_repo
 from app.repositories import catalogs as catalogs_repo
 from app.repositories import goals as goals_repo
@@ -24,7 +25,6 @@ from app.schemas.applications import (
     UpdateApplicationRequest,
 )
 from app.services import applications_service
-from app.models import UserRecord
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -35,14 +35,14 @@ def list_applications(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     List the applications for a goal.
     **Parameters**:
         - goal_id: str | None: The ID of the goal.
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The list of applications.
-    '''
+    """
     apps = applications_repo.list_for_user(conn, user.id)
     # Advance partner pipelines before reporting (use-case APP-05).
     for app in apps:
@@ -60,14 +60,14 @@ def create_application(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Create an application for a goal.
     **Parameters**:
         - body: CreateApplicationRequest: The request body.
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The application.
-    '''
+    """
     if not goals_repo.exists(conn, user.id, body.goal_id):
         raise validation_error("Goal not found.", "goalId")
     job = catalogs_repo.get_job(conn, body.job_id)
@@ -102,7 +102,7 @@ def update_application(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
+    """
     Update an application for a goal.
     **Parameters**:
         - application_id: str: The ID of the application.
@@ -110,7 +110,7 @@ def update_application(
         - user: UserRecord: The current user.
     **Returns**:
         - dict: The application.
-    '''
+    """
     app = applications_repo.get(conn, user.id, application_id)
     if not app:
         raise not_found("Application not found.")
@@ -132,14 +132,14 @@ def delete_application(
     user: UserRecord = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_conn),
 ) -> None:
-    '''
+    """
     Delete an application for a goal.
     **Parameters**:
         - application_id: str: The ID of the application.
         - user: UserRecord: The current user.
     **Returns**:
         - None: The response body.
-    '''
+    """
     # Reviews and mock sessions cascade via FK.
     if not applications_repo.delete(conn, user.id, application_id):
         raise not_found("Application not found.")

@@ -49,9 +49,12 @@ def count_for_user(conn: sqlite3.Connection, user_id: str) -> int:
 
 
 def has_job(conn: sqlite3.Connection, user_id: str, job_id: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM applications WHERE user_id = ? AND job_id = ? LIMIT 1", (user_id, job_id)
-    ).fetchone() is not None
+    return (
+        conn.execute(
+            "SELECT 1 FROM applications WHERE user_id = ? AND job_id = ? LIMIT 1", (user_id, job_id)
+        ).fetchone()
+        is not None
+    )
 
 
 def create(conn: sqlite3.Connection, user_id: str, app: dict[str, Any]) -> dict[str, Any]:
@@ -59,13 +62,25 @@ def create(conn: sqlite3.Connection, user_id: str, app: dict[str, Any]) -> dict[
         "INSERT INTO applications"
         "(id, user_id, kind, goal_id, job_id, title, company, submitted_at, partner_status, manual_status, cv_text) "
         "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
-        (app["id"], user_id, app["kind"], app["goalId"], app["jobId"], app["title"], app["company"],
-         app["submittedAt"], app.get("partnerStatus"), app.get("manualStatus")),
+        (
+            app["id"],
+            user_id,
+            app["kind"],
+            app["goalId"],
+            app["jobId"],
+            app["title"],
+            app["company"],
+            app["submittedAt"],
+            app.get("partnerStatus"),
+            app.get("manualStatus"),
+        ),
     )
     return app
 
 
-def set_manual_status(conn: sqlite3.Connection, user_id: str, app_id: str, status: str | None) -> None:
+def set_manual_status(
+    conn: sqlite3.Connection, user_id: str, app_id: str, status: str | None
+) -> None:
     conn.execute(
         "UPDATE applications SET manual_status = ? WHERE user_id = ? AND id = ?",
         (status, user_id, app_id),
@@ -78,7 +93,5 @@ def set_partner_status(conn: sqlite3.Connection, app_id: str, status: str) -> No
 
 def delete(conn: sqlite3.Connection, user_id: str, app_id: str) -> bool:
     """Delete an application. Reviews and mock sessions cascade via FK."""
-    cur = conn.execute(
-        "DELETE FROM applications WHERE user_id = ? AND id = ?", (user_id, app_id)
-    )
+    cur = conn.execute("DELETE FROM applications WHERE user_id = ? AND id = ?", (user_id, app_id))
     return cur.rowcount > 0

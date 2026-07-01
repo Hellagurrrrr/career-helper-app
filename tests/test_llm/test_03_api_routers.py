@@ -38,7 +38,9 @@ def ctx(client):
 
 def test_router_tailored_cv(ctx):
     client, headers, goal_id = ctx["client"], ctx["headers"], ctx["goal_id"]
-    client.put("/v1/profile", json={"name": "Jane Doe", "skills": ["Python", "FastAPI"]}, headers=headers)
+    client.put(
+        "/v1/profile", json={"name": "Jane Doe", "skills": ["Python", "FastAPI"]}, headers=headers
+    )
     resp = client.post(
         "/v1/tailored-cv/generate",
         json={"jobId": "j_101", "goalId": goal_id},
