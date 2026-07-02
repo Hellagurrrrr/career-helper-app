@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-import time
+import sqlite3
 
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_user
 from app.core.errors import goal_already_added, not_found, validation_error
-from app.core.security import new_id, now_ms
+from app.core.security import iso_now, new_id, now_ms
+from app.db import get_conn
+from app.models import UserRecord
+from app.repositories import catalogs as catalogs_repo
+from app.repositories import goals as goals_repo
+from app.repositories import profiles as profiles_repo
 from app.schemas.goals import (
     CatalogGoal,
     CreateGoalRequest,
@@ -15,39 +20,30 @@ from app.schemas.goals import (
     UserGoal,
 )
 from app.services import mock_match
-from app.services.goals_service import new_tracking, recompute_progress
-from app.services.store import UserRecord, store
+from app.services.goals_service import recompute_progress
 
 router = APIRouter(tags=["goals"])
 
 
 # ----- public catalog -----
 @router.get("/goal-catalog", response_model=list[CatalogGoal])
-def get_goal_catalog(user: UserRecord = Depends(get_current_user)) -> list[dict]:
-    '''
-    Get the goal catalog.
-
-    **Args**:
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[CatalogGoal]: The goal catalog, sorted by descending match score.
-    '''
-    profile = store.profiles.get(user.id)
-    return mock_match.sort_catalog_goals(profile, store.goal_catalog)
+def get_goal_catalog(
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> list[dict]:
+    """Return the goal catalog, sorted by descending match score against the profile."""
+    profile = profiles_repo.get(conn, user.id)
+    return mock_match.sort_catalog_goals(profile, catalogs_repo.list_goal_catalog(conn))
 
 
 @router.get("/goal-catalog/{catalog_id}", response_model=CatalogGoal)
-def get_catalog_item(catalog_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
-    '''
-    Get a goal catalog item.
-
-    **Args**:
-        - catalog_id: str: The ID of the catalog item.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - CatalogGoal: The catalog item.
-    '''
-    item = store.get_catalog_goal(catalog_id)
+def get_catalog_item(
+    catalog_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
+    """Return a single catalog goal; 404 if unknown."""
+    item = catalogs_repo.get_catalog_goal(conn, catalog_id)
     if not item:
         raise not_found("Catalog goal not found.")
     return item
@@ -55,40 +51,29 @@ def get_catalog_item(catalog_id: str, user: UserRecord = Depends(get_current_use
 
 # ----- user goals -----
 @router.get("/goals", response_model=list[UserGoal])
-def list_goals(user: UserRecord = Depends(get_current_user)) -> list[dict]:
-    '''
-    Get the list of goals that the current user has selected.
-
-    **Args**:
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
-    '''
-    goals = list(store.goals.get(user.id, {}).values())
-    return sorted(goals, key=lambda g: g["sortOrder"])
+def list_goals(
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> list[dict]:
+    """List the current user's selected goals, ordered by sortOrder."""
+    return goals_repo.list_for_user(conn, user.id)
 
 
 @router.post("/goals", response_model=UserGoal, status_code=201)
-def create_goal(body: CreateGoalRequest, user: UserRecord = Depends(get_current_user)) -> dict:
-    '''
-    Create a new goal for the current user.
-
-    **Args**:
-        - body: CreateGoalRequest: The request body containing the catalog ID of the goal to create.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - UserGoal: The created goal.
-    '''
-    catalog = store.get_catalog_goal(body.catalog_id)
+def create_goal(
+    body: CreateGoalRequest,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
+    """Add a catalog goal to the current user; 409 if it is already added."""
+    catalog = catalogs_repo.get_catalog_goal(conn, body.catalog_id)
     if not catalog:
         raise not_found("Catalog goal not found.")
 
-    user_goals = store.goals.setdefault(user.id, {})
-    if any(g["catalogId"] == body.catalog_id for g in user_goals.values()):
+    if goals_repo.has_catalog(conn, user.id, body.catalog_id):
         raise goal_already_added()
 
     goal_id = new_id("g")
-    sort_order = len(user_goals)
     goal = {
         "id": goal_id,
         "catalogId": catalog["id"],
@@ -97,29 +82,24 @@ def create_goal(body: CreateGoalRequest, user: UserRecord = Depends(get_current_
         "color": catalog["color"],
         "status": catalog["defaultStatus"],
         "progress": 0,
-        "lastUpdated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "lastUpdated": iso_now(),
         "createdAt": now_ms(),
         "confidence": {},
-        "sortOrder": sort_order,
+        "sortOrder": goals_repo.count_for_user(conn, user.id),
     }
-    user_goals[goal_id] = goal
-    store.tracking.setdefault(user.id, {})[goal_id] = new_tracking()
-    recompute_progress(user.id, goal_id)
-    return goal
+    goals_repo.create(conn, user.id, goal)
+    recompute_progress(conn, user.id, goal_id)
+    return goals_repo.get(conn, user.id, goal_id)
 
 
 @router.get("/goals/{goal_id}", response_model=UserGoal)
-def get_goal(goal_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
-    '''
-    Get a goal for the current user.
-
-    **Args**:
-        - goal_id: str: The ID of the goal to get.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - UserGoal: The goal.
-    '''
-    goal = store.goals.get(user.id, {}).get(goal_id)
+def get_goal(
+    goal_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
+    """Return one of the current user's goals; 404 if unknown."""
+    goal = goals_repo.get(conn, user.id, goal_id)
     if not goal:
         raise not_found("Goal not found.")
     return goal
@@ -130,69 +110,49 @@ def update_goal(
     goal_id: str,
     body: UpdateGoalRequest,
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
-    Update a goal for the current user.
-
-    **Args**:
-        - goal_id: str: The ID of the goal to update.
-        - body: UpdateGoalRequest: The request body containing the status and confidence of the goal.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - UserGoal: The updated goal.
-    '''
-    goal = store.goals.get(user.id, {}).get(goal_id)
-    if not goal:
+    """Update a goal's status and/or confidence scores, then recompute progress."""
+    if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
 
     if body.status is not None:
-        goal["status"] = body.status
+        goals_repo.set_status(conn, user.id, goal_id, body.status)
     if body.confidence is not None:
         for value in body.confidence.values():
             if not 1 <= value <= 5:
                 raise validation_error("Confidence must be between 1 and 5.", "confidence")
-        goal.setdefault("confidence", {}).update(body.confidence)
+        goals_repo.update_confidence(conn, goal_id, body.confidence)
 
-    recompute_progress(user.id, goal_id)
-    return goal
+    recompute_progress(conn, user.id, goal_id)
+    return goals_repo.get(conn, user.id, goal_id)
 
 
 @router.delete("/goals/{goal_id}", status_code=204, response_model=None)
-def delete_goal(goal_id: str, user: UserRecord = Depends(get_current_user)) -> None:
-    '''
-    Delete a goal for the current user.
-
-    **Args**:
-        - goal_id: str: The ID of the goal to delete.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - None: The response is empty.
-    '''
-    user_goals = store.goals.get(user.id, {})
-    if goal_id not in user_goals:
+def delete_goal(
+    goal_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> None:
+    """Delete a goal; its tracking, saved jobs, applications and reviews cascade in the DB."""
+    if not goals_repo.exists(conn, user.id, goal_id):
         raise not_found("Goal not found.")
-    user_goals.pop(goal_id, None)
-    store.tracking.get(user.id, {}).pop(goal_id, None)
-    store.saved_jobs.get(user.id, {}).pop(goal_id, None)
-    # Re-pack sortOrder to stay contiguous.
-    for idx, g in enumerate(sorted(user_goals.values(), key=lambda x: x["sortOrder"])):
-        g["sortOrder"] = idx
+
+    # Deleting the goal cascades (in DB) to its tracking, saved jobs, applications,
+    # interview reviews and mock sessions -- all repository-owned now.
+    goals_repo.delete(conn, user.id, goal_id)
+    goals_repo.repack_sort_order(conn, user.id)
 
 
 @router.put("/goals/order", response_model=list[UserGoal])
-def reorder_goals(body: ReorderGoalsRequest, user: UserRecord = Depends(get_current_user)) -> list[dict]:
-    '''
-    Reorder the goals for the current user.
-
-    **Args**:
-        - body: ReorderGoalsRequest: The request body containing the IDs of the goals to reorder.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[UserGoal]: The list of goals for the current user, sorted by sortOrder.
-    '''
-    user_goals = store.goals.get(user.id, {})
-    if set(body.goal_ids) != set(user_goals.keys()):
+def reorder_goals(
+    body: ReorderGoalsRequest,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> list[dict]:
+    """Persist a new goal ordering; the payload must list every goal exactly once."""
+    current_ids = {g["id"] for g in goals_repo.list_for_user(conn, user.id)}
+    if set(body.goal_ids) != current_ids:
         raise validation_error("goalIds must include every goal exactly once.", "goalIds")
-    for idx, gid in enumerate(body.goal_ids):
-        user_goals[gid]["sortOrder"] = idx
-    return sorted(user_goals.values(), key=lambda g: g["sortOrder"])
+    goals_repo.reorder(conn, user.id, body.goal_ids)
+    return goals_repo.list_for_user(conn, user.id)

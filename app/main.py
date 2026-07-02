@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+import os
+import threading
+import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
+from app.db import seed_catalogs
 from app.routers import api_router
-from app.services.store import seed_catalogs
 
 
 @asynccontextmanager
@@ -45,12 +51,48 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+
+if FRONTEND_DIST.exists() and FRONTEND_INDEX.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_frontend(full_path: str) -> FileResponse:
+        """Serve the Vite SPA for browser routes after API/docs routes are matched."""
+        candidate = FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(FRONTEND_INDEX)
+
+
 if settings.enable_dev_reset:
-    from app.core.deps import get_current_user
-    from app.services.store import UserRecord, store
+    import sqlite3
+
     from fastapi import Depends
 
+    from app.core.deps import get_current_user
+    from app.db import get_conn
+    from app.models import UserRecord
+    from app.services import account_service
+
     @app.post("/__dev/reset", tags=["meta"], status_code=204, response_model=None)
-    def dev_reset(user: "UserRecord" = Depends(get_current_user)) -> None:
+    def dev_reset(
+        user: UserRecord = Depends(get_current_user),
+        conn: sqlite3.Connection = Depends(get_conn),
+    ) -> None:
         """Dev-only: clear the current user's demo data (use-case SET-07)."""
-        store.reset_user_data(user.id)
+        account_service.reset_user_data(conn, user.id)
+
+    @app.post("/__dev/shutdown", tags=["meta"], include_in_schema=False)
+    def dev_shutdown(x_dev_action: str | None = Header(default=None)) -> dict[str, str]:
+        """Dev-only: let local scripts stop the server when the OS PID is inaccessible."""
+        if x_dev_action != "shutdown":
+            raise HTTPException(status_code=403, detail="Missing dev shutdown header.")
+
+        def exit_process() -> None:
+            time.sleep(0.2)
+            os._exit(0)
+
+        threading.Thread(target=exit_process, daemon=True).start()
+        return {"status": "shutting_down"}

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import io
 from abc import ABC, abstractmethod
-from functools import lru_cache
+from functools import cache
 
 from app.core.config import settings
 
@@ -67,13 +67,12 @@ class OpenAIVoiceProvider(VoiceProvider):
         return response.content, "audio/mpeg"
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_voice_provider() -> VoiceProvider:
     """Return the configured voice provider (cached)."""
     provider = (settings.voice_provider or "openai").lower()
     if provider == "openai":
         return OpenAIVoiceProvider()
     raise RuntimeError(
-        f"Unknown CAREER_VOICE_PROVIDER '{settings.voice_provider}'. "
-        "Supported: openai."
+        f"Unknown CAREER_VOICE_PROVIDER '{settings.voice_provider}'. Supported: openai."
     )

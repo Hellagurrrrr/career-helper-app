@@ -64,7 +64,9 @@ def run_direct() -> None:
     """Drive the LLM layer (app.llm.onboarding.run_step) directly."""
     _preflight()
     target = settings.onboarding_target_questions
-    print(f"=== Onboarding chat - DIRECT (model={settings.llm_onboarding_model}, target~{target}) ===")
+    print(
+        f"=== Onboarding chat - DIRECT (model={settings.llm_onboarding_model}, target~{target}) ==="
+    )
     print("Type your answers. Enter 'quit' to stop.\n")
 
     history: list[tuple[str, str]] = []
@@ -97,7 +99,9 @@ def run_via_api() -> None:
     from app.main import app
 
     target = settings.onboarding_target_questions
-    print(f"=== Onboarding chat - API ROUTER (model={settings.llm_onboarding_model}, target~{target}) ===")
+    print(
+        f"=== Onboarding chat - API ROUTER (model={settings.llm_onboarding_model}, target~{target}) ==="
+    )
     print("Type your answers. Enter 'quit' to stop.\n")
 
     with TestClient(app) as client:

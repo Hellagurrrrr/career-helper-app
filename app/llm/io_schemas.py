@@ -66,7 +66,9 @@ class TailoredCv(BaseModel):
 
 # --- Interview coaching ---
 class DimensionScore(BaseModel):
-    id: str = Field(..., description="One of: role_fit, depth, communication, problem_solving, presence")
+    id: str = Field(
+        ..., description="One of: role_fit, depth, communication, problem_solving, presence"
+    )
     label: str
     score: float = Field(..., description="0-10 scale, one decimal place")
     narrative: str = Field(..., description="One sentence of concrete feedback")

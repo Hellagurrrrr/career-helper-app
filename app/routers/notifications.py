@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import sqlite3
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.deps import get_current_user
 from app.core.errors import not_found
 from app.core.pagination import paginate
+from app.db import get_conn
+from app.models import UserRecord
+from app.repositories import notifications as notifications_repo
 from app.schemas.notifications import (
     MarkReadRequest,
     NotificationListResponse,
 )
-from app.services.store import UserRecord, store
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -20,55 +24,30 @@ def list_notifications(
     limit: int = Query(default=20, ge=1, le=50),
     cursor: str | None = Query(default=None),
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> dict:
-    '''
-    List the notifications for a user.
-    **Parameters**:
-        - unread: bool | None: Whether to filter by unread.
-        - limit: int: The limit of notifications to return.
-        - cursor: str | None: The cursor to paginate by.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The list of notifications.
-    '''
-    items = list(store.notifications.get(user.id, []))
-    if unread:
-        items = [n for n in items if not n["read"]]
-    items.sort(key=lambda n: n["createdAt"], reverse=True)
+    """List the user's notifications newest first, optionally unread-only, paginated."""
+    items = notifications_repo.list_for_user(conn, user.id, unread)
     return paginate(items, limit, cursor)
 
 
 @router.post("/read", response_model=NotificationListResponse)
-def mark_read(body: MarkReadRequest, user: UserRecord = Depends(get_current_user)) -> dict:
-    '''
-    Mark notifications as read.
-    **Parameters**:
-        - body: MarkReadRequest: The request body.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The list of notifications.
-    '''
-    items = store.notifications.get(user.id, [])
-    ids = set(body.ids) if body.ids is not None else None
-    for n in items:
-        if ids is None or n["id"] in ids:
-            n["read"] = True
-    ordered = sorted(items, key=lambda n: n["createdAt"], reverse=True)
-    return {"items": ordered, "nextCursor": None, "total": len(ordered)}
+def mark_read(
+    body: MarkReadRequest,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
+    """Mark notifications read (all of the user's when no ids are given)."""
+    items = notifications_repo.mark_read(conn, user.id, body.ids)
+    return {"items": items, "nextCursor": None, "total": len(items)}
 
 
 @router.delete("/{notification_id}", status_code=204, response_model=None)
-def delete_notification(notification_id: str, user: UserRecord = Depends(get_current_user)) -> None:
-    '''
-    Delete a notification.
-    **Parameters**:
-        - notification_id: str: The ID of the notification.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - None: The response body.
-    '''
-    items = store.notifications.get(user.id, [])
-    idx = next((i for i, n in enumerate(items) if n["id"] == notification_id), None)
-    if idx is None:
+def delete_notification(
+    notification_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> None:
+    """Delete one of the user's notifications; 404 if unknown."""
+    if not notifications_repo.delete(conn, user.id, notification_id):
         raise not_found("Notification not found.")
-    items.pop(idx)

@@ -19,7 +19,9 @@ def test_register_and_me(client):
 
 def test_register_validation(client):
     # REG-04: short password
-    resp = client.post("/v1/auth/register", json={"name": "A", "email": "a@b.com", "password": "123"})
+    resp = client.post(
+        "/v1/auth/register", json={"name": "A", "email": "a@b.com", "password": "123"}
+    )
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
     assert resp.json()["error"]["details"]["field"] == "password"
@@ -36,7 +38,9 @@ def test_register_duplicate_email(client):
 def test_login_cases(client):
     register(client)
     # LOGIN-05: trims + lowercases email
-    ok = client.post("/v1/auth/login", json={"email": "  ALEX@example.com ", "password": "secret123"})
+    ok = client.post(
+        "/v1/auth/login", json={"email": "  ALEX@example.com ", "password": "secret123"}
+    )
     assert ok.status_code == 200
     # LOGIN-03: unknown email
     nf = client.post("/v1/auth/login", json={"email": "nobody@x.com", "password": "secret123"})
@@ -44,6 +48,25 @@ def test_login_cases(client):
     # LOGIN-04: wrong password
     wp = client.post("/v1/auth/login", json={"email": "alex@example.com", "password": "nope"})
     assert wp.status_code == 401 and wp.json()["error"]["code"] == "WRONG_PASSWORD"
+
+
+def test_auth_refresh_rotation_and_isolation(client):
+    # Regression guard for the auth repository slice (#7): refresh rotates (old
+    # token revoked), and a second account does not disturb the first.
+    a = register(client, email="a@example.com").json()
+    refresh_a = a["tokens"]["refreshToken"]
+
+    rotated = client.post("/v1/auth/refresh", json={"refreshToken": refresh_a})
+    assert rotated.status_code == 200
+    # The old refresh token is now revoked.
+    assert client.post("/v1/auth/refresh", json={"refreshToken": refresh_a}).status_code == 401
+
+    # A second registration is isolated; the first account still authenticates.
+    register(client, email="b@example.com")
+    me_a = client.get(
+        "/v1/auth/me", headers={"Authorization": f"Bearer {a['tokens']['accessToken']}"}
+    )
+    assert me_a.status_code == 200 and me_a.json()["email"] == "a@example.com"
 
 
 def test_requires_auth(client):
@@ -97,10 +120,19 @@ def test_onboarding_chat_full_flow(client):
     assert body["question"]
     total = body["totalQuestions"]
 
-    answers = ["Alex Chen", "State University", "Computer Science", "BSc", "Python, SQL, React", "Data Structures"]
+    answers = [
+        "Alex Chen",
+        "State University",
+        "Computer Science",
+        "BSc",
+        "Python, SQL, React",
+        "Data Structures",
+    ]
     last = None
     for ans in answers[:total]:
-        last = client.post("/v1/profile/onboarding-chat/answers", json={"text": ans}, headers=headers)
+        last = client.post(
+            "/v1/profile/onboarding-chat/answers", json={"text": ans}, headers=headers
+        )
         assert last.status_code == 200
 
     data = last.json()
@@ -123,7 +155,9 @@ def test_onboarding_chat_resume(client):
     # OB-12: leaving and re-entering resumes the same session from the same node
     headers = auth_headers(client)
     client.post("/v1/profile/onboarding-chat", headers=headers)
-    s1 = client.post("/v1/profile/onboarding-chat/answers", json={"text": "Alex"}, headers=headers).json()
+    s1 = client.post(
+        "/v1/profile/onboarding-chat/answers", json={"text": "Alex"}, headers=headers
+    ).json()
     session_id = s1["id"]
     assert s1["questionIndex"] == 1
 
@@ -141,30 +175,102 @@ def test_onboarding_chat_empty_answer_rejected(client):
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
+def test_profile_repository_aggregate_round_trip_and_replace(client):
+    # Regression guard for the profiles aggregate repository slice: every child
+    # table round-trips, and a later PUT REPLACES children (no stale rows leak).
+    headers = auth_headers(client)
+    full = {
+        "name": "Alex",
+        "education": [
+            {
+                "degree": "BSc",
+                "school": "U",
+                "major": "CS",
+                "grade": 3.8,
+                "start": "2022-09",
+                "end": "2026-06",
+            }
+        ],
+        "projects": [{"title": "P1", "start": "2024", "end": "2024", "description": "d"}],
+        "skills": ["Python", "React"],
+        "coursework": ["Algorithms", "Databases"],
+    }
+    got = client.put("/v1/profile", json=full, headers=headers).json()
+    assert got["education"][0]["grade"] == 3.8
+    assert got["projects"][0]["title"] == "P1"
+    assert got["skills"] == ["Python", "React"]
+    assert got["coursework"] == ["Algorithms", "Databases"]
+
+    # Shrinking the profile must drop the old education/projects/coursework rows.
+    shrunk = client.put(
+        "/v1/profile", json={"name": "Alex2", "skills": ["Go"]}, headers=headers
+    ).json()
+    assert shrunk["name"] == "Alex2"
+    assert shrunk["skills"] == ["Go"]
+    assert shrunk["education"] == [] and shrunk["projects"] == [] and shrunk["coursework"] == []
+
+
+def test_onboarding_chat_repository_turns_and_delete(client):
+    # Regression guard for the onboarding_chats parent+child repository slice:
+    # turns round-trip in order across save/reload, and the discard endpoint works.
+    headers = auth_headers(client)
+    assert client.delete("/v1/profile/onboarding-chat", headers=headers).status_code == 404
+
+    started = client.post("/v1/profile/onboarding-chat", headers=headers).json()
+    session_id = started["id"]
+    client.post("/v1/profile/onboarding-chat/answers", json={"text": "Alex Chen"}, headers=headers)
+    resumed = client.post(
+        "/v1/profile/onboarding-chat/answers", json={"text": "State University"}, headers=headers
+    ).json()
+
+    # Same session persisted; turns reloaded from child rows in order.
+    assert resumed["id"] == session_id
+    assert [t["role"] for t in resumed["turns"][:4]] == ["assistant", "user", "assistant", "user"]
+
+    assert client.delete("/v1/profile/onboarding-chat", headers=headers).status_code == 204
+    assert client.get("/v1/profile/onboarding-chat", headers=headers).status_code == 404
+
+
 def test_profile_normalization_and_welcome(client):
     # OB-13: empty internship dropped, empty end -> null; welcome only on first create
     headers = auth_headers(client)
     payload = {
         "name": "Alex",
-        "education": [{"degree": "BSc", "school": "U", "major": "CS", "start": "2022-09", "end": ""}],
+        "education": [
+            {"degree": "BSc", "school": "U", "major": "CS", "start": "2022-09", "end": ""}
+        ],
         "internships": [
             {"title": "", "company": "", "description": "", "start": "", "end": ""},
-            {"title": "SWE Intern", "company": "Stripe", "start": "2025-06", "end": "", "description": "x"},
+            {
+                "title": "SWE Intern",
+                "company": "Stripe",
+                "start": "2025-06",
+                "end": "",
+                "description": "x",
+            },
         ],
     }
     first = client.put("/v1/profile", json=payload, headers=headers)
     assert first.status_code == 200
     saved = first.json()
-    assert len(saved["internships"]) == 1            # fully-empty entry dropped
-    assert saved["internships"][0]["end"] is None    # empty end -> null
+    assert len(saved["internships"]) == 1  # fully-empty entry dropped
+    assert saved["internships"][0]["end"] is None  # empty end -> null
     assert saved["education"][0]["end"] is None
 
-    welcome_count = sum(1 for n in client.get("/v1/notifications", headers=headers).json()["items"] if n["type"] == "system")
+    welcome_count = sum(
+        1
+        for n in client.get("/v1/notifications", headers=headers).json()["items"]
+        if n["type"] == "system"
+    )
     assert welcome_count == 1
 
     # Second PUT is an edit (profile already exists) -> no new welcome
     client.put("/v1/profile", json={"name": "Alex 2"}, headers=headers)
-    welcome_count2 = sum(1 for n in client.get("/v1/notifications", headers=headers).json()["items"] if n["type"] == "system")
+    welcome_count2 = sum(
+        1
+        for n in client.get("/v1/notifications", headers=headers).json()["items"]
+        if n["type"] == "system"
+    )
     assert welcome_count2 == 1
 
 
@@ -199,6 +305,33 @@ def test_goals_and_tracking_progress(client):
 
 
 # --- Jobs (§6) + Tailored CV (§7) + Applications (§8) ---
+def test_delete_goal_with_application_then_reapply(client):
+    # Regression guard for the goals-cluster repository slice + the interim
+    # applications-mirror bridge: deleting a goal cascades (in DB) to its
+    # application, and a later application must not hit a stale-FK crash.
+    headers = auth_headers(client)
+    goal_id = client.post("/v1/goals", json={"catalogId": "1"}, headers=headers).json()["id"]
+    app_resp = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
+        headers=headers,
+    )
+    assert app_resp.status_code == 201
+
+    # Delete the goal that owns the application.
+    assert client.delete(f"/v1/goals/{goal_id}", headers=headers).status_code == 204
+    assert client.get("/v1/applications", headers=headers).json()["summary"]["total"] == 0
+
+    # A fresh goal + application must still work (no FK violation on the apps save).
+    goal2 = client.post("/v1/goals", json={"catalogId": "2"}, headers=headers).json()["id"]
+    reapply = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal2, "jobId": "j_102"},
+        headers=headers,
+    )
+    assert reapply.status_code == 201
+
+
 def test_jobs_applications_flow(client):
     headers = auth_headers(client)
     client.put("/v1/profile", json={"name": "Alex", "skills": ["React"]}, headers=headers)
@@ -217,7 +350,9 @@ def test_jobs_applications_flow(client):
     assert unsave.status_code == 204
 
     # Tailored CV (§7)
-    cv = client.post("/v1/tailored-cv/generate", json={"jobId": "j_101", "goalId": goal_id}, headers=headers)
+    cv = client.post(
+        "/v1/tailored-cv/generate", json={"jobId": "j_101", "goalId": goal_id}, headers=headers
+    )
     assert cv.status_code == 200 and cv.json()["cvText"]
 
     # Standard application (JOB-08)
@@ -243,10 +378,15 @@ def test_jobs_applications_flow(client):
         json={"kind": "partner", "goalId": goal_id, "jobId": "j_103"},
         headers=headers,
     )
-    assert bad_partner.status_code == 422 and bad_partner.json()["error"]["code"] == "NOT_EXCLUSIVE_JOB"
+    assert (
+        bad_partner.status_code == 422
+        and bad_partner.json()["error"]["code"] == "NOT_EXCLUSIVE_JOB"
+    )
 
     # Manual status update (APP-06)
-    upd = client.patch(f"/v1/applications/{app_id}", json={"manualStatus": "interview"}, headers=headers)
+    upd = client.patch(
+        f"/v1/applications/{app_id}", json={"manualStatus": "interview"}, headers=headers
+    )
     assert upd.status_code == 200 and upd.json()["manualStatus"] == "interview"
 
     listing = client.get("/v1/applications", headers=headers)
@@ -307,6 +447,27 @@ def test_coaching_review_and_mock(client):
     assert summary.json()["mockCount"] == 1
 
 
+def test_delete_application_cascades_reviews_and_mocks(client):
+    # Regression guard for the applications-cluster repository slice: deleting an
+    # application removes its interview reviews and mock sessions (FK cascade), and
+    # the coaching summary reflects zero afterwards.
+    headers = auth_headers(client)
+    goal_id = client.post("/v1/goals", json={"catalogId": "1"}, headers=headers).json()["id"]
+    app_id = client.post(
+        "/v1/applications",
+        json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
+        headers=headers,
+    ).json()["id"]
+    # A completed mock session so there is a child row to cascade.
+    client.post(f"/v1/applications/{app_id}/mock-interviews", headers=headers)
+    assert client.get("/v1/ai-coaching/summary", headers=headers).json()["mockCount"] == 1
+
+    assert client.delete(f"/v1/applications/{app_id}", headers=headers).status_code == 204
+    assert client.delete(f"/v1/applications/{app_id}", headers=headers).status_code == 404
+    summary = client.get("/v1/ai-coaching/summary", headers=headers).json()
+    assert summary == {"applicationCount": 0, "reviewCount": 0, "mockCount": 0}
+
+
 def test_mock_end_early_requires_answer(client):
     headers = auth_headers(client)
     goal_id = client.post("/v1/goals", json={"catalogId": "1"}, headers=headers).json()["id"]
@@ -315,9 +476,9 @@ def test_mock_end_early_requires_answer(client):
         json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
         headers=headers,
     ).json()["id"]
-    session_id = client.post(
-        f"/v1/applications/{app_id}/mock-interviews", headers=headers
-    ).json()["sessionId"]
+    session_id = client.post(f"/v1/applications/{app_id}/mock-interviews", headers=headers).json()[
+        "sessionId"
+    ]
 
     # End before answering -> MOCK_SESSION_INCOMPLETE
     early = client.post(
@@ -337,9 +498,9 @@ def test_voice_endpoints_disabled_in_mock_mode(client):
         json={"kind": "standard", "goalId": goal_id, "jobId": "j_102"},
         headers=headers,
     ).json()["id"]
-    session_id = client.post(
-        f"/v1/applications/{app_id}/mock-interviews", headers=headers
-    ).json()["sessionId"]
+    session_id = client.post(f"/v1/applications/{app_id}/mock-interviews", headers=headers).json()[
+        "sessionId"
+    ]
 
     voice = client.post(
         f"/v1/applications/{app_id}/mock-interviews/{session_id}/turns/voice",
@@ -373,7 +534,11 @@ def test_alumni_meetings_and_notifications(client):
     # AD-03: valid request creates a notification
     ok = client.post(
         "/v1/meetings",
-        json={"alumniId": "a1", "topic": "Career", "message": "I would love to learn about your path."},
+        json={
+            "alumniId": "a1",
+            "topic": "Career",
+            "message": "I would love to learn about your path.",
+        },
         headers=headers,
     )
     assert ok.status_code == 201
@@ -382,7 +547,11 @@ def test_alumni_meetings_and_notifications(client):
     # MEETING_ALREADY_PENDING
     dup = client.post(
         "/v1/meetings",
-        json={"alumniId": "a1", "topic": "Career", "message": "Another request that is long enough."},
+        json={
+            "alumniId": "a1",
+            "topic": "Career",
+            "message": "Another request that is long enough.",
+        },
         headers=headers,
     )
     assert dup.status_code == 409 and dup.json()["error"]["code"] == "MEETING_ALREADY_PENDING"
@@ -397,3 +566,44 @@ def test_alumni_meetings_and_notifications(client):
     # Mark all read (NT-03)
     read = client.post("/v1/notifications/read", json={}, headers=headers)
     assert all(n["read"] for n in read.json()["items"])
+
+
+def test_meetings_repository_isolation_across_users(client):
+    # Regression guard for the P0 repository slice: meetings live in the SQLite
+    # repository (not the in-memory mirror). A second user registering must not
+    # cascade-wipe the first user's meetings, and meetings must stay per-user.
+    alice = auth_headers(client, email="alice@example.com", name="Alice")
+    msg = {"alumniId": "a1", "topic": "Career", "message": "I would love to learn about your path."}
+    created = client.post("/v1/meetings", json=msg, headers=alice)
+    assert created.status_code == 201
+
+    # Registering Bob triggers a users-table save; Alice's meeting must survive.
+    bob = auth_headers(client, email="bob@example.com", name="Bob")
+    assert len(client.get("/v1/meetings", headers=alice).json()) == 1
+    assert client.get("/v1/meetings", headers=bob).json() == []
+
+
+def test_notifications_repository_dedup_isolation_and_delete(client):
+    # Regression guard for the notifications repository slice: dedup, per-user
+    # isolation across a second registration, unread filter, and delete.
+    alice = auth_headers(client, email="alice@example.com", name="Alice")
+    # A meeting request creates exactly one "meeting" notification (deduped by id).
+    msg = {"alumniId": "a1", "topic": "Career", "message": "I would love to learn about your path."}
+    assert client.post("/v1/meetings", json=msg, headers=alice).status_code == 201
+
+    listing = client.get("/v1/notifications", headers=alice).json()
+    assert listing["total"] == 1
+    notif_id = listing["items"][0]["id"]
+
+    # Second user must not cascade-wipe Alice's notifications, and stays isolated.
+    bob = auth_headers(client, email="bob@example.com", name="Bob")
+    assert client.get("/v1/notifications", headers=alice).json()["total"] == 1
+    assert client.get("/v1/notifications", headers=bob).json()["total"] == 0
+
+    # unread filter + delete (404 then 204).
+    assert (
+        client.get("/v1/notifications", params={"unread": True}, headers=alice).json()["total"] == 1
+    )
+    assert client.delete("/v1/notifications/missing-id", headers=alice).status_code == 404
+    assert client.delete(f"/v1/notifications/{notif_id}", headers=alice).status_code == 204
+    assert client.get("/v1/notifications", headers=alice).json()["total"] == 0

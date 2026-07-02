@@ -47,7 +47,9 @@ def _graph():
 
     def extract(state: _State) -> _State:
         llm = get_llm(Purpose.ONBOARDING).with_structured_output(ProfileDraft)
-        convo = "\n".join(f"{'Assistant' if r == 'ai' else 'User'}: {t}" for r, t in state["history"])
+        convo = "\n".join(
+            f"{'Assistant' if r == 'ai' else 'User'}: {t}" for r, t in state["history"]
+        )
         draft: ProfileDraft = llm.invoke(
             [
                 ("system", ONBOARDING_EXTRACTION_SYSTEM),

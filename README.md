@@ -1,6 +1,7 @@
-# AI Career Helper - Mock Backend (FastAPI)
+# AI Career Helper - Full Local Demo App
 
-A FastAPI backend that implements the full API contract from
+AI Career Helper is a FastAPI backend plus a Vite/React frontend demo. The
+backend implements the full API contract from
 [`design-docs/api-design.md`](design-docs/api-design.md) (11 modules) against the
 page use cases in [`design-docs/use-cases.md`](design-docs/use-cases.md).
 
@@ -8,7 +9,11 @@ The **interface contracts are real** (paths, methods, status codes, schemas,
 validation rules, and error codes all follow the design docs), while the
 **business logic is mocked** (local SQLite store, mock AI, mock matching). This
 lets the frontend integrate immediately; later you replace the `services/` layer
-with real implementations without changing the routers.
+with real implementations without changing the routers or frontend API client.
+
+The frontend lives in [`frontend/`](frontend/) and is wired to the backend `/v1`
+API. In production-style local runs, FastAPI serves the built Vite app from
+`frontend/dist`, so the app can run as a single service.
 
 The AI capabilities (CV extraction, conversational onboarding, tailored CV,
 interview coaching with voice) can be switched from mock to **real large-model
@@ -16,20 +21,62 @@ calls** with a single flag - see [Real AI integration](#real-ai-integration).
 
 ## Quick start
 
+Start the full local app with one command:
+
 ```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python scripts/start.py
 ```
 
+Works on Windows, macOS, and Linux. Run it from your project environment (e.g.
+after `conda activate career-helper-app`). It installs any missing
+backend/frontend dependencies, builds the frontend, and starts FastAPI. FastAPI
+serves both the `/v1` API and the built frontend, so the whole app runs as a
+single process. Press **Ctrl-C** to stop it — nothing is left running in the
+background, so there is no separate stop command.
+
+By default, the app starts in mock-AI mode. To start with real LLM integration,
+set `CAREER_LLM_API_KEY` in `.env` and run:
+
+```bash
+python scripts/start.py --llm
+```
+
+`--llm` installs the optional AI dependencies, sets `CAREER_ENABLE_REAL_AI=true`
+for the run, and makes one real model call to verify connectivity before
+starting — if the key/URL is wrong or the model is unreachable, startup is
+aborted. Without it the run is forced to mock mode regardless of your shell. Add
+`--rebuild` to force a fresh frontend build.
+
+Seeded demo account:
+
+```text
+Name: Demo Student
+Email: demo@example.com
+Password: Demo123456
+```
+
+- Full app: http://127.0.0.1:8000/
 - Interactive docs (Swagger): http://127.0.0.1:8000/docs
 - OpenAPI schema: http://127.0.0.1:8000/openapi.json
 - Health check: http://127.0.0.1:8000/health
 - API base path: `/v1` (e.g. `POST /v1/auth/register`)
 
-Run tests:
+Reset the local database to the shipped initial snapshot at any time:
 
 ```bash
-pytest tests/test_smoke.py          # mock-mode smoke tests (no API key, no network)
+python scripts/reset_db.py          # add --backup to keep a copy first
+```
+
+Frontend hot-reload (optional): run Vite separately with `cd frontend && npm run
+dev` — frontend on http://127.0.0.1:5173, backend on 8000. Copy
+`frontend/.env.example` to `frontend/.env.local` if you need to override the API
+URL; the default build uses same-origin `/v1`.
+
+Run the tests:
+
+```bash
+pip install -r requirements-dev.txt
+CAREER_ENABLE_REAL_AI=false pytest -q
 ```
 
 There is also a separate suite that exercises the **real** models - see
@@ -88,7 +135,7 @@ suite run with **zero external dependencies or API keys**.
 Setup:
 
 ```bash
-pip install -r requirements.txt          # includes the optional AI extras
+pip install -r requirements-ai.txt       # includes the optional AI extras
 cp .env.example .env                      # then fill in your keys
 # set CAREER_ENABLE_REAL_AI=true and CAREER_LLM_API_KEY=...
 ```
@@ -150,12 +197,13 @@ python tests/test_llm/run_onboarding_chat.py api      # drives the real API rout
 
 ## Continuous integration
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines two jobs:
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines three jobs:
 
-- **test** (runs on every push / PR): installs `requirements.txt` and runs
-  `pytest -q` on Python 3.11 / 3.12 / 3.13 with `CAREER_ENABLE_REAL_AI=false`, so
-  only the deterministic mock smoke tests execute and the `tests/test_llm` suite
-  auto-skips. This is the required gate.
+- **test** (runs on every push / PR): installs `requirements-dev.txt`, runs
+  `pip check`, and runs `pytest -q` on Python 3.11 / 3.12 / 3.13 with
+  `CAREER_ENABLE_REAL_AI=false`, so only deterministic mock tests execute.
+- **frontend**: installs the Vite app with `npm ci`, builds it, and runs
+  `npm audit --audit-level=high`.
 - **real-ai** (manual `workflow_dispatch` only): runs `tests/test_llm` against the
   real models using an `OPENAI_API_KEY` repository secret. It never runs
   automatically (the calls are billable) and is a no-op if the secret is unset.

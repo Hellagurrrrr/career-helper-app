@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db import reset_all
 from app.main import app
-from app.services import store as store_module
 
 
 @pytest.fixture()
@@ -12,7 +12,7 @@ def client():
     # `with` triggers the lifespan (seeds public catalogs).
     with TestClient(app) as c:
         yield c
-    store_module.store.reset_all()
+    reset_all()
 
 
 def register(client: TestClient, email="alex@example.com", name="Alex Chen", password="secret123"):

@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import sqlite3
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.deps import get_current_user
 from app.core.errors import not_found
+from app.db import get_conn
+from app.models import UserRecord
+from app.repositories import catalogs as catalogs_repo
+from app.repositories import goals as goals_repo
+from app.repositories import profiles as profiles_repo
 from app.schemas.alumni import AlumniProfile
 from app.services import mock_match
-from app.services.store import UserRecord, store
 
 router = APIRouter(prefix="/alumni", tags=["alumni"])
 
@@ -17,18 +23,10 @@ def list_alumni(
     q: str | None = Query(default=None),
     expertise: str | None = Query(default=None),
     user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
 ) -> list[dict]:
-    '''
-    List the alumni for a goal.
-    **Parameters**:
-        - goal_id: str | None: The ID of the goal.
-        - q: str | None: The query to filter by.
-        - expertise: str | None: The expertise to filter by.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - list[dict]: The list of alumni.
-    '''
-    alumni = list(store.alumni)
+    """List alumni with optional goal/expertise/text filters, ranked for the current user."""
+    alumni = catalogs_repo.list_alumni(conn)
     if expertise:
         needle = expertise.strip().lower()
         alumni = [a for a in alumni if any(needle in e.lower() for e in a.get("expertise", []))]
@@ -43,25 +41,24 @@ def list_alumni(
             or any(needle in e.lower() for e in a.get("expertise", []))
         ]
 
-    profile = store.profiles.get(user.id)
-    user_goals = store.goals.get(user.id, {}).values()
+    profile = profiles_repo.get(conn, user.id)
+    user_goals = goals_repo.list_for_user(conn, user.id)
     catalog_ids = {g["catalogId"] for g in user_goals}
-    if goal_id and goal_id in store.goals.get(user.id, {}):
-        catalog_ids = {store.goals[user.id][goal_id]["catalogId"]}
+    if goal_id:
+        match = goals_repo.get(conn, user.id, goal_id)
+        if match:
+            catalog_ids = {match["catalogId"]}
     return mock_match.sort_alumni(profile, catalog_ids, alumni)
 
 
 @router.get("/{alumni_id}", response_model=AlumniProfile)
-def get_alumni(alumni_id: str, user: UserRecord = Depends(get_current_user)) -> dict:
-    '''
-    Get an alumni profile.
-    **Parameters**:
-        - alumni_id: str: The ID of the alumni.
-        - user: UserRecord: The current user.
-    **Returns**:
-        - dict: The alumni profile.
-    '''
-    alum = store.get_alumni(alumni_id)
+def get_alumni(
+    alumni_id: str,
+    user: UserRecord = Depends(get_current_user),
+    conn: sqlite3.Connection = Depends(get_conn),
+) -> dict:
+    """Return a single alumni profile; 404 if unknown."""
+    alum = catalogs_repo.get_alumni(conn, alumni_id)
     if not alum:
         raise not_found("Profile not found.")
     return alum

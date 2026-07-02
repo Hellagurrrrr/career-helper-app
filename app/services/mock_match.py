@@ -32,12 +32,16 @@ def catalog_match_score(profile: dict[str, Any] | None, catalog_goal: dict[str, 
     return match_score(candidate, signals)
 
 
-def sort_catalog_goals(profile: dict[str, Any] | None, catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def sort_catalog_goals(
+    profile: dict[str, Any] | None, catalog: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Return catalog goals sorted by descending match (use-case NG-01)."""
     return sorted(catalog, key=lambda g: catalog_match_score(profile, g), reverse=True)
 
 
-def alumni_match(profile: dict[str, Any] | None, user_goal_catalog_ids: set[str], alum: dict[str, Any]) -> int:
+def alumni_match(
+    profile: dict[str, Any] | None, user_goal_catalog_ids: set[str], alum: dict[str, Any]
+) -> int:
     """Higher score = better alumni recommendation for the user's goals."""
     score = 0
     if user_goal_catalog_ids & set(alum.get("goalAlignment", [])):

@@ -1,0 +1,41 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["frontend", "app/data"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, Q: flake8-quotes, UP: pyupgrade,
+# D: pydocstyle (Google convention).
+select = ["E", "W", "F", "I", "Q", "UP", "D"]
+ignore = [
+    # Docstring *presence* is not mandated: a self-explanatory function needs no
+    # docstring, and forcing one produces boilerplate. We enforce only that the
+    # docstrings that do exist follow a consistent Google format (D2xx/D4xx).
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    # `ruff format` owns line length; it intentionally does not split string
+    # literals (long SQL / message strings), so E501 would flag only those.
+    "E501",
+    # `str, Enum` -> `StrEnum` changes `str()` semantics; revisit deliberately,
+    # not as part of a mechanical formatting pass.
+    "UP042",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+
+[tool.ruff.format]
+docstring-code-format = true

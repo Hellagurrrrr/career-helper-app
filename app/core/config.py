@@ -18,11 +18,11 @@ class Settings(BaseSettings):
     # JWT (>= 32 bytes to satisfy HS256 / RFC 7518; override in production)
     jwt_secret: str = "dev-secret-change-me-in-production-min-32-bytes"
     jwt_algorithm: str = "HS256"
-    access_token_ttl_seconds: int = 30 * 60          # 30 minutes (api-design 2.1)
+    access_token_ttl_seconds: int = 30 * 60  # 30 minutes (api-design 2.1)
     refresh_token_ttl_seconds: int = 30 * 24 * 3600  # 30 days
 
     # Upload limits
-    cv_max_bytes: int = 10 * 1024 * 1024     # 10 MB (api-design 3.3)
+    cv_max_bytes: int = 10 * 1024 * 1024  # 10 MB (api-design 3.3)
     audio_max_bytes: int = 25 * 1024 * 1024  # 25 MB (api-design 9.5)
 
     # Local database. Uses SQLite by default so the demo persists across restarts
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # Voice (STT/TTS). voice_provider selects the implementation in
     # app/llm/voice.py; only "openai" ships today but the layer is pluggable.
     voice_provider: str = "openai"
-    voice_api_key: str = ""          # falls back to llm_api_key when empty
+    voice_api_key: str = ""  # falls back to llm_api_key when empty
     voice_base_url: str | None = None  # falls back to llm_base_url when empty
     stt_model: str = "whisper-1"
     tts_model: str = "tts-1"

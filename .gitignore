@@ -14,8 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -228,3 +228,9 @@ __marimo__/
 
 # Generated audio from the real-AI test suite (TTS output / uploaded clips)
 tests/test_llm/output/
+
+# Frontend workspace
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.vite/
