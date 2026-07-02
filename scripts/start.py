@@ -62,12 +62,25 @@ def ensure_frontend_build(rebuild: bool) -> None:
         run([NPM, "run", "build"], cwd=FRONTEND)
 
 
-def check_llm_ready() -> None:
-    """Fail fast if --llm was passed without an API key configured."""
+def check_llm_connectivity() -> None:
+    """Make one real model call so a bad key/URL/network aborts before startup."""
     from app.core.config import settings
 
     if not settings.llm_api_key:
         sys.exit("--llm requires CAREER_LLM_API_KEY. Set it in .env and re-run.")
+
+    from app.llm.models import Purpose, get_llm
+
+    print(f"Checking LLM connectivity (model={settings.llm_cv_model})...", flush=True)
+    try:
+        response = get_llm(Purpose.CV).invoke("Reply with exactly the word: pong")
+    except Exception as exc:  # noqa: BLE001 - any failure here means we must not start
+        sys.exit(f"LLM connectivity check failed: {exc}\nStartup aborted.")
+
+    text = getattr(response, "content", response)
+    if not isinstance(text, str) or not text.strip():
+        sys.exit("LLM connectivity check failed: empty response. Startup aborted.")
+    print(f"LLM connectivity OK (reply: {text.strip()!r}).", flush=True)
 
 
 def main() -> None:
@@ -85,7 +98,7 @@ def main() -> None:
 
     ensure_backend_deps(args.llm)
     if args.llm:
-        check_llm_ready()
+        check_llm_connectivity()
     ensure_frontend_build(args.rebuild)
 
     print(

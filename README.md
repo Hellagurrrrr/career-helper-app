@@ -42,9 +42,10 @@ python scripts/start.py --llm
 ```
 
 `--llm` installs the optional AI dependencies, sets `CAREER_ENABLE_REAL_AI=true`
-for the run, and aborts early if `CAREER_LLM_API_KEY` is missing. Without it the
-run is forced to mock mode regardless of your shell. Add `--rebuild` to force a
-fresh frontend build.
+for the run, and makes one real model call to verify connectivity before
+starting — if the key/URL is wrong or the model is unreachable, startup is
+aborted. Without it the run is forced to mock mode regardless of your shell. Add
+`--rebuild` to force a fresh frontend build.
 
 Seeded demo account:
 
