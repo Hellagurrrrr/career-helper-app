@@ -4,10 +4,12 @@ import { initReactI18next } from "react-i18next";
 
 import authEn from "./locales/en/auth.json";
 import commonEn from "./locales/en/common.json";
+import dashboardEn from "./locales/en/dashboard.json";
 import navEn from "./locales/en/nav.json";
 import settingsEn from "./locales/en/settings.json";
 import authZh from "./locales/zh-CN/auth.json";
 import commonZh from "./locales/zh-CN/common.json";
+import dashboardZh from "./locales/zh-CN/dashboard.json";
 import navZh from "./locales/zh-CN/nav.json";
 import settingsZh from "./locales/zh-CN/settings.json";
 
@@ -23,8 +25,20 @@ export const languageNames: Record<Language, string> = {
 };
 
 export const resources = {
-  en: { common: commonEn, nav: navEn, auth: authEn, settings: settingsEn },
-  "zh-CN": { common: commonZh, nav: navZh, auth: authZh, settings: settingsZh },
+  en: {
+    common: commonEn,
+    nav: navEn,
+    auth: authEn,
+    settings: settingsEn,
+    dashboard: dashboardEn,
+  },
+  "zh-CN": {
+    common: commonZh,
+    nav: navZh,
+    auth: authZh,
+    settings: settingsZh,
+    dashboard: dashboardZh,
+  },
 } as const;
 
 i18n
@@ -35,7 +49,7 @@ i18n
     fallbackLng: "en",
     supportedLngs: [...supportedLngs],
     defaultNS,
-    ns: ["common", "nav", "auth", "settings"],
+    ns: ["common", "nav", "auth", "settings", "dashboard"],
     interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],

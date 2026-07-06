@@ -6,7 +6,8 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite --host 127.0.0.1",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "engines": {
     "node": ">=22.0.0",

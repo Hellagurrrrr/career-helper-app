@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router";
+import { Trans, useTranslation } from "react-i18next";
 import {
   Plus,
   Sparkles,
@@ -50,6 +51,7 @@ function AnimatedProgress({ value, gradient }: { value: number; gradient: string
 }
 
 export function Dashboard() {
+  const { t } = useTranslation(["dashboard", "nav"]);
   const { profile } = useProfile();
   const { goals } = useGoals();
   const { meetings } = useMeetings();
@@ -68,7 +70,7 @@ export function Dashboard() {
 
   const edu = latestEducation(profile);
   const userInfo = {
-    name: profile?.name?.trim() || "Friend",
+    name: profile?.name?.trim() || t("header.friend"),
     degree: edu?.degree || "",
     major: edu?.major || "",
     school: edu?.school || "",
@@ -127,7 +129,7 @@ export function Dashboard() {
           items.push({
             goalId: goal.id,
             goalTitle: goal.title,
-            title: `Strengthen ${focusSkill.skill.name}`,
+            title: t("todaysFocus.strengthen", { name: focusSkill.skill.name }),
             description: focusSkill.skill.description,
             dot: dots[items.length % dots.length],
           });
@@ -136,7 +138,8 @@ export function Dashboard() {
     }
 
     return items;
-  }, [careerGoals, getGoalTracking, trackingState]);
+    // `t` is included so the "Strengthen ..." label re-derives on language change.
+  }, [careerGoals, getGoalTracking, trackingState, t]);
 
   const applicationSummary = React.useMemo(() => {
     const now = Date.now();
@@ -158,13 +161,11 @@ export function Dashboard() {
   return (
     <div className="space-y-12">
       <div>
-        <p className="mb-2 text-sm font-medium text-blue-700">Career planning workspace</p>
+        <p className="mb-2 text-sm font-medium text-blue-700">{t("header.eyebrow")}</p>
         <h1 className="text-3xl font-bold tracking-tight text-slate-950">
-          Welcome back, {userInfo.name}
+          {t("header.welcome", { name: userInfo.name })}
         </h1>
-        <p className="mt-2 text-slate-600">
-          Track your goals, close skill gaps, and move toward your next role.
-        </p>
+        <p className="mt-2 text-slate-600">{t("header.subtitle")}</p>
       </div>
 
       <Link
@@ -176,19 +177,23 @@ export function Dashboard() {
             <ClipboardList className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-medium text-blue-700">Job applications</p>
+            <p className="text-sm font-medium text-blue-700">{t("applications.eyebrow")}</p>
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-              Application tracking
+              {t("applications.title")}
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               {applicationSummary.total === 0
-                ? "View and update all applications across your career goals."
-                : `${applicationSummary.total} total · ${applicationSummary.active} in progress · ${applicationSummary.offers} offer${applicationSummary.offers === 1 ? "" : "s"}`}
+                ? t("applications.empty")
+                : t("applications.summary", {
+                    count: applicationSummary.offers,
+                    total: applicationSummary.total,
+                    active: applicationSummary.active,
+                  })}
             </p>
           </div>
         </div>
         <span className="inline-flex items-center gap-1 self-start text-sm font-medium text-blue-800 sm:self-center">
-          Open tracker
+          {t("applications.open")}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </span>
       </Link>
@@ -199,11 +204,11 @@ export function Dashboard() {
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-blue-600" />
               <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-                Today's focus
+                {t("todaysFocus.title")}
               </h2>
             </div>
             <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              {todaysFocus.length} actions
+              {t("todaysFocus.actions", { count: todaysFocus.length })}
             </span>
           </div>
 
@@ -237,9 +242,11 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-950">
               <Sparkles className="h-5 w-5 text-blue-600" />
-              My Career Explorations
+              {t("explorations.title")}
             </h2>
-            <span className="text-sm text-slate-500">{careerGoals.length} goals</span>
+            <span className="text-sm text-slate-500">
+              {t("explorations.goalCount", { count: careerGoals.length })}
+            </span>
           </div>
 
           {careerGoals.length === 0 ? (
@@ -247,17 +254,18 @@ export function Dashboard() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
                 <Sparkles className="h-6 w-6 text-blue-600" />
               </div>
-              <h3 className="text-base font-semibold text-slate-950">No goals yet</h3>
+              <h3 className="text-base font-semibold text-slate-950">
+                {t("explorations.emptyTitle")}
+              </h3>
               <p className="max-w-sm text-sm text-slate-600">
-                Add your first career goal to get a personalized learning plan and matching job
-                recommendations.
+                {t("explorations.emptyBody")}
               </p>
               <Link
                 to="/new-goal"
                 className="mt-1 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4" />
-                Add your first goal
+                {t("nav:addFirstGoal")}
               </Link>
             </div>
           ) : (
@@ -294,17 +302,21 @@ export function Dashboard() {
                                   : "bg-blue-50 text-blue-800"
                               }`}
                             >
-                              {goal.status === "active" ? "Active" : "Exploring"}
+                              {goal.status === "active"
+                                ? t("status.active")
+                                : t("status.exploring")}
                             </span>
                           </div>
                           <p className="mt-1 text-sm text-slate-600">{goal.description}</p>
                           <div className="mt-4 space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-slate-600">Overall Progress</span>
+                              <span className="text-slate-600">{t("explorations.overallProgress")}</span>
                               <span className="font-semibold text-slate-950">{computedProgress}%</span>
                             </div>
                             <AnimatedProgress value={computedProgress} gradient={goal.color} />
-                            <p className="text-xs text-slate-500">Updated {goal.lastUpdated}</p>
+                            <p className="text-xs text-slate-500">
+                              {t("explorations.updated", { date: goal.lastUpdated })}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -319,14 +331,12 @@ export function Dashboard() {
                 className="group flex items-center justify-center gap-2 border-t border-slate-200/70 px-5 py-3.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-blue-700"
               >
                 <Plus className="h-4 w-4 transition-colors group-hover:text-blue-700" />
-                New Career Goal
+                {t("explorations.newGoal")}
               </Link>
             </div>
           )}
           {careerGoals.length > 0 && (
-            <p className="px-1 text-xs text-slate-500">
-              Tip: reorder or delete goals from the sidebar's Career Goals menu.
-            </p>
+            <p className="px-1 text-xs text-slate-500">{t("explorations.tip")}</p>
           )}
         </section>
 
@@ -343,7 +353,7 @@ export function Dashboard() {
                       {userInfo.name}
                     </h2>
                     <p className="text-sm text-slate-600">
-                      {[userInfo.degree, userInfo.major].filter(Boolean).join(" · ") || "Profile incomplete"}
+                      {[userInfo.degree, userInfo.major].filter(Boolean).join(" · ") || t("profile.incomplete")}
                     </p>
                     {userInfo.school && (
                       <p className="text-sm text-slate-500">
@@ -356,10 +366,10 @@ export function Dashboard() {
                 <Link
                   to="/profile"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                  aria-label="Edit profile"
+                  aria-label={t("profile.editAria")}
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                  Edit
+                  {t("profile.edit")}
                 </Link>
               </div>
             </div>
@@ -368,7 +378,7 @@ export function Dashboard() {
               <div className="p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
                   <Award className="h-4 w-4 text-blue-600" />
-                  Skills
+                  {t("profile.skills")}
                 </h3>
                 {quickStats.skills.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
@@ -383,11 +393,17 @@ export function Dashboard() {
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500">
-                    No skills added yet.{" "}
-                    <Link to="/profile" className="font-medium text-blue-700 hover:underline">
-                      Add some
-                    </Link>
-                    .
+                    <Trans
+                      i18nKey="dashboard:profile.noSkills"
+                      components={{
+                        link: (
+                          <Link
+                            to="/profile"
+                            className="font-medium text-blue-700 hover:underline"
+                          />
+                        ),
+                      }}
+                    />
                   </p>
                 )}
               </div>
@@ -395,7 +411,7 @@ export function Dashboard() {
               <div className="p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
                   <Code className="h-4 w-4 text-blue-600" />
-                  Projects
+                  {t("profile.projects")}
                 </h3>
                 {quickStats.projects.length > 0 ? (
                   <div className="space-y-3">
@@ -411,14 +427,14 @@ export function Dashboard() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">No projects added yet.</p>
+                  <p className="text-sm text-slate-500">{t("profile.noProjects")}</p>
                 )}
               </div>
 
               <div className="p-5">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
                   <GraduationCap className="h-4 w-4 text-blue-600" />
-                  Coursework
+                  {t("profile.coursework")}
                 </h3>
                 {quickStats.coursework.length > 0 ? (
                   <ul className="space-y-1.5">
@@ -430,7 +446,7 @@ export function Dashboard() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">No coursework added yet.</p>
+                  <p className="text-sm text-slate-500">{t("profile.noCoursework")}</p>
                 )}
               </div>
 
@@ -438,7 +454,7 @@ export function Dashboard() {
                 <div className="p-5">
                   <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
                     <BookOpen className="h-4 w-4 text-blue-600" />
-                    Internships
+                    {t("profile.internships")}
                   </h3>
                   <div className="space-y-3">
                     {quickStats.internships.map((item, index) => (
@@ -466,19 +482,16 @@ export function Dashboard() {
             </div>
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-                Alumni network
+                {t("alumni.title")}
               </h2>
-              <p className="mt-0.5 text-sm text-slate-600">
-                Chat with alumni who've landed roles you're targeting. Profiles are
-                anonymized and your contact stays private.
-              </p>
+              <p className="mt-0.5 text-sm text-slate-600">{t("alumni.subtitle")}</p>
             </div>
           </div>
           <Link
             to="/alumni"
             className="inline-flex items-center justify-center gap-1.5 self-start rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
-            Browse network
+            {t("alumni.browse")}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -486,26 +499,22 @@ export function Dashboard() {
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
             <Shield className="h-3.5 w-3.5" />
-            Privacy protected
+            {t("alumni.privacy")}
           </span>
           {pendingMeetingCount > 0 && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-800">
               <Clock className="h-3.5 w-3.5" />
-              {pendingMeetingCount} pending request
-              {pendingMeetingCount === 1 ? "" : "s"}
+              {t("alumni.pending", { count: pendingMeetingCount })}
             </span>
           )}
           {completedMeetingCount > 0 && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-800">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {completedMeetingCount} chat
-              {completedMeetingCount === 1 ? "" : "s"} completed
+              {t("alumni.completed", { count: completedMeetingCount })}
             </span>
           )}
           {pendingMeetingCount === 0 && completedMeetingCount === 0 && (
-            <span className="text-slate-500">
-              No coffee chats yet — pick someone to start the conversation.
-            </span>
+            <span className="text-slate-500">{t("alumni.noChats")}</span>
           )}
         </div>
 
@@ -531,7 +540,7 @@ export function Dashboard() {
                     {userGoalIds.length > 0 && matched && (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-800">
                         <Sparkles className="h-2.5 w-2.5" />
-                        Match
+                        {t("alumni.match")}
                       </span>
                     )}
                   </div>
@@ -539,7 +548,7 @@ export function Dashboard() {
                     {alumni.role}
                   </p>
                   <p className="truncate text-xs text-slate-500">
-                    {alumni.company} · Class of {alumni.graduationYear}
+                    {alumni.company} · {t("alumni.classOf", { year: alumni.graduationYear })}
                   </p>
                 </div>
               </div>
@@ -548,7 +557,7 @@ export function Dashboard() {
                   {alumni.topics[0]}
                 </span>
                 <span className="inline-flex items-center gap-0.5 font-medium text-blue-700 transition-transform group-hover:translate-x-0.5">
-                  View
+                  {t("alumni.view")}
                   <ArrowRight className="h-3 w-3" />
                 </span>
               </div>

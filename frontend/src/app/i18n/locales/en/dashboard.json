@@ -1,0 +1,63 @@
+{
+  "header": {
+    "eyebrow": "Career planning workspace",
+    "welcome": "Welcome back, {{name}}",
+    "subtitle": "Track your goals, close skill gaps, and move toward your next role.",
+    "friend": "Friend"
+  },
+  "applications": {
+    "eyebrow": "Job applications",
+    "title": "Application tracking",
+    "empty": "View and update all applications across your career goals.",
+    "summary_one": "{{total}} total · {{active}} in progress · {{count}} offer",
+    "summary_other": "{{total}} total · {{active}} in progress · {{count}} offers",
+    "open": "Open tracker"
+  },
+  "todaysFocus": {
+    "title": "Today's focus",
+    "actions_one": "{{count}} action",
+    "actions_other": "{{count}} actions",
+    "strengthen": "Strengthen {{name}}"
+  },
+  "explorations": {
+    "title": "My Career Explorations",
+    "goalCount_one": "{{count}} goal",
+    "goalCount_other": "{{count}} goals",
+    "emptyTitle": "No goals yet",
+    "emptyBody": "Add your first career goal to get a personalized learning plan and matching job recommendations.",
+    "overallProgress": "Overall Progress",
+    "updated": "Updated {{date}}",
+    "newGoal": "New Career Goal",
+    "tip": "Tip: reorder or delete goals from the sidebar's Career Goals menu."
+  },
+  "status": {
+    "active": "Active",
+    "exploring": "Exploring"
+  },
+  "profile": {
+    "incomplete": "Profile incomplete",
+    "edit": "Edit",
+    "editAria": "Edit profile",
+    "skills": "Skills",
+    "noSkills": "No skills added yet. <link>Add some</link>.",
+    "projects": "Projects",
+    "noProjects": "No projects added yet.",
+    "coursework": "Coursework",
+    "noCoursework": "No coursework added yet.",
+    "internships": "Internships"
+  },
+  "alumni": {
+    "title": "Alumni network",
+    "subtitle": "Chat with alumni who've landed roles you're targeting. Profiles are anonymized and your contact stays private.",
+    "browse": "Browse network",
+    "privacy": "Privacy protected",
+    "pending_one": "{{count}} pending request",
+    "pending_other": "{{count}} pending requests",
+    "completed_one": "{{count}} chat completed",
+    "completed_other": "{{count}} chats completed",
+    "noChats": "No coffee chats yet — pick someone to start the conversation.",
+    "match": "Match",
+    "classOf": "Class of {{year}}",
+    "view": "View"
+  }
+}
