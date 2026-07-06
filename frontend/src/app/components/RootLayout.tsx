@@ -63,11 +63,13 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Separator } from "./ui/separator";
+import { Trans, useTranslation } from "react-i18next";
 import { useProfile } from "../lib/profile";
 import { useAuth } from "../lib/auth";
 import { useGoals, UserGoal } from "../lib/goals";
 import { NotificationsButton } from "./NotificationsButton";
 import { NotificationOrchestrator } from "./NotificationOrchestrator";
+import { LanguageSelect } from "./LanguageSelect";
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -77,11 +79,11 @@ function initialsOf(name: string): string {
 }
 
 const navItems = [
-  { to: "/", end: true, label: "Dashboard", icon: LayoutDashboard },
-  { to: "/applications", label: "Applications", icon: ClipboardList },
-  { to: "/ai-coaching", label: "AI Coaching", icon: Sparkles },
-  { to: "/jobs", label: "Jobs", icon: Briefcase },
-  { to: "/alumni", label: "Network", icon: Users, avatar: true },
+  { to: "/", end: true, labelKey: "dashboard", icon: LayoutDashboard },
+  { to: "/applications", labelKey: "applications", icon: ClipboardList },
+  { to: "/ai-coaching", labelKey: "aiCoaching", icon: Sparkles },
+  { to: "/jobs", labelKey: "jobs", icon: Briefcase },
+  { to: "/alumni", labelKey: "network", icon: Users, avatar: true },
 ] as const;
 
 function AlumniNavAvatar() {
@@ -109,6 +111,7 @@ function AppSidebar({
   onRequestDeleteGoal: (goal: UserGoal) => void;
 }) {
   const location = useLocation();
+  const { t } = useTranslation(["nav", "common"]);
   const { isMobile, setOpenMobile } = useSidebar();
   const { goals, reorderGoals } = useGoals();
 
@@ -124,13 +127,13 @@ function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="AI Career Helper">
+            <SidebarMenuButton size="lg" asChild tooltip={t("common:appName")}>
               <NavLink to="/" onClick={closeOnMobile}>
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-600">
                   <Target className="size-4 text-white" />
                 </div>
                 <span className="truncate font-semibold tracking-tight">
-                  AI Career Helper
+                  {t("common:appName")}
                 </span>
               </NavLink>
             </SidebarMenuButton>
@@ -140,19 +143,19 @@ function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
                     asChild
-                    tooltip={item.label}
+                    tooltip={t(item.labelKey)}
                     isActive={isActive(item.to, "end" in item ? item.end : false)}
                   >
                     <NavLink to={item.to} onClick={closeOnMobile}>
                       {"avatar" in item ? <AlumniNavAvatar /> : <item.icon />}
-                      <span>{item.label}</span>
+                      <span>{t(item.labelKey)}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -162,11 +165,11 @@ function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Career Goals</SidebarGroupLabel>
-          <SidebarGroupAction asChild title="Add a career goal">
+          <SidebarGroupLabel>{t("careerGoals")}</SidebarGroupLabel>
+          <SidebarGroupAction asChild title={t("addGoal")}>
             <Link to="/new-goal" onClick={closeOnMobile}>
               <Plus />
-              <span className="sr-only">Add a career goal</span>
+              <span className="sr-only">{t("addGoal")}</span>
             </Link>
           </SidebarGroupAction>
           <SidebarGroupContent>
@@ -175,12 +178,12 @@ function AppSidebar({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    tooltip="Add your first goal"
+                    tooltip={t("addFirstGoal")}
                     className="text-sidebar-foreground/60"
                   >
                     <Link to="/new-goal" onClick={closeOnMobile}>
                       <Plus />
-                      <span>Add your first goal</span>
+                      <span>{t("addFirstGoal")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -208,7 +211,7 @@ function AppSidebar({
                       <DropdownMenuTrigger asChild>
                         <SidebarMenuAction
                           showOnHover
-                          aria-label={`Manage ${goal.title}`}
+                          aria-label={t("manageGoal", { title: goal.title })}
                         >
                           <MoreHorizontal />
                         </SidebarMenuAction>
@@ -223,14 +226,14 @@ function AppSidebar({
                           onSelect={() => reorderGoals(idx, idx - 1)}
                         >
                           <ArrowUp className="h-4 w-4" />
-                          Move up
+                          {t("moveUp")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           disabled={idx === goals.length - 1}
                           onSelect={() => reorderGoals(idx, idx + 1)}
                         >
                           <ArrowDown className="h-4 w-4" />
-                          Move down
+                          {t("moveDown")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -238,7 +241,7 @@ function AppSidebar({
                           onSelect={() => onRequestDeleteGoal(goal)}
                         >
                           <Trash2 className="h-4 w-4" />
-                          Delete goal
+                          {t("deleteGoal")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -292,7 +295,7 @@ function AppSidebar({
                     className="flex items-center gap-2"
                   >
                     <User className="h-4 w-4" />
-                    Profile
+                    {t("profile")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -302,13 +305,13 @@ function AppSidebar({
                     className="flex items-center gap-2"
                   >
                     <Settings className="h-4 w-4" />
-                    Settings
+                    {t("settings")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={onLogout}>
                   <LogOut className="h-4 w-4" />
-                  Log out
+                  {t("logout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -324,6 +327,7 @@ function AppSidebar({
 export function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation(["nav", "common"]);
   const { profile, loading: profileLoading } = useProfile();
   const { currentUser, loading: authLoading, logout } = useAuth();
   const { removeGoal } = useGoals();
@@ -334,7 +338,7 @@ export function RootLayout() {
   if (authLoading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
-        Loading...
+        {t("common:loading")}
       </div>
     );
   }
@@ -364,7 +368,7 @@ export function RootLayout() {
     }
   };
 
-  const displayName = profile.name?.trim() || currentUser.name || "You";
+  const displayName = profile.name?.trim() || currentUser.name || t("common:you");
 
   return (
     <SidebarProvider>
@@ -379,9 +383,10 @@ export function RootLayout() {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 h-5!" />
           <span className="text-sm font-semibold tracking-tight text-slate-950">
-            AI Career Helper
+            {t("common:appName")}
           </span>
           <div className="ml-auto flex items-center gap-1">
+            <LanguageSelect className="h-9 w-auto gap-1.5" />
             <NotificationsButton />
           </div>
         </header>
@@ -402,24 +407,23 @@ export function RootLayout() {
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700">
                 <AlertTriangle className="h-5 w-5" />
               </span>
-              Delete this career goal?
+              {t("deleteGoalTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              You're about to permanently delete{" "}
-              <span className="font-semibold text-slate-900">
-                {pendingDelete?.title}
-              </span>
-              . Your confidence quiz answers and progress for this goal will be
-              lost. This can't be undone.
+              <Trans
+                i18nKey="nav:deleteGoalConfirm"
+                values={{ title: pendingDelete?.title ?? "" }}
+                components={{ bold: <span className="font-semibold text-slate-900" /> }}
+              />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep goal</AlertDialogCancel>
+            <AlertDialogCancel>{t("keepGoal")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-200"
             >
-              Yes, delete
+              {t("confirmDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

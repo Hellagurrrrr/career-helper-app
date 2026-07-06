@@ -1,5 +1,6 @@
 import React from "react";
 import { Target } from "lucide-react";
+import { LanguageSelect } from "./LanguageSelect";
 
 export function AuthLayout({
   title,
@@ -14,6 +15,9 @@ export function AuthLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-white">
+      <div className="flex justify-end px-4 pt-4">
+        <LanguageSelect className="h-9 w-auto gap-1.5" />
+      </div>
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">

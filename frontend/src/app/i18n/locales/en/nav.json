@@ -1,0 +1,22 @@
+{
+  "navigation": "Navigation",
+  "dashboard": "Dashboard",
+  "applications": "Applications",
+  "aiCoaching": "AI Coaching",
+  "jobs": "Jobs",
+  "network": "Network",
+  "careerGoals": "Career Goals",
+  "addGoal": "Add a career goal",
+  "addFirstGoal": "Add your first goal",
+  "manageGoal": "Manage {{title}}",
+  "moveUp": "Move up",
+  "moveDown": "Move down",
+  "deleteGoal": "Delete goal",
+  "profile": "Profile",
+  "settings": "Settings",
+  "logout": "Log out",
+  "deleteGoalTitle": "Delete this career goal?",
+  "deleteGoalConfirm": "You're about to permanently delete <bold>{{title}}</bold>. Your confidence quiz answers and progress for this goal will be lost. This can't be undone.",
+  "keepGoal": "Keep goal",
+  "confirmDelete": "Yes, delete"
+}

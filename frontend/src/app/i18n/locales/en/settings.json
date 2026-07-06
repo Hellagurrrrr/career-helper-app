@@ -1,0 +1,42 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your account, preferences, and demo data.",
+  "sections": {
+    "account": "Account",
+    "preferences": "Preferences",
+    "data": "Data"
+  },
+  "signedInAs": "Signed in as",
+  "logout": "Log out",
+  "changePassword": "Change password",
+  "currentPasswordPlaceholder": "Current password",
+  "newPasswordPlaceholder": "New password",
+  "updatePassword": "Update password",
+  "updated": "Updated",
+  "notifications": {
+    "title": "In-app notifications",
+    "description": "Show partner role alerts and reminders in the notification bell."
+  },
+  "resetData": {
+    "title": "Reset demo data",
+    "description": "Clear goals, plans, applications, and profile. Your account is kept.",
+    "button": "Reset data"
+  },
+  "deleteAccount": {
+    "title": "Delete account",
+    "description": "Permanently remove your account and all associated demo data.",
+    "button": "Delete account"
+  },
+  "resetDialog": {
+    "title": "Reset demo data?",
+    "description": "This clears your profile, goals, plans, and applications, then restarts onboarding. Your login is kept. This can't be undone.",
+    "cancel": "Cancel",
+    "confirm": "Reset data"
+  },
+  "deleteDialog": {
+    "title": "Delete your account?",
+    "description": "This permanently removes your account and all demo data. You'll be returned to the sign-in page. This can't be undone.",
+    "cancel": "Keep account",
+    "confirm": "Yes, delete"
+  }
+}

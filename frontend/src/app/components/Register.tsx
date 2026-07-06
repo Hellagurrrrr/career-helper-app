@@ -1,11 +1,13 @@
 import React from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../lib/auth";
 import { AuthLayout, AuthField } from "./AuthLayout";
 
 export function Register() {
   const navigate = useNavigate();
+  const { t } = useTranslation("auth");
   const { register } = useAuth();
 
   const [name, setName] = React.useState("");
@@ -29,13 +31,13 @@ export function Register() {
 
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Start building your personalized career plan"
+      title={t("register.title")}
+      subtitle={t("register.subtitle")}
       footer={
         <>
-          Already have an account?{" "}
+          {t("register.haveAccount")}{" "}
           <Link to="/login" className="font-medium text-blue-700 hover:underline">
-            Sign in
+            {t("register.signIn")}
           </Link>
         </>
       }
@@ -43,28 +45,28 @@ export function Register() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthField
           id="name"
-          label="Name"
+          label={t("fields.name")}
           value={name}
           onChange={setName}
-          placeholder="Alex"
+          placeholder={t("fields.namePlaceholder")}
           autoComplete="name"
         />
         <AuthField
           id="email"
-          label="Email"
+          label={t("fields.email")}
           type="email"
           value={email}
           onChange={setEmail}
-          placeholder="you@example.com"
+          placeholder={t("fields.emailPlaceholder")}
           autoComplete="email"
         />
         <AuthField
           id="password"
-          label="Password"
+          label={t("fields.password")}
           type="password"
           value={password}
           onChange={setPassword}
-          placeholder="At least 6 characters"
+          placeholder={t("fields.newPasswordPlaceholder")}
           autoComplete="new-password"
         />
 
@@ -79,7 +81,7 @@ export function Register() {
           disabled={submitting}
           className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
-          {submitting ? "Creating..." : "Create account"}
+          {submitting ? t("register.submitting") : t("register.submit")}
           <ArrowRight className="h-4 w-4" />
         </button>
       </form>

@@ -1,12 +1,14 @@
 import React from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../lib/auth";
 import { useProfile } from "../lib/profile";
 import { AuthLayout, AuthField } from "./AuthLayout";
 
 export function Login() {
   const navigate = useNavigate();
+  const { t } = useTranslation("auth");
   const { login } = useAuth();
   const { refreshProfile } = useProfile();
 
@@ -32,13 +34,13 @@ export function Login() {
 
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to continue planning your career"
+      title={t("login.title")}
+      subtitle={t("login.subtitle")}
       footer={
         <>
-          New here?{" "}
+          {t("login.newHere")}{" "}
           <Link to="/register" className="font-medium text-blue-700 hover:underline">
-            Create an account
+            {t("login.createAccount")}
           </Link>
         </>
       }
@@ -46,20 +48,20 @@ export function Login() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthField
           id="email"
-          label="Email"
+          label={t("fields.email")}
           type="email"
           value={email}
           onChange={setEmail}
-          placeholder="you@example.com"
+          placeholder={t("fields.emailPlaceholder")}
           autoComplete="email"
         />
         <AuthField
           id="password"
-          label="Password"
+          label={t("fields.password")}
           type="password"
           value={password}
           onChange={setPassword}
-          placeholder="••••••••"
+          placeholder={t("fields.passwordPlaceholder")}
           autoComplete="current-password"
         />
 
@@ -74,7 +76,7 @@ export function Login() {
           disabled={submitting}
           className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
-          {submitting ? "Signing in..." : "Sign in"}
+          {submitting ? t("login.submitting") : t("login.submit")}
           <ArrowRight className="h-4 w-4" />
         </button>
       </form>
