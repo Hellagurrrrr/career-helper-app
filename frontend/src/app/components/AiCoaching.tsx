@@ -10,6 +10,7 @@ import {
   ChevronUp,
   ClipboardList,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { InterviewReviewPanel } from "./InterviewReviewPanel";
 import { MockInterviewPanel } from "./MockInterviewPanel";
 import { useGoals } from "../lib/goals";
@@ -20,6 +21,7 @@ import { useMockInterviews } from "../lib/mock-interviews";
 type CoachingTab = "review" | "mock";
 
 export function AiCoaching() {
+  const { t } = useTranslation("coaching");
   const { goals } = useGoals();
   const { applications } = useJobApplications();
   const { reviews } = useInterviewReviews();
@@ -74,64 +76,64 @@ export function AiCoaching() {
             <Sparkles className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-sm font-medium text-indigo-700">AI Coaching</p>
+            <p className="text-sm font-medium text-indigo-700">{t("page.eyebrow")}</p>
             <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-950">
-              Interview coaching workspace
+              {t("page.title")}
             </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Review past interviews or run voice mock sessions for roles you&apos;ve applied to.
-              Every session is archived per application so you can track improvement over time.
-            </p>
+            <p className="mt-1 max-w-2xl text-sm text-slate-600">{t("page.subtitle")}</p>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-indigo-100">
             <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">
-              Applications
+              {t("page.stats.applications")}
             </p>
             <p className="mt-1 text-xl font-bold text-slate-950">{sortedApps.length}</p>
           </div>
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-indigo-100">
             <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">
-              Reviews archived
+              {t("page.stats.reviewsArchived")}
             </p>
             <p className="mt-1 text-xl font-bold text-slate-950">{reviews.length}</p>
           </div>
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-indigo-100">
             <p className="text-xs font-medium uppercase tracking-wide text-indigo-700">
-              Mocks archived
+              {t("page.stats.mocksArchived")}
             </p>
             <p className="mt-1 text-xl font-bold text-slate-950">{sessions.length}</p>
           </div>
           <div className="col-span-2 rounded-xl bg-indigo-600 px-4 py-3 text-white sm:col-span-1">
             <p className="text-xs font-medium uppercase tracking-wide text-indigo-100">
-              Demo mode
+              {t("page.stats.demoMode")}
             </p>
-            <p className="mt-1 text-sm font-medium">Browser speech APIs</p>
+            <p className="mt-1 text-sm font-medium">{t("page.stats.demoModeValue")}</p>
           </div>
         </div>
       </section>
 
       {sortedApps.length === 0 ? (
         <section className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-12 text-center">
-          <p className="text-sm font-medium text-slate-800">No applications to coach yet</p>
+          <p className="text-sm font-medium text-slate-800">{t("page.emptyTitle")}</p>
           <p className="mt-2 text-sm text-slate-600">
-            Apply to roles from{" "}
-            <Link
-              to={`/jobs?goal=${firstGoalForEmptyLink}`}
-              className="font-medium text-blue-700 underline-offset-2 hover:underline"
-            >
-              Jobs
-            </Link>{" "}
-            first, then return here for interview review and mock practice.
+            <Trans
+              i18nKey="coaching:page.emptyBody"
+              components={{
+                jobs: (
+                  <Link
+                    to={`/jobs?goal=${firstGoalForEmptyLink}`}
+                    className="font-medium text-blue-700 underline-offset-2 hover:underline"
+                  />
+                ),
+              }}
+            />
           </p>
         </section>
       ) : (
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
             <ClipboardList className="h-5 w-5 text-indigo-600" />
-            Coaching by application
+            {t("page.byApplication")}
           </h2>
 
           <ul className="space-y-3">
@@ -179,13 +181,13 @@ export function AiCoaching() {
                         {reviewCount > 0 && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
                             <FileAudio className="h-3 w-3" />
-                            {reviewCount} review{reviewCount !== 1 ? "s" : ""}
+                            {t("page.reviewCount", { count: reviewCount })}
                           </span>
                         )}
                         {mockCount > 0 && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800">
                             <Mic className="h-3 w-3" />
-                            {mockCount} mock{mockCount !== 1 ? "s" : ""}
+                            {t("page.mockCount", { count: mockCount })}
                           </span>
                         )}
                       </div>
@@ -210,7 +212,7 @@ export function AiCoaching() {
                           }`}
                         >
                           <FileAudio className="h-4 w-4" />
-                          Interview review
+                          {t("page.tabReview")}
                         </button>
                         <button
                           type="button"
@@ -222,7 +224,7 @@ export function AiCoaching() {
                           }`}
                         >
                           <Mic className="h-4 w-4" />
-                          Mock interview
+                          {t("page.tabMock")}
                         </button>
                       </div>
 

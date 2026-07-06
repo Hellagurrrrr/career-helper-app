@@ -1,0 +1,86 @@
+{
+  "page": {
+    "eyebrow": "AI 辅导",
+    "title": "面试辅导工作台",
+    "subtitle": "复盘过往面试，或为你申请过的职位进行语音模拟练习。每次会话都会按申请归档，方便你追踪进步。",
+    "stats": {
+      "applications": "申请",
+      "reviewsArchived": "已归档复盘",
+      "mocksArchived": "已归档模拟",
+      "demoMode": "演示模式",
+      "demoModeValue": "浏览器语音 API"
+    },
+    "emptyTitle": "还没有可辅导的申请",
+    "emptyBody": "先从<jobs>职位</jobs>页面申请岗位，再回到这里进行面试复盘和模拟练习。",
+    "byApplication": "按申请辅导",
+    "reviewCount_other": "{{count}} 次复盘",
+    "mockCount_other": "{{count}} 次模拟",
+    "tabReview": "面试复盘",
+    "tabMock": "模拟面试"
+  },
+  "review": {
+    "intro": "上传这个职位的面试录音。教练会转写、总结、对关键维度评分并给出改进建议 —— 针对 <role>{{jobTitle}}</role> 定制（演示，无服务器）。每次上传都会归档。",
+    "processing": "处理中…",
+    "upload": "上传面试录音",
+    "analysisFailed": "分析失败，请换一个文件重试。",
+    "latestAnalysis": "最新分析",
+    "archived": "已归档复盘（{{count}}）"
+  },
+  "steps": {
+    "transcribing": "正在转写你的录音…",
+    "summarizing": "正在总结对话…",
+    "scoring": "正在对面试维度评分…",
+    "recommendations": "正在起草改进建议…",
+    "complete": "分析完成"
+  },
+  "validate": {
+    "notAudio": "请上传音频文件（MP3、WAV、M4A 或 WebM）。",
+    "tooLarge": "文件太大，演示上限为 25 MB。"
+  },
+  "results": {
+    "delete": "删除",
+    "overallScore": "总体评分",
+    "average": "{{count}} 个维度的平均分",
+    "sessionSummary": "会话总结",
+    "dimensionScores": "维度评分",
+    "improvementAdvice": "改进建议",
+    "hideTranscript": "隐藏文字记录",
+    "viewTranscript": "查看文字记录",
+    "durationSubtitle": "{{minutes}} 分钟 · {{date}}"
+  },
+  "mock": {
+    "intro": "为 <role>{{jobTitle}}</role> 进行一场实时模拟面试。AI 教练会朗读问题，你用语音录制回答。回答 {{count}} 个问题后，你会收到评分反馈。每次会话都会归档（演示 —— 浏览器语音 API）。",
+    "voiceLimited": "此浏览器的语音输入/输出可能受限。请使用 Chrome 或 Edge 获得完整体验。",
+    "start": "开始模拟面试",
+    "coachSpeaking": "教练正在讲话…",
+    "ready": "准备好回答",
+    "recording": "录音中…",
+    "evaluating": "正在评估你的表现…",
+    "question": "第 {{current}}/{{total}} 题",
+    "roleCoach": "教练",
+    "roleYou": "你",
+    "recordAnswer": "录制回答",
+    "submitAnswer": "提交回答",
+    "endEarly": "提前结束",
+    "complete": "模拟面试完成 —— 已归档",
+    "startAnother": "再来一次模拟",
+    "archived": "已归档模拟面试（{{count}}）",
+    "archivedItem": "模拟 · {{minutes}} 分钟",
+    "errors": {
+      "voiceUnsupported": "语音辅导需要语音合成与识别（推荐 Chrome 或 Edge）。",
+      "startFailed": "无法开始模拟面试，请重试。",
+      "notAllowed": "麦克风访问被阻止。请在浏览器中允许本站使用麦克风，然后再次点击录音。",
+      "serviceNotAllowed": "语音识别被阻止。请允许本站使用麦克风，然后再次点击录音。",
+      "audioCapture": "未找到麦克风。请连接麦克风后重试。",
+      "noSpeech": "未检测到语音。请对着麦克风清晰讲话，然后再次点击录音。",
+      "network": "语音识别需要联网（Chrome 会将音频传给 Google 进行转写）。",
+      "aborted": "录音被中断。请点击录音重试。",
+      "recordFailedGeneric": "录音失败（{{error}}）。语音回答需要 Chrome 或 Edge 并允许麦克风访问。",
+      "startRecordFailed": "无法开始录音。请检查浏览器是否允许本站访问麦克风（推荐 Chrome 或 Edge）。",
+      "noSpeechSubmit": "未检测到语音。请再试着讲话；本演示不支持打字输入。",
+      "noSession": "模拟面试会话未创建，请重新开始。",
+      "submitFailed": "无法提交你的回答，请重试。",
+      "evalFailed": "评估失败，请重试。"
+    }
+  }
+}

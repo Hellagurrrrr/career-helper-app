@@ -1,5 +1,6 @@
 import React from "react";
 import { Sparkles, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { InterviewDimensionScore } from "../lib/interview-reviews";
 
 function scoreTone(score: number): string {
@@ -41,7 +42,7 @@ export function CoachingFeedbackResults({
   improvementAdvice,
   transcript,
   onDelete,
-  deleteLabel = "Delete",
+  deleteLabel,
 }: {
   title?: string;
   subtitle?: string;
@@ -52,6 +53,7 @@ export function CoachingFeedbackResults({
   onDelete?: () => void;
   deleteLabel?: string;
 }) {
+  const { t } = useTranslation("coaching");
   const [showTranscript, setShowTranscript] = React.useState(false);
   const avg =
     dimensions.length > 0
@@ -77,7 +79,7 @@ export function CoachingFeedbackResults({
               className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-700"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              {deleteLabel}
+              {deleteLabel ?? t("results.delete")}
             </button>
           )}
         </div>
@@ -85,21 +87,21 @@ export function CoachingFeedbackResults({
 
       <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50/50 p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">
-          Overall score
+          {t("results.overallScore")}
         </p>
         <p className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{avg}</p>
         <p className="text-xs text-slate-500">
-          Average across {dimensions.length} dimensions
+          {t("results.average", { count: dimensions.length })}
         </p>
       </div>
 
       <div>
-        <h4 className="mb-2 text-sm font-semibold text-slate-900">Session summary</h4>
+        <h4 className="mb-2 text-sm font-semibold text-slate-900">{t("results.sessionSummary")}</h4>
         <p className="text-sm leading-relaxed text-slate-700">{overallSummary}</p>
       </div>
 
       <div>
-        <h4 className="mb-3 text-sm font-semibold text-slate-900">Dimension scores</h4>
+        <h4 className="mb-3 text-sm font-semibold text-slate-900">{t("results.dimensionScores")}</h4>
         <div className="grid gap-3 sm:grid-cols-2">
           {dimensions.map((d) => (
             <ScoreCard key={d.id} label={d.label} score={d.score} narrative={d.narrative} />
@@ -110,7 +112,7 @@ export function CoachingFeedbackResults({
       <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
         <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
           <Sparkles className="h-4 w-4 text-indigo-600" />
-          Improvement advice
+          {t("results.improvementAdvice")}
         </h4>
         <p className="text-sm leading-relaxed text-slate-700">{improvementAdvice}</p>
       </div>
@@ -125,12 +127,12 @@ export function CoachingFeedbackResults({
             {showTranscript ? (
               <>
                 <ChevronUp className="h-4 w-4" />
-                Hide transcript
+                {t("results.hideTranscript")}
               </>
             ) : (
               <>
                 <ChevronDown className="h-4 w-4" />
-                View transcript
+                {t("results.viewTranscript")}
               </>
             )}
           </button>

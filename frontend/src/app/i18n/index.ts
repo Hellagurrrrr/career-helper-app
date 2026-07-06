@@ -4,6 +4,7 @@ import { initReactI18next } from "react-i18next";
 
 import applicationsEn from "./locales/en/applications.json";
 import authEn from "./locales/en/auth.json";
+import coachingEn from "./locales/en/coaching.json";
 import commonEn from "./locales/en/common.json";
 import dashboardEn from "./locales/en/dashboard.json";
 import jobsEn from "./locales/en/jobs.json";
@@ -11,6 +12,7 @@ import navEn from "./locales/en/nav.json";
 import settingsEn from "./locales/en/settings.json";
 import applicationsZh from "./locales/zh-CN/applications.json";
 import authZh from "./locales/zh-CN/auth.json";
+import coachingZh from "./locales/zh-CN/coaching.json";
 import commonZh from "./locales/zh-CN/common.json";
 import dashboardZh from "./locales/zh-CN/dashboard.json";
 import jobsZh from "./locales/zh-CN/jobs.json";
@@ -37,6 +39,7 @@ export const resources = {
     dashboard: dashboardEn,
     jobs: jobsEn,
     applications: applicationsEn,
+    coaching: coachingEn,
   },
   "zh-CN": {
     common: commonZh,
@@ -46,6 +49,7 @@ export const resources = {
     dashboard: dashboardZh,
     jobs: jobsZh,
     applications: applicationsZh,
+    coaching: coachingZh,
   },
 } as const;
 
@@ -57,7 +61,7 @@ i18n
     fallbackLng: "en",
     supportedLngs: [...supportedLngs],
     defaultNS,
-    ns: ["common", "nav", "auth", "settings", "dashboard", "jobs", "applications"],
+    ns: ["common", "nav", "auth", "settings", "dashboard", "jobs", "applications", "coaching"],
     interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],
