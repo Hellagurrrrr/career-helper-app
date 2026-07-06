@@ -1,0 +1,51 @@
+{
+  "eyebrow": "Job search",
+  "title": "Find your next role",
+  "subtitle": "Curated openings and partner referrals tailored to your career goals.",
+  "emptyTitle": "No career goals yet",
+  "emptyBody": "Add a career goal to unlock tailored job recommendations and partner referral roles.",
+  "showingFor": "Showing jobs for",
+  "match": "match",
+  "matchPercent": "{{value}}% match",
+  "rolesCount_one": "{{count}} role",
+  "rolesCount_other": "{{count}} roles",
+  "viewJobAria": "View full job description: {{title}} at {{company}}",
+  "stats": {
+    "saved": "Saved",
+    "applied": "Applied",
+    "openRoles": "Open roles",
+    "referral": "Referral"
+  },
+  "saved": {
+    "title": "Saved jobs",
+    "forThisGoal": "{{count}} for this goal",
+    "emptyHint": "Tap <strong>Save</strong> on any role below to keep it here. Your saved list is stored in this browser so you can return anytime.",
+    "partnerTrack": "Partner · referral track",
+    "showInList": "Show in list"
+  },
+  "actions": {
+    "save": "Save",
+    "saved": "Saved",
+    "unsave": "Unsave",
+    "applied": "Applied",
+    "applyNow": "Apply Now"
+  },
+  "partner": {
+    "title": "Partner roles",
+    "referralTrack": "Referral track",
+    "exclusive": "Exclusive",
+    "badge": "Partner",
+    "verified": "Verified partner",
+    "infoTitle": "These roles come with a built-in referral.",
+    "infoBody": "Partner companies post these jobs <strong>exclusively on AI Career Helper</strong>. When you apply, your profile is forwarded directly to the team along with a referral, so you skip the standard applicant pile.",
+    "referralSubmitted": "Referral submitted",
+    "applyWithReferral": "Apply with referral"
+  },
+  "other": {
+    "titleWithPartner": "Other open roles",
+    "titleDefault": "Recommended Jobs for You"
+  },
+  "detail": {
+    "description": "Job description"
+  }
+}

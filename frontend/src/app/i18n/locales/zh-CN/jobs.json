@@ -1,0 +1,50 @@
+{
+  "eyebrow": "职位搜索",
+  "title": "寻找你的下一份工作",
+  "subtitle": "根据你的职业目标精选的职位空缺与合作方内推。",
+  "emptyTitle": "还没有职业目标",
+  "emptyBody": "添加一个职业目标，解锁量身定制的职位推荐和合作方内推岗位。",
+  "showingFor": "查看以下目标的职位",
+  "match": "匹配",
+  "matchPercent": "匹配度 {{value}}%",
+  "rolesCount_other": "{{count}} 个职位",
+  "viewJobAria": "查看完整职位描述：{{company}} 的 {{title}}",
+  "stats": {
+    "saved": "已收藏",
+    "applied": "已申请",
+    "openRoles": "在招职位",
+    "referral": "内推"
+  },
+  "saved": {
+    "title": "收藏的职位",
+    "forThisGoal": "本目标 {{count}} 个",
+    "emptyHint": "点击下方任意职位的<strong>保存</strong>即可留存于此。你的收藏列表存储在本浏览器中，随时可以回来查看。",
+    "partnerTrack": "合作方 · 内推通道",
+    "showInList": "在列表中显示"
+  },
+  "actions": {
+    "save": "保存",
+    "saved": "已保存",
+    "unsave": "取消保存",
+    "applied": "已申请",
+    "applyNow": "立即申请"
+  },
+  "partner": {
+    "title": "合作方职位",
+    "referralTrack": "内推通道",
+    "exclusive": "独家",
+    "badge": "合作方",
+    "verified": "认证合作方",
+    "infoTitle": "这些职位自带内推。",
+    "infoBody": "合作企业将这些职位<strong>独家发布在 AI Career Helper 上</strong>。当你申请时，你的资料会连同推荐一起直接转交给团队，让你跳过常规的投递人海。",
+    "referralSubmitted": "已提交内推",
+    "applyWithReferral": "通过内推申请"
+  },
+  "other": {
+    "titleWithPartner": "其他在招职位",
+    "titleDefault": "为你推荐的职位"
+  },
+  "detail": {
+    "description": "职位描述"
+  }
+}

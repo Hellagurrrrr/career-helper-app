@@ -5,11 +5,13 @@ import { initReactI18next } from "react-i18next";
 import authEn from "./locales/en/auth.json";
 import commonEn from "./locales/en/common.json";
 import dashboardEn from "./locales/en/dashboard.json";
+import jobsEn from "./locales/en/jobs.json";
 import navEn from "./locales/en/nav.json";
 import settingsEn from "./locales/en/settings.json";
 import authZh from "./locales/zh-CN/auth.json";
 import commonZh from "./locales/zh-CN/common.json";
 import dashboardZh from "./locales/zh-CN/dashboard.json";
+import jobsZh from "./locales/zh-CN/jobs.json";
 import navZh from "./locales/zh-CN/nav.json";
 import settingsZh from "./locales/zh-CN/settings.json";
 
@@ -31,6 +33,7 @@ export const resources = {
     auth: authEn,
     settings: settingsEn,
     dashboard: dashboardEn,
+    jobs: jobsEn,
   },
   "zh-CN": {
     common: commonZh,
@@ -38,6 +41,7 @@ export const resources = {
     auth: authZh,
     settings: settingsZh,
     dashboard: dashboardZh,
+    jobs: jobsZh,
   },
 } as const;
 
@@ -49,7 +53,7 @@ i18n
     fallbackLng: "en",
     supportedLngs: [...supportedLngs],
     defaultNS,
-    ns: ["common", "nav", "auth", "settings", "dashboard"],
+    ns: ["common", "nav", "auth", "settings", "dashboard", "jobs"],
     interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],
