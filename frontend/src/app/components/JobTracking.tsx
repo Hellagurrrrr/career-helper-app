@@ -9,6 +9,7 @@ import {
   Target,
   Sparkles,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { useInterviewReviews } from "../lib/interview-reviews";
 import { useMockInterviews } from "../lib/mock-interviews";
 import { useGoals } from "../lib/goals";
@@ -18,7 +19,6 @@ import {
   JobApplication,
   MANUAL_STATUS_LABELS,
   ManualApplicationStatus,
-  PARTNER_STATUS_LABELS,
   useJobApplications,
 } from "../lib/job-applications";
 
@@ -43,6 +43,7 @@ function computeSummary(apps: JobApplication[]) {
 }
 
 export function JobTracking() {
+  const { t } = useTranslation("applications");
   const [searchParams, setSearchParams] = useSearchParams();
   const goalFilter = searchParams.get("goal") ?? "all";
 
@@ -92,54 +93,55 @@ export function JobTracking() {
       <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-700">Applications</p>
+            <p className="text-sm font-medium text-blue-700">{t("header.eyebrow")}</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
-              Job application tracking
+              {t("header.title")}
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              All roles you applied to across career goals. Use{" "}
-              <Link
-                to="/ai-coaching"
-                className="font-medium text-indigo-700 underline-offset-2 hover:underline"
-              >
-                AI Coaching
-              </Link>{" "}
-              for interview review and voice mock practice per role.{" "}
-              <span className="font-medium text-slate-800">Partner / exclusive</span> roles update
-              automatically; <span className="font-medium text-slate-800">other roles</span> use
-              the status you set.
+              <Trans
+                i18nKey="applications:header.intro"
+                components={{
+                  coaching: (
+                    <Link
+                      to="/ai-coaching"
+                      className="font-medium text-indigo-700 underline-offset-2 hover:underline"
+                    />
+                  ),
+                  b: <span className="font-medium text-slate-800" />,
+                }}
+              />
             </p>
           </div>
           <button
             type="button"
             onClick={() => setNow(Date.now())}
             className="inline-flex shrink-0 items-center gap-2 self-start rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-800 shadow-sm transition-colors hover:bg-blue-50"
-            title="Refresh status display"
+            title={t("header.refreshTitle")}
           >
             <RefreshCw className="h-4 w-4" />
-            Refresh
+            {t("header.refresh")}
           </button>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-blue-100">
-            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Total</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">{t("stats.total")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{summary.total}</p>
           </div>
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-blue-100">
-            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Partner</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">{t("stats.partner")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{summary.partner}</p>
           </div>
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-blue-100">
-            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Self-tracked</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">{t("stats.selfTracked")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{summary.standard}</p>
           </div>
           <div className="rounded-xl bg-white px-4 py-3 ring-1 ring-blue-100">
-            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">In progress</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-blue-700">{t("stats.inProgress")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{summary.active}</p>
           </div>
           <div className="col-span-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 px-4 py-3 text-white shadow-sm sm:col-span-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-blue-100">Offers</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-blue-100">{t("stats.offers")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight">{summary.offers}</p>
           </div>
         </div>
@@ -150,13 +152,13 @@ export function JobTracking() {
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-blue-700" />
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-              Application details
+              {t("details.title")}
             </h2>
             <span className="text-sm text-slate-500">({sorted.length})</span>
           </div>
           {goalIdsWithApps.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-slate-600">
-              <span className="shrink-0 font-medium">Career goal</span>
+              <span className="shrink-0 font-medium">{t("details.careerGoal")}</span>
               <select
                 value={goalFilter}
                 onChange={(e) => {
@@ -169,7 +171,7 @@ export function JobTracking() {
                 }}
                 className="min-w-[10rem] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
-                <option value="all">All goals</option>
+                <option value="all">{t("details.allGoals")}</option>
                 {goalIdsWithApps.map((id) => (
                   <option key={id} value={id}>
                     {goalTitleById.get(id) ?? id}
@@ -182,17 +184,20 @@ export function JobTracking() {
 
         {sorted.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-10 text-center">
-            <p className="text-sm font-medium text-slate-800">No applications yet</p>
+            <p className="text-sm font-medium text-slate-800">{t("details.emptyTitle")}</p>
             <p className="mt-2 text-sm text-slate-600">
-              Open a career goal&apos;s{" "}
-              <Link
-                to={`/jobs?goal=${firstGoalForEmptyLink}`}
-                className="font-medium text-blue-700 underline-offset-2 hover:underline"
-              >
-                Jobs
-              </Link>{" "}
-              and use <span className="font-medium text-slate-900">Apply</span> or{" "}
-              <span className="font-medium text-slate-900">Apply with referral</span>.
+              <Trans
+                i18nKey="applications:details.emptyBody"
+                components={{
+                  jobs: (
+                    <Link
+                      to={`/jobs?goal=${firstGoalForEmptyLink}`}
+                      className="font-medium text-blue-700 underline-offset-2 hover:underline"
+                    />
+                  ),
+                  b: <span className="font-medium text-slate-900" />,
+                }}
+              />
             </p>
           </div>
         ) : (
@@ -218,11 +223,11 @@ export function JobTracking() {
                         {app.kind === "partner" ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-900 ring-1 ring-blue-200">
                             <Lock className="h-3 w-3" />
-                            Exclusive · auto
+                            {t("card.exclusiveAuto")}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-slate-200/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
-                            Self-tracked
+                            {t("card.selfTracked")}
                           </span>
                         )}
                       </div>
@@ -246,7 +251,7 @@ export function JobTracking() {
                       <p className="mt-2 text-xs text-slate-500">
                         <span className="inline-flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          Applied {new Date(app.submittedAt).toLocaleString()}
+                          {t("card.appliedOn", { date: new Date(app.submittedAt).toLocaleString() })}
                         </span>
                       </p>
                     </div>
@@ -255,15 +260,13 @@ export function JobTracking() {
                       {app.kind === "partner" && partnerStage ? (
                         <div className="rounded-xl border border-blue-100 bg-blue-50/80 p-3">
                           <p className="text-xs font-semibold uppercase tracking-wide text-blue-800">
-                            Status (auto)
+                            {t("card.statusAuto")}
                           </p>
                           <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {PARTNER_STATUS_LABELS[partnerStage]}
+                            {t(`partnerStatus.${partnerStage}`)}
                           </p>
                           <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                            Status advances from your apply time (referral → review → interviews →
-                            offer). Timing is simulated from hours since apply; use Refresh if the
-                            page has been open a while.
+                            {t("card.autoDesc")}
                           </p>
                         </div>
                       ) : app.kind === "standard" ? (
@@ -272,7 +275,7 @@ export function JobTracking() {
                             htmlFor={`status-${app.id}`}
                             className="text-xs font-semibold uppercase tracking-wide text-slate-600"
                           >
-                            Your status
+                            {t("card.yourStatus")}
                           </label>
                           <select
                             id={`status-${app.id}`}
@@ -288,7 +291,7 @@ export function JobTracking() {
                             {(Object.keys(MANUAL_STATUS_LABELS) as ManualApplicationStatus[]).map(
                               (key) => (
                                 <option key={key} value={key}>
-                                  {MANUAL_STATUS_LABELS[key]}
+                                  {t(`manualStatus.${key}`)}
                                 </option>
                               )
                             )}
@@ -309,16 +312,16 @@ export function JobTracking() {
                     return (
                       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
                         <span className="text-xs text-slate-500">
-                          {reviewCount > 0 && `${reviewCount} review${reviewCount !== 1 ? "s" : ""}`}
+                          {reviewCount > 0 && t("card.reviewCount", { count: reviewCount })}
                           {reviewCount > 0 && mockCount > 0 && " · "}
-                          {mockCount > 0 && `${mockCount} mock${mockCount !== 1 ? "s" : ""}`}
+                          {mockCount > 0 && t("card.mockCount", { count: mockCount })}
                         </span>
                         <Link
                           to="/ai-coaching"
                           className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 transition-colors hover:bg-indigo-100"
                         >
                           <Sparkles className="h-3 w-3" />
-                          Open in AI Coaching
+                          {t("card.openInCoaching")}
                         </Link>
                       </div>
                     );

@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "Applications",
+    "title": "Job application tracking",
+    "intro": "All roles you applied to across career goals. Use <coaching>AI Coaching</coaching> for interview review and voice mock practice per role. <b>Partner / exclusive</b> roles update automatically; <b>other roles</b> use the status you set.",
+    "refresh": "Refresh",
+    "refreshTitle": "Refresh status display"
+  },
+  "stats": {
+    "total": "Total",
+    "partner": "Partner",
+    "selfTracked": "Self-tracked",
+    "inProgress": "In progress",
+    "offers": "Offers"
+  },
+  "details": {
+    "title": "Application details",
+    "careerGoal": "Career goal",
+    "allGoals": "All goals",
+    "emptyTitle": "No applications yet",
+    "emptyBody": "Open a career goal's <jobs>Jobs</jobs> and use <b>Apply</b> or <b>Apply with referral</b>."
+  },
+  "card": {
+    "exclusiveAuto": "Exclusive · auto",
+    "selfTracked": "Self-tracked",
+    "appliedOn": "Applied {{date}}",
+    "statusAuto": "Status (auto)",
+    "autoDesc": "Status advances from your apply time (referral → review → interviews → offer). Timing is simulated from hours since apply; use Refresh if the page has been open a while.",
+    "yourStatus": "Your status",
+    "reviewCount_one": "{{count}} review",
+    "reviewCount_other": "{{count}} reviews",
+    "mockCount_one": "{{count}} mock",
+    "mockCount_other": "{{count}} mocks",
+    "openInCoaching": "Open in AI Coaching"
+  },
+  "manualStatus": {
+    "applied": "Applied",
+    "screening": "Screening / review",
+    "interview": "Interview",
+    "offer": "Offer",
+    "rejected": "Rejected",
+    "withdrawn": "Withdrawn"
+  },
+  "partnerStatus": {
+    "referral_sent": "Referral sent",
+    "under_review": "Under review",
+    "interview": "Interview",
+    "final_round": "Final round",
+    "offer_extended": "Offer extended"
+  }
+}
