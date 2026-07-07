@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../lib/auth";
 import {
   Target,
@@ -32,9 +33,10 @@ type ChatMessage = {
   text: string;
 };
 
+// Prompt/placeholder text lives in the `onboarding` namespace (chat.questions.*),
+// keyed by `id`; only the field-mapping stays in code.
 type ChatQuestion = {
-  prompt: string;
-  placeholder: string;
+  id: string;
   apply: (draft: Profile, raw: string) => Profile;
 };
 
@@ -47,38 +49,12 @@ function withEducation(draft: Profile, patch: Partial<Education>): Profile {
 }
 
 const CHAT_QUESTIONS: ChatQuestion[] = [
-  {
-    prompt: "Hi! I'm your career assistant. What should I call you?",
-    placeholder: "Your first name",
-    apply: (draft, raw) => ({ ...draft, name: raw }),
-  },
-  {
-    prompt: "Nice to meet you! Which school are you attending?",
-    placeholder: "e.g. State University",
-    apply: (draft, raw) => withEducation(draft, { school: raw }),
-  },
-  {
-    prompt: "What's your major?",
-    placeholder: "e.g. Computer Science",
-    apply: (draft, raw) => withEducation(draft, { major: raw }),
-  },
-  {
-    prompt: "Which degree are you working toward?",
-    placeholder: "e.g. BSc",
-    apply: (draft, raw) => withEducation(draft, { degree: raw }),
-  },
-  {
-    prompt:
-      "What are your top skills? List a few separated by commas.",
-    placeholder: "JavaScript, Python, React",
-    apply: (draft, raw) => ({ ...draft, skills: parseCommaList(raw) }),
-  },
-  {
-    prompt:
-      "Which relevant courses have you taken? (comma-separated)",
-    placeholder: "Data Structures, Algorithms",
-    apply: (draft, raw) => ({ ...draft, coursework: parseCommaList(raw) }),
-  },
+  { id: "name", apply: (draft, raw) => ({ ...draft, name: raw }) },
+  { id: "school", apply: (draft, raw) => withEducation(draft, { school: raw }) },
+  { id: "major", apply: (draft, raw) => withEducation(draft, { major: raw }) },
+  { id: "degree", apply: (draft, raw) => withEducation(draft, { degree: raw }) },
+  { id: "skills", apply: (draft, raw) => ({ ...draft, skills: parseCommaList(raw) }) },
+  { id: "coursework", apply: (draft, raw) => ({ ...draft, coursework: parseCommaList(raw) }) },
 ];
 
 function ProgressDots({ current, total }: { current: number; total: number }) {
@@ -102,6 +78,7 @@ function ProgressDots({ current, total }: { current: number; total: number }) {
 
 export function Onboarding() {
   const navigate = useNavigate();
+  const { t } = useTranslation(["onboarding", "common"]);
   const { saveProfile } = useProfile();
   const { notify } = useNotifications();
   const { currentUser } = useAuth();
@@ -120,23 +97,22 @@ export function Onboarding() {
     notify({
       type: "system",
       severity: "info",
-      title: `Welcome aboard, ${name}!`,
-      body:
-        "Pick a career goal to get a personalized learning plan and matching jobs.",
+      title: t("notify.welcomeTitle", { name }),
+      body: t("notify.welcomeBody"),
       link: "/new-goal",
       dedupKey: "onboarding-welcome",
     });
   };
 
   const handleSkip = async () => {
-    await saveProfile({ ...EMPTY_PROFILE, name: "Friend" });
-    emitWelcome("Friend");
+    await saveProfile({ ...EMPTY_PROFILE, name: t("friend") });
+    emitWelcome(t("friend"));
     navigate("/", { replace: true });
   };
 
   const finish = async (profile: Profile) => {
     await saveProfile(profile);
-    emitWelcome(profile.name?.trim() || "Friend");
+    emitWelcome(profile.name?.trim() || t("friend"));
     navigate("/", { replace: true });
   };
 
@@ -148,7 +124,7 @@ export function Onboarding() {
             <Target className="h-5 w-5 text-white" />
           </div>
           <span className="text-lg font-semibold tracking-tight text-slate-950">
-            AI Career Helper
+            {t("common:appName")}
           </span>
         </div>
         {step !== "welcome" && (
@@ -156,7 +132,7 @@ export function Onboarding() {
             onClick={handleSkip}
             className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
           >
-            Skip for now
+            {t("skipForNow")}
           </button>
         )}
       </header>
@@ -188,15 +164,15 @@ export function Onboarding() {
 
         {step === "extracting" && (
           <ExtractingStep
-            fileName={fileName ?? "your resume"}
+            fileName={fileName ?? t("extracting.yourResume")}
             onDone={() => {
               setDraft({
                 ...EMPTY_PROFILE,
                 projects: [
                   {
                     ...EMPTY_PROJECT,
-                    title: "Project extracted from CV",
-                    description: "Edit this entry to describe your project.",
+                    title: t("extracting.projectTitle"),
+                    description: t("extracting.projectDesc"),
                   },
                 ],
               });
@@ -239,20 +215,18 @@ function WelcomeStep({
   onChooseChat: () => void;
   onSkip: () => void;
 }) {
+  const { t } = useTranslation("onboarding");
   return (
     <div className="space-y-8">
       <div className="text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-blue-700">
           <Sparkles className="h-3.5 w-3.5" />
-          Get started
+          {t("welcome.eyebrow")}
         </span>
         <h1 className="mx-auto mt-4 max-w-2xl text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-          Let's build your career profile
+          {t("welcome.title")}
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-slate-600">
-          We'll use this information to personalize your learning plan and match
-          you with the right job opportunities.
-        </p>
+        <p className="mx-auto mt-3 max-w-xl text-slate-600">{t("welcome.subtitle")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -265,15 +239,12 @@ function WelcomeStep({
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-              Upload my CV
+              {t("welcome.uploadTitle")}
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Have a resume ready? Upload it and we'll extract your skills,
-              education, and experience automatically.
-            </p>
+            <p className="mt-1 text-sm text-slate-600">{t("welcome.uploadBody")}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700">
-            Upload CV
+            {t("welcome.uploadCta")}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </span>
         </button>
@@ -287,15 +258,12 @@ function WelcomeStep({
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-              Chat with the assistant
+              {t("welcome.chatTitle")}
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              No CV yet? Answer a few quick questions and we'll build your
-              profile together in a guided conversation.
-            </p>
+            <p className="mt-1 text-sm text-slate-600">{t("welcome.chatBody")}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700">
-            Start chat
+            {t("welcome.chatCta")}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </span>
         </button>
@@ -306,7 +274,7 @@ function WelcomeStep({
           onClick={onSkip}
           className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
         >
-          Skip and explore the dashboard
+          {t("welcome.skipExplore")}
         </button>
       </div>
     </div>
@@ -326,6 +294,7 @@ function UploadStep({
   onClearFile: () => void;
   onExtract: () => void;
 }) {
+  const { t } = useTranslation("onboarding");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = React.useState(false);
 
@@ -337,9 +306,9 @@ function UploadStep({
   return (
     <div className="space-y-6">
       <StepHeader
-        eyebrow="Step 1 of 2"
-        title="Upload your CV"
-        description="We'll analyze your resume to pre-fill your career profile."
+        eyebrow={t("upload.eyebrow")}
+        title={t("upload.title")}
+        description={t("upload.description")}
         onBack={onBack}
       />
 
@@ -363,19 +332,14 @@ function UploadStep({
         <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
           <Upload className="h-7 w-7" />
         </div>
-        <p className="text-base font-semibold text-slate-950">
-          Drag and drop your resume here
-        </p>
-        <p className="max-w-sm text-sm text-slate-600">
-          Supports PDF, DOC, DOCX, and TXT files. Your file stays on your
-          device.
-        </p>
+        <p className="text-base font-semibold text-slate-950">{t("upload.dropHere")}</p>
+        <p className="max-w-sm text-sm text-slate-600">{t("upload.supports")}</p>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           className="mt-1 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
-          Choose file
+          {t("upload.chooseFile")}
         </button>
         <input
           ref={inputRef}
@@ -394,13 +358,13 @@ function UploadStep({
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-950">{fileName}</p>
-              <p className="text-xs text-slate-500">Ready to analyze</p>
+              <p className="text-xs text-slate-500">{t("upload.readyToAnalyze")}</p>
             </div>
           </div>
           <button
             onClick={onClearFile}
             className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100"
-            aria-label="Remove file"
+            aria-label={t("upload.removeFile")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -413,7 +377,7 @@ function UploadStep({
           disabled={!fileName}
           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
-          Extract info
+          {t("upload.extractInfo")}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -428,11 +392,12 @@ function ExtractingStep({
   fileName: string;
   onDone: () => void;
 }) {
+  const { t } = useTranslation("onboarding");
   const [stage, setStage] = React.useState(0);
   const stages = [
-    "Reading your resume...",
-    "Identifying skills and coursework...",
-    "Building your profile draft...",
+    t("extracting.stage1"),
+    t("extracting.stage2"),
+    t("extracting.stage3"),
   ];
 
   React.useEffect(() => {
@@ -451,7 +416,7 @@ function ExtractingStep({
       </div>
       <div>
         <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-          Analyzing {fileName}
+          {t("extracting.analyzing", { fileName })}
         </h2>
         <p className="mt-2 text-sm text-slate-600">{stages[stage]}</p>
       </div>
@@ -472,8 +437,10 @@ function ChatStep({
   onBack: () => void;
   onComplete: (profile: Profile) => void;
 }) {
+  const { t } = useTranslation("onboarding");
+  const questionText = (id: string) => t(`chat.questions.${id}.prompt`);
   const [messages, setMessages] = React.useState<ChatMessage[]>([
-    { from: "bot", text: CHAT_QUESTIONS[0].prompt },
+    { from: "bot", text: questionText(CHAT_QUESTIONS[0].id) },
   ]);
   const [draft, setDraft] = React.useState<Profile>(EMPTY_PROFILE);
   const [index, setIndex] = React.useState(0);
@@ -501,7 +468,7 @@ function ChatStep({
 
     const nextIndex = index + 1;
     if (nextIndex < CHAT_QUESTIONS.length) {
-      next.push({ from: "bot", text: CHAT_QUESTIONS[nextIndex].prompt });
+      next.push({ from: "bot", text: questionText(CHAT_QUESTIONS[nextIndex].id) });
       setMessages(next);
       setDraft(updatedDraft);
       setIndex(nextIndex);
@@ -509,7 +476,7 @@ function ChatStep({
     } else {
       next.push({
         from: "bot",
-        text: "Great, thanks! Let's review what you shared.",
+        text: t("chat.done"),
       });
       setMessages(next);
       setDraft(updatedDraft);
@@ -521,9 +488,12 @@ function ChatStep({
   return (
     <div className="space-y-5">
       <StepHeader
-        eyebrow={`Question ${Math.min(index + 1, CHAT_QUESTIONS.length)} of ${CHAT_QUESTIONS.length}`}
-        title="Tell us about yourself"
-        description="A quick chat helps us understand your background."
+        eyebrow={t("chat.questionOf", {
+          current: Math.min(index + 1, CHAT_QUESTIONS.length),
+          total: CHAT_QUESTIONS.length,
+        })}
+        title={t("chat.title")}
+        description={t("chat.description")}
         onBack={onBack}
       />
 
@@ -565,8 +535,8 @@ function ChatStep({
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               index < CHAT_QUESTIONS.length
-                ? CHAT_QUESTIONS[index].placeholder
-                : "Sending..."
+                ? t(`chat.questions.${CHAT_QUESTIONS[index].id}.placeholder`)
+                : t("chat.sending")
             }
             disabled={index >= CHAT_QUESTIONS.length}
             className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
@@ -575,7 +545,7 @@ function ChatStep({
             type="submit"
             disabled={!input.trim() || index >= CHAT_QUESTIONS.length}
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-            aria-label="Send"
+            aria-label={t("chat.send")}
           >
             <Send className="h-4 w-4" />
           </button>
@@ -596,6 +566,7 @@ function ReviewStep({
   onBack: () => void;
   onSave: (profile: Profile) => void;
 }) {
+  const { t } = useTranslation(["onboarding", "profile"]);
   const [skillsText, setSkillsText] = React.useState(draft.skills.join(", "));
   const [courseworkText, setCourseworkText] = React.useState(
     draft.coursework.join(", ")
@@ -647,64 +618,64 @@ function ReviewStep({
   return (
     <div className="space-y-5">
       <StepHeader
-        eyebrow="Almost done"
-        title="Review your profile"
-        description="Confirm or fix anything we got wrong, then continue to your dashboard."
+        eyebrow={t("review.eyebrow")}
+        title={t("review.title")}
+        description={t("review.description")}
         onBack={onBack}
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Field
-          label="Name"
+          label={t("profile:fields.name")}
           value={draft.name}
           onChange={(v) => onChange({ ...draft, name: v })}
-          placeholder="Alex"
+          placeholder={t("profile:placeholders.name")}
           required
           full
         />
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Education
+            {t("profile:sections.education")}
           </h3>
           <div className="grid gap-3 sm:grid-cols-4">
             <Field
-              label="Degree"
+              label={t("profile:fields.degree")}
               value={edu.degree}
               onChange={(v) => setEdu({ degree: v })}
               placeholder="BSc"
               inline
             />
             <Field
-              label="School"
+              label={t("profile:fields.school")}
               value={edu.school}
               onChange={(v) => setEdu({ school: v })}
-              placeholder="State University"
+              placeholder={t("profile:placeholders.school")}
               inline
             />
             <Field
-              label="Major"
+              label={t("profile:fields.major")}
               value={edu.major}
               onChange={(v) => setEdu({ major: v })}
-              placeholder="Computer Science"
+              placeholder={t("profile:placeholders.major")}
               inline
             />
             <Field
-              label="GPA"
+              label={t("profile:fields.gpa")}
               value={gradeText}
               onChange={setGradeText}
               placeholder="3.7"
               inline
             />
             <Field
-              label="Start (YYYY-MM)"
+              label={t("profile:fields.start")}
               value={edu.start}
               onChange={(v) => setEdu({ start: v })}
               placeholder="2022-09"
               inline
             />
             <Field
-              label="End (YYYY-MM)"
+              label={t("profile:fields.end")}
               value={edu.end ?? ""}
               onChange={(v) => setEdu({ end: v })}
               placeholder="2026-06"
@@ -714,48 +685,48 @@ function ReviewStep({
         </div>
 
         <Field
-          label="Skills (comma separated)"
+          label={t("profile:fields.skills")}
           value={skillsText}
           onChange={setSkillsText}
-          placeholder="JavaScript, Python, React"
+          placeholder={t("profile:placeholders.skills")}
           full
         />
         <Field
-          label="Coursework (comma separated)"
+          label={t("profile:fields.coursework")}
           value={courseworkText}
           onChange={setCourseworkText}
-          placeholder="Data Structures, Algorithms"
+          placeholder={t("profile:placeholders.coursework")}
           full
         />
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
           <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Most recent internship (optional)
+            {t("review.internshipTitle")}
           </h3>
           <div className="grid gap-3 sm:grid-cols-4">
             <Field
-              label="Role"
+              label={t("profile:fields.role")}
               value={internship.title}
               onChange={(v) => setInternship({ ...internship, title: v })}
-              placeholder="Software Intern"
+              placeholder={t("profile:placeholders.role")}
               inline
             />
             <Field
-              label="Company"
+              label={t("profile:fields.company")}
               value={internship.company}
               onChange={(v) => setInternship({ ...internship, company: v })}
-              placeholder="Tech Startup"
+              placeholder={t("profile:placeholders.company")}
               inline
             />
             <Field
-              label="Start (YYYY-MM)"
+              label={t("profile:fields.start")}
               value={internship.start}
               onChange={(v) => setInternship({ ...internship, start: v })}
               placeholder="2025-06"
               inline
             />
             <Field
-              label="End (YYYY-MM)"
+              label={t("profile:fields.end")}
               value={internship.end ?? ""}
               onChange={(v) => setInternship({ ...internship, end: v })}
               placeholder="2025-09"
@@ -764,12 +735,12 @@ function ReviewStep({
           </div>
           <div className="mt-3">
             <Field
-              label="Description"
+              label={t("profile:fields.description")}
               value={internship.description}
               onChange={(v) =>
                 setInternship({ ...internship, description: v })
               }
-              placeholder="What did you build or improve?"
+              placeholder={t("profile:placeholders.internDesc")}
               inline
             />
           </div>
@@ -782,7 +753,7 @@ function ReviewStep({
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("back")}
         </button>
         <button
           onClick={handleSave}
@@ -790,7 +761,7 @@ function ReviewStep({
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
           <CheckCircle2 className="h-4 w-4" />
-          Continue to dashboard
+          {t("review.continue")}
         </button>
       </div>
     </div>
@@ -808,6 +779,7 @@ function StepHeader({
   description: string;
   onBack: () => void;
 }) {
+  const { t } = useTranslation("onboarding");
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
@@ -824,7 +796,7 @@ function StepHeader({
         className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back
+        {t("back")}
       </button>
     </div>
   );
