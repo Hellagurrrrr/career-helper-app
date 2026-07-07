@@ -1,0 +1,58 @@
+{
+  "header": {
+    "eyebrow": "职业规划工作台",
+    "welcome": "欢迎回来，{{name}}",
+    "subtitle": "追踪你的目标、补齐技能短板，向下一个职位迈进。",
+    "friend": "朋友"
+  },
+  "applications": {
+    "eyebrow": "求职申请",
+    "title": "申请追踪",
+    "empty": "查看并更新你所有职业目标下的申请。",
+    "summary_other": "共 {{total}} · 进行中 {{active}} · offer {{count}} 个",
+    "open": "打开追踪器"
+  },
+  "todaysFocus": {
+    "title": "今日重点",
+    "actions_other": "{{count}} 项行动",
+    "strengthen": "强化 {{name}}"
+  },
+  "explorations": {
+    "title": "我的职业探索",
+    "goalCount_other": "{{count}} 个目标",
+    "emptyTitle": "还没有目标",
+    "emptyBody": "添加你的第一个职业目标，获取个性化学习计划和匹配的职位推荐。",
+    "overallProgress": "总体进度",
+    "updated": "更新于 {{date}}",
+    "newGoal": "新建职业目标",
+    "tip": "提示：在侧栏的“职业目标”菜单中可以重新排序或删除目标。"
+  },
+  "status": {
+    "active": "进行中",
+    "exploring": "探索中"
+  },
+  "profile": {
+    "incomplete": "资料不完整",
+    "edit": "编辑",
+    "editAria": "编辑个人资料",
+    "skills": "技能",
+    "noSkills": "还没有添加技能。<link>去添加</link>。",
+    "projects": "项目",
+    "noProjects": "还没有添加项目。",
+    "coursework": "课程",
+    "noCoursework": "还没有添加课程。",
+    "internships": "实习"
+  },
+  "alumni": {
+    "title": "校友网络",
+    "subtitle": "与已入职你目标岗位的校友交流。资料匿名，你的联系方式保持私密。",
+    "browse": "浏览网络",
+    "privacy": "隐私保护",
+    "pending_other": "{{count}} 个待处理请求",
+    "completed_other": "已完成 {{count}} 次交流",
+    "noChats": "还没有 coffee chat —— 挑一个人开始对话吧。",
+    "match": "匹配",
+    "classOf": "{{year}} 届",
+    "view": "查看"
+  }
+}

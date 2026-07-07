@@ -1,0 +1,9 @@
+{
+  "appName": "AI Career Helper",
+  "loading": "Loading...",
+  "you": "You",
+  "imageError": "Error loading image",
+  "language": {
+    "label": "Language"
+  }
+}

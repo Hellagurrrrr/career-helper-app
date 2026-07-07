@@ -1,0 +1,82 @@
+{
+  "skipForNow": "Skip for now",
+  "friend": "Friend",
+  "back": "Back",
+  "notify": {
+    "welcomeTitle": "Welcome aboard, {{name}}!",
+    "welcomeBody": "Pick a career goal to get a personalized learning plan and matching jobs."
+  },
+  "welcome": {
+    "eyebrow": "Get started",
+    "title": "Let's build your career profile",
+    "subtitle": "We'll use this information to personalize your learning plan and match you with the right job opportunities.",
+    "uploadTitle": "Upload my CV",
+    "uploadBody": "Have a resume ready? Upload it and we'll extract your skills, education, and experience automatically.",
+    "uploadCta": "Upload CV",
+    "chatTitle": "Chat with the assistant",
+    "chatBody": "No CV yet? Answer a few quick questions and we'll build your profile together in a guided conversation.",
+    "chatCta": "Start chat",
+    "skipExplore": "Skip and explore the dashboard"
+  },
+  "upload": {
+    "eyebrow": "Step 1 of 2",
+    "title": "Upload your CV",
+    "description": "We'll analyze your resume to pre-fill your career profile.",
+    "dropHere": "Drag and drop your resume here",
+    "supports": "Supports PDF, DOC, DOCX, and TXT files. Your file stays on your device.",
+    "chooseFile": "Choose file",
+    "readyToAnalyze": "Ready to analyze",
+    "removeFile": "Remove file",
+    "extractInfo": "Extract info"
+  },
+  "extracting": {
+    "yourResume": "your resume",
+    "analyzing": "Analyzing {{fileName}}",
+    "stage1": "Reading your resume...",
+    "stage2": "Identifying skills and coursework...",
+    "stage3": "Building your profile draft...",
+    "projectTitle": "Project extracted from CV",
+    "projectDesc": "Edit this entry to describe your project."
+  },
+  "chat": {
+    "questionOf": "Question {{current}} of {{total}}",
+    "title": "Tell us about yourself",
+    "description": "A quick chat helps us understand your background.",
+    "done": "Great, thanks! Let's review what you shared.",
+    "sending": "Sending...",
+    "send": "Send",
+    "questions": {
+      "name": {
+        "prompt": "Hi! I'm your career assistant. What should I call you?",
+        "placeholder": "Your first name"
+      },
+      "school": {
+        "prompt": "Nice to meet you! Which school are you attending?",
+        "placeholder": "e.g. State University"
+      },
+      "major": {
+        "prompt": "What's your major?",
+        "placeholder": "e.g. Computer Science"
+      },
+      "degree": {
+        "prompt": "Which degree are you working toward?",
+        "placeholder": "e.g. BSc"
+      },
+      "skills": {
+        "prompt": "What are your top skills? List a few separated by commas.",
+        "placeholder": "JavaScript, Python, React"
+      },
+      "coursework": {
+        "prompt": "Which relevant courses have you taken? (comma-separated)",
+        "placeholder": "Data Structures, Algorithms"
+      }
+    }
+  },
+  "review": {
+    "eyebrow": "Almost done",
+    "title": "Review your profile",
+    "description": "Confirm or fix anything we got wrong, then continue to your dashboard.",
+    "internshipTitle": "Most recent internship (optional)",
+    "continue": "Continue to dashboard"
+  }
+}

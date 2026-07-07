@@ -1,0 +1,95 @@
+{
+  "header": {
+    "eyebrow": "Alumni network",
+    "title": "Connect with alumni working in your target roles",
+    "subtitle": "Browse alumni profiles and request a coffee chat. Profiles are anonymized to first name + last initial. Personal contact info is never shared on this platform."
+  },
+  "privacy": {
+    "title": "Your privacy and theirs.",
+    "body": "Names appear as \"First name + last initial\" only. Alumni opt in to specific chat topics and response cadences. Email is never shown — once an alumnus accepts your request, the platform will introduce you via a private channel."
+  },
+  "tabs": {
+    "browse": "Browse",
+    "requests": "My requests"
+  },
+  "browse": {
+    "searchPlaceholder": "Search role, company, topic...",
+    "allIndustries": "All industries",
+    "empty": "No alumni matched your search. Try different keywords or clear the filter."
+  },
+  "card": {
+    "match": "Match",
+    "requestSent": "Request sent",
+    "classOf": "Class of {{year}}",
+    "privacy": "Privacy protected",
+    "linkedinAria": "View {{name}}'s LinkedIn profile (opens in a new tab)",
+    "viewProfile": "View profile"
+  },
+  "requests": {
+    "total": "Total requests",
+    "pending": "Pending",
+    "completed": "Completed",
+    "emptyTitle": "You haven't requested any coffee chats yet.",
+    "emptyBody": "Browse alumni profiles and tap \"Request a coffee chat\" to get started.",
+    "topic": "Topic:",
+    "sent": "Sent {{time}}",
+    "markCompleted": "Mark completed",
+    "withdraw": "Withdraw",
+    "chatCompleted": "Chat completed",
+    "awaitingResponse": "Awaiting response",
+    "statusCompleted": "Completed"
+  },
+  "notify": {
+    "completedTitle": "Coffee chat with {{name}} completed",
+    "completedBody": "Nice work — log any takeaways while it's fresh. Want to chat with someone else?",
+    "sentTitle": "Request sent to {{name}}",
+    "sentBody": "{{responseTime}}. We'll alert you when there's an update."
+  },
+  "detail": {
+    "notFoundTitle": "Profile not found",
+    "notFoundBody": "This alumnus may have paused chat requests. Browse the directory for others.",
+    "backToNetwork": "Back to network",
+    "networkCrumb": "Alumni network",
+    "major": "{{major}}, Class of {{year}}",
+    "experience": "{{count}} yrs experience",
+    "openToChat": "Open to chat about",
+    "expertise": "Expertise",
+    "availability": "Availability",
+    "introTitle": "How introductions work",
+    "introBody": "When {{name}} accepts, we share contact details with both of you privately. Your email stays hidden until then."
+  },
+  "sentCard": {
+    "title": "Request sent",
+    "waiting": "We're waiting for {{name}}'s response. {{responseTime}}.",
+    "topic": "Topic: ",
+    "sent": "Sent: ",
+    "withdraw": "Withdraw request"
+  },
+  "form": {
+    "title": "Request a coffee chat",
+    "hint": "Keep it short. {{name}} responds best to specific questions.",
+    "topicLabel": "Topic",
+    "messageLabel": "Your message",
+    "messagePlaceholder": "Hi {{name}}, I'm a senior studying CS and would love to learn about your path into...",
+    "charsHint_one": "{{count}} more character recommended",
+    "charsHint_other": "{{count}} more characters recommended",
+    "looksGood": "Looks good.",
+    "timesLabel": "Preferred times (optional)",
+    "timesPlaceholder": "Tue afternoon, weekend evenings...",
+    "add": "Add",
+    "removeAria": "Remove {{time}}",
+    "back": "Back to list",
+    "send": "Send request"
+  },
+  "relativeTime": {
+    "justNow": "just now",
+    "minutes_one": "{{count}} min ago",
+    "minutes_other": "{{count}} min ago",
+    "hours_one": "{{count}} hour ago",
+    "hours_other": "{{count}} hours ago",
+    "days_one": "{{count}} day ago",
+    "days_other": "{{count}} days ago",
+    "months_one": "{{count}} month ago",
+    "months_other": "{{count}} months ago"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "page": {
+    "eyebrow": "AI Coaching",
+    "title": "Interview coaching workspace",
+    "subtitle": "Review past interviews or run voice mock sessions for roles you've applied to. Every session is archived per application so you can track improvement over time.",
+    "stats": {
+      "applications": "Applications",
+      "reviewsArchived": "Reviews archived",
+      "mocksArchived": "Mocks archived",
+      "demoMode": "Demo mode",
+      "demoModeValue": "Browser speech APIs"
+    },
+    "emptyTitle": "No applications to coach yet",
+    "emptyBody": "Apply to roles from <jobs>Jobs</jobs> first, then return here for interview review and mock practice.",
+    "byApplication": "Coaching by application",
+    "reviewCount_one": "{{count}} review",
+    "reviewCount_other": "{{count}} reviews",
+    "mockCount_one": "{{count}} mock",
+    "mockCount_other": "{{count}} mocks",
+    "tabReview": "Interview review",
+    "tabMock": "Mock interview"
+  },
+  "review": {
+    "intro": "Upload a recorded interview for this role. The coach transcribes, summarizes, scores key dimensions, and suggests improvements — tailored to <role>{{jobTitle}}</role> (demo, no server). Each upload is archived.",
+    "processing": "Processing…",
+    "upload": "Upload interview audio",
+    "analysisFailed": "Analysis failed. Please try another file.",
+    "latestAnalysis": "Latest analysis",
+    "archived": "Archived reviews ({{count}})"
+  },
+  "steps": {
+    "transcribing": "Transcribing your recording...",
+    "summarizing": "Summarizing the conversation...",
+    "scoring": "Scoring interview dimensions...",
+    "recommendations": "Drafting improvement advice...",
+    "complete": "Analysis complete"
+  },
+  "validate": {
+    "notAudio": "Please upload an audio file (MP3, WAV, M4A, or WebM).",
+    "tooLarge": "File is too large for this demo (max 25 MB)."
+  },
+  "results": {
+    "delete": "Delete",
+    "overallScore": "Overall score",
+    "average": "Average across {{count}} dimensions",
+    "sessionSummary": "Session summary",
+    "dimensionScores": "Dimension scores",
+    "improvementAdvice": "Improvement advice",
+    "hideTranscript": "Hide transcript",
+    "viewTranscript": "View transcript",
+    "durationSubtitle": "{{minutes}} min · {{date}}"
+  },
+  "mock": {
+    "intro": "Practice a live mock interview for <role>{{jobTitle}}</role>. The AI coach speaks questions aloud; record your voice answers. After {{count}} prompts you receive scored feedback. Each session is archived (demo — browser speech APIs).",
+    "voiceLimited": "Voice input/output may be limited in this browser. Use Chrome or Edge for the full experience.",
+    "start": "Start mock interview",
+    "coachSpeaking": "Coach speaking…",
+    "ready": "Ready for your answer",
+    "recording": "Recording…",
+    "evaluating": "Evaluating your performance…",
+    "question": "Q {{current}}/{{total}}",
+    "roleCoach": "Coach",
+    "roleYou": "You",
+    "recordAnswer": "Record answer",
+    "submitAnswer": "Submit answer",
+    "endEarly": "End early",
+    "complete": "Mock interview complete — archived",
+    "startAnother": "Start another mock",
+    "archived": "Archived mock interviews ({{count}})",
+    "archivedItem": "Mock · {{minutes}} min",
+    "errors": {
+      "voiceUnsupported": "Voice coaching requires speech synthesis and recognition (Chrome or Edge recommended).",
+      "startFailed": "Could not start the mock interview. Try again.",
+      "notAllowed": "Microphone access is blocked. Allow mic permission for this site in your browser, then tap record again.",
+      "serviceNotAllowed": "Speech recognition is blocked. Allow mic permission for this site, then tap record again.",
+      "audioCapture": "No microphone was found. Connect a mic and try again.",
+      "noSpeech": "No speech was detected. Speak clearly into your mic, then tap record again.",
+      "network": "Speech recognition needs an internet connection (Chrome streams the audio to Google to transcribe).",
+      "aborted": "Recording was interrupted. Tap record to try again.",
+      "recordFailedGeneric": "Recording failed ({{error}}). Voice answers need Chrome or Edge with microphone access.",
+      "startRecordFailed": "Could not start recording. Check that your browser allows microphone access for this site (Chrome or Edge recommended).",
+      "noSpeechSubmit": "No speech detected. Try speaking again or type is not supported in this demo.",
+      "noSession": "Mock interview session was not created. Start again.",
+      "submitFailed": "Could not submit your answer. Try again.",
+      "evalFailed": "Evaluation failed. Please try again."
+    }
+  }
+}

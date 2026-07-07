@@ -12,6 +12,7 @@ import {
   Check,
   Inbox,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import {
   AppNotification,
@@ -37,6 +38,7 @@ export function NotificationsButton({
 }: {
   variant?: "desktop" | "mobile";
 }) {
+  const { t } = useTranslation("notifications");
   const {
     notifications,
     unreadCount,
@@ -60,9 +62,7 @@ export function NotificationsButton({
     <button
       type="button"
       aria-label={
-        unreadCount > 0
-          ? `Notifications (${unreadCount} unread)`
-          : "Notifications"
+        unreadCount > 0 ? t("ariaWithCount", { count: unreadCount }) : t("aria")
       }
       className={`relative flex items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
         variant === "mobile"
@@ -71,7 +71,7 @@ export function NotificationsButton({
       }`}
     >
       <Bell className={variant === "mobile" ? "h-4 w-4" : "h-5 w-5"} />
-      {variant === "mobile" && "Notifications"}
+      {variant === "mobile" && t("title")}
       {unreadCount > 0 && (
         <span
           className={`absolute flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white ${
@@ -97,12 +97,10 @@ export function NotificationsButton({
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <div>
             <h3 className="text-sm font-semibold tracking-tight text-slate-950">
-              Notifications
+              {t("title")}
             </h3>
             <p className="text-xs text-slate-500">
-              {unreadCount > 0
-                ? `${unreadCount} unread`
-                : "Nothing new — you're all caught up"}
+              {unreadCount > 0 ? t("unreadCount", { count: unreadCount }) : t("allCaughtUp")}
             </p>
           </div>
           {notifications.length > 0 && (
@@ -113,7 +111,7 @@ export function NotificationsButton({
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent"
             >
               <Check className="h-3.5 w-3.5" />
-              Mark all read
+              {t("markAllRead")}
             </button>
           )}
         </div>
@@ -124,13 +122,8 @@ export function NotificationsButton({
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                 <Inbox className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium text-slate-700">
-                No notifications yet
-              </p>
-              <p className="max-w-[260px] text-xs text-slate-500">
-                We'll let you know when there are new job matches, alumni
-                updates, or progress milestones.
-              </p>
+              <p className="text-sm font-medium text-slate-700">{t("emptyTitle")}</p>
+              <p className="max-w-[260px] text-xs text-slate-500">{t("emptyBody")}</p>
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -176,13 +169,13 @@ export function NotificationsButton({
                               {n.body}
                             </p>
                             <p className="mt-1 text-[11px] text-slate-400">
-                              {formatNotificationTime(n.createdAt)}
+                              {formatNotificationTime(n.createdAt, t)}
                             </p>
                           </div>
                           {!n.read && (
                             <span
                               className="mt-1 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-blue-600"
-                              aria-label="Unread"
+                              aria-label={t("unread")}
                             />
                           )}
                         </div>
@@ -194,8 +187,8 @@ export function NotificationsButton({
                           dismiss(n.id);
                         }}
                         className="invisible mt-0.5 flex h-6 w-6 items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 group-hover:visible"
-                        aria-label="Dismiss notification"
-                        title="Dismiss"
+                        aria-label={t("dismissNotification")}
+                        title={t("dismiss")}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -214,7 +207,7 @@ export function NotificationsButton({
               onClick={clear}
               className="w-full rounded-md py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
             >
-              Clear all
+              {t("clearAll")}
             </button>
           </div>
         )}

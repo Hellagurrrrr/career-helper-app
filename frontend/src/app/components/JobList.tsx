@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Clock,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { getJobDetailDescription, JobListing, listJobsForGoal } from "../lib/jobs";
 import { apiRequest } from "../lib/api";
 import { useGoals } from "../lib/goals";
@@ -29,6 +30,7 @@ import {
 } from "./ui/dialog";
 
 export function JobList({ goalId }: { goalId: string }) {
+  const { t } = useTranslation("jobs");
   const effectiveGoalId = goalId;
   const { getGoal } = useGoals();
   const selectedGoal = getGoal(effectiveGoalId);
@@ -148,21 +150,21 @@ export function JobList({ goalId }: { goalId: string }) {
       <section>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Saved</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("stats.saved")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{savedJobIds.size}</p>
           </div>
           <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Applied</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("stats.applied")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{appliedCount}</p>
           </div>
           <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Open roles</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t("stats.openRoles")}</p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{recommendedJobs.length}</p>
           </div>
           <div className="rounded-xl border border-slate-200/70 bg-white px-4 py-3">
             <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-blue-600">
               <Sparkles className="h-3 w-3" />
-              Referral
+              {t("stats.referral")}
             </p>
             <p className="mt-1 text-xl font-bold tracking-tight text-slate-950">{partnerJobs.length}</p>
           </div>
@@ -180,19 +182,21 @@ export function JobList({ goalId }: { goalId: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <BookmarkCheck className="h-5 w-5 shrink-0 text-blue-600" aria-hidden />
             <h2 id="saved-jobs-heading" className="text-lg font-semibold tracking-tight text-slate-950">
-              Saved jobs
+              {t("saved.title")}
             </h2>
             {savedJobEntries.length > 0 && (
               <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
-                {savedJobEntries.length} for this goal
+                {t("saved.forThisGoal", { count: savedJobEntries.length })}
               </span>
             )}
           </div>
         </div>
         {savedJobEntries.length === 0 ? (
           <p className="mt-3 text-sm leading-relaxed text-slate-600">
-            Tap <span className="font-medium text-slate-800">Save</span> on any role below to keep it here. Your
-            saved list is stored in this browser so you can return anytime.
+            <Trans
+              i18nKey="jobs:saved.emptyHint"
+              components={{ strong: <span className="font-medium text-slate-800" /> }}
+            />
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
@@ -205,24 +209,26 @@ export function JobList({ goalId }: { goalId: string }) {
                   <p className="font-medium text-slate-950">{job.title}</p>
                   <p className="text-sm text-slate-600">{job.company}</p>
                   {job.partner && (
-                    <p className="mt-1 text-xs font-medium text-blue-700">Partner · referral track</p>
+                    <p className="mt-1 text-xs font-medium text-blue-700">{t("saved.partnerTrack")}</p>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <span className="text-sm font-semibold tabular-nums text-blue-700">{job.match ?? job.matchScore ?? "--"}% match</span>
+                  <span className="text-sm font-semibold tabular-nums text-blue-700">
+                    {t("matchPercent", { value: job.match ?? job.matchScore ?? "--" })}
+                  </span>
                   <button
                     type="button"
                     onClick={() => scrollToJobCard(index)}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
                   >
-                    Show in list
+                    {t("saved.showInList")}
                   </button>
                   <button
                     type="button"
                     onClick={() => toggleSaved(index)}
                     className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-100"
                   >
-                    Unsave
+                    {t("actions.unsave")}
                   </button>
                 </div>
               </li>
@@ -238,13 +244,15 @@ export function JobList({ goalId }: { goalId: string }) {
               <Sparkles className="h-4 w-4" />
             </span>
             <h2 id="partner-roles-heading" className="text-lg font-semibold tracking-tight text-slate-950">
-              Partner roles
+              {t("partner.title")}
             </h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
               <Handshake className="h-3 w-3" />
-              Referral track
+              {t("partner.referralTrack")}
             </span>
-            <span className="ml-auto text-sm text-slate-500">{partnerJobs.length} roles</span>
+            <span className="ml-auto text-sm text-slate-500">
+              {t("rolesCount", { count: partnerJobs.length })}
+            </span>
           </div>
 
           <div className="mb-4 rounded-xl border border-slate-200/70 bg-slate-50 p-4">
@@ -253,12 +261,12 @@ export function JobList({ goalId }: { goalId: string }) {
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div className="flex-1 space-y-1.5 text-sm text-slate-700">
-                <p className="font-semibold text-slate-900">
-                  These roles come with a built-in referral.
-                </p>
+                <p className="font-semibold text-slate-900">{t("partner.infoTitle")}</p>
                 <p>
-                  Partner companies post these jobs <span className="font-medium text-blue-800">exclusively on AI Career Helper</span>. When you apply,
-                  your profile is forwarded directly to the team along with a referral, so you skip the standard applicant pile.
+                  <Trans
+                    i18nKey="jobs:partner.infoBody"
+                    components={{ strong: <span className="font-medium text-blue-800" /> }}
+                  />
                 </p>
               </div>
             </div>
@@ -280,7 +288,7 @@ export function JobList({ goalId }: { goalId: string }) {
                     <div
                       role="button"
                       tabIndex={0}
-                      aria-label={`View full job description: ${job.title} at ${job.company}`}
+                      aria-label={t("viewJobAria", { title: job.title, company: job.company })}
                       className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-t-[14px] bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white outline-none ring-white/30 transition-colors hover:brightness-110 focus-visible:ring-2"
                       onClick={() => setDetailJobIndex(index)}
                       onKeyDown={(e) => {
@@ -292,13 +300,13 @@ export function JobList({ goalId }: { goalId: string }) {
                     >
                       <span className="inline-flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5" />
-                        Partner
+                        {t("partner.badge")}
                         <span className="opacity-60">·</span>
-                        Referral track
+                        {t("partner.referralTrack")}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] backdrop-blur">
                         <Lock className="h-3 w-3" />
-                        Exclusive
+                        {t("partner.exclusive")}
                       </span>
                     </div>
 
@@ -306,7 +314,7 @@ export function JobList({ goalId }: { goalId: string }) {
                       <div
                         role="button"
                         tabIndex={0}
-                        aria-label={`View full job description: ${job.title} at ${job.company}`}
+                        aria-label={t("viewJobAria", { title: job.title, company: job.company })}
                         className="-m-1 cursor-pointer rounded-xl p-1 text-left outline-none ring-blue-300/50 transition-colors hover:bg-slate-50/90 focus-visible:ring-2"
                         onClick={() => setDetailJobIndex(index)}
                         onKeyDown={(e) => {
@@ -329,7 +337,7 @@ export function JobList({ goalId }: { goalId: string }) {
                               {isApplied && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800">
                                   <CheckCircle2 className="h-3 w-3" />
-                                  Applied
+                                  {t("actions.applied")}
                                 </span>
                               )}
                             </div>
@@ -337,7 +345,7 @@ export function JobList({ goalId }: { goalId: string }) {
                               <span className="font-medium text-slate-800">{job.company}</span>
                               <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-800 ring-1 ring-blue-200">
                                 <ShieldCheck className="h-3 w-3" />
-                                Verified partner
+                                {t("partner.verified")}
                               </span>
                             </div>
                             {job.companyTagline && (
@@ -368,7 +376,7 @@ export function JobList({ goalId }: { goalId: string }) {
                             <span className="bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
                               {job.match ?? job.matchScore ?? "--"}%
                             </span>
-                            <span className="text-xs text-slate-500">match</span>
+                            <span className="text-xs text-slate-500">{t("match")}</span>
                           </div>
                           <span className="text-xs text-slate-500">{job.posted}</span>
                         </div>
@@ -402,12 +410,12 @@ export function JobList({ goalId }: { goalId: string }) {
                             {isSaved ? (
                               <>
                                 <BookmarkCheck className="h-4 w-4" />
-                                Saved
+                                {t("actions.saved")}
                               </>
                             ) : (
                               <>
                                 <Bookmark className="h-4 w-4" />
-                                Save
+                                {t("actions.save")}
                               </>
                             )}
                           </button>
@@ -423,12 +431,12 @@ export function JobList({ goalId }: { goalId: string }) {
                             {isApplied ? (
                               <>
                                 <CheckCircle2 className="h-4 w-4" />
-                                Referral submitted
+                                {t("partner.referralSubmitted")}
                               </>
                             ) : (
                               <>
                                 <Sparkles className="h-4 w-4" />
-                                Apply with referral
+                                {t("partner.applyWithReferral")}
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover/cta:translate-x-0.5" />
                               </>
                             )}
@@ -448,9 +456,11 @@ export function JobList({ goalId }: { goalId: string }) {
         <div className="mb-4 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-blue-600" />
           <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-            {partnerJobs.length > 0 ? "Other open roles" : "Recommended Jobs for You"}
+            {partnerJobs.length > 0 ? t("other.titleWithPartner") : t("other.titleDefault")}
           </h2>
-          <span className="ml-auto text-sm text-slate-500">{regularJobs.length} roles</span>
+          <span className="ml-auto text-sm text-slate-500">
+            {t("rolesCount", { count: regularJobs.length })}
+          </span>
         </div>
         <div className="space-y-3">
           {regularJobs.map(({ job, index }) => {
@@ -467,7 +477,7 @@ export function JobList({ goalId }: { goalId: string }) {
                   <div
                     role="button"
                     tabIndex={0}
-                    aria-label={`View full job description: ${job.title} at ${job.company}`}
+                    aria-label={t("viewJobAria", { title: job.title, company: job.company })}
                     className="min-w-0 flex-1 cursor-pointer rounded-xl p-1 text-left outline-none ring-blue-300/50 transition-colors hover:bg-slate-50 focus-visible:ring-2"
                     onClick={() => setDetailJobIndex(index)}
                     onKeyDown={(e) => {
@@ -484,7 +494,7 @@ export function JobList({ goalId }: { goalId: string }) {
                       {isApplied && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800">
                           <CheckCircle2 className="h-3 w-3" />
-                          Applied
+                          {t("actions.applied")}
                         </span>
                       )}
                     </div>
@@ -522,7 +532,7 @@ export function JobList({ goalId }: { goalId: string }) {
                       <span className="text-2xl font-bold tracking-tight text-blue-700">
                         {job.match ?? job.matchScore ?? "--"}%
                       </span>
-                      <span className="text-xs text-slate-500">match</span>
+                      <span className="text-xs text-slate-500">{t("match")}</span>
                     </div>
                     <span className="text-xs text-slate-500">{job.posted}</span>
                     <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
@@ -538,12 +548,12 @@ export function JobList({ goalId }: { goalId: string }) {
                         {isSaved ? (
                           <>
                             <BookmarkCheck className="h-4 w-4" />
-                            Saved
+                            {t("actions.saved")}
                           </>
                         ) : (
                           <>
                             <Bookmark className="h-4 w-4" />
-                            Save
+                            {t("actions.save")}
                           </>
                         )}
                       </button>
@@ -556,7 +566,7 @@ export function JobList({ goalId }: { goalId: string }) {
                         }`}
                         aria-pressed={isApplied}
                       >
-                        {isApplied ? "Applied" : "Apply Now"}
+                        {isApplied ? t("actions.applied") : t("actions.applyNow")}
                       </button>
                     </div>
                   </div>
@@ -595,7 +605,7 @@ export function JobList({ goalId }: { goalId: string }) {
                   {detailJob.partner && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 ring-1 ring-blue-200">
                       <Sparkles className="h-3 w-3" />
-                      Partner
+                      {t("partner.badge")}
                     </span>
                   )}
                 </div>
@@ -620,7 +630,7 @@ export function JobList({ goalId }: { goalId: string }) {
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <TrendingUp className="h-4 w-4 shrink-0 text-slate-500" />
-                        {detailJob.match ?? detailJob.matchScore ?? "--"}% match
+                        {t("matchPercent", { value: detailJob.match ?? detailJob.matchScore ?? "--" })}
                       </span>
                       <span className="inline-flex items-center gap-1.5">
                         <Clock className="h-4 w-4 shrink-0 text-slate-500" />
@@ -641,7 +651,7 @@ export function JobList({ goalId }: { goalId: string }) {
                 </DialogDescription>
               </DialogHeader>
               <div className="p-6 pt-4">
-                <p className="mb-2 text-sm font-semibold text-slate-900">Job description</p>
+                <p className="mb-2 text-sm font-semibold text-slate-900">{t("detail.description")}</p>
                 <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
                   {getJobDetailDescription(detailJob)}
                 </div>

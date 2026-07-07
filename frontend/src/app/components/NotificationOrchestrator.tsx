@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { getCatalogGoal, useGoals } from "../lib/goals";
 import {
   computeGoalProgress,
@@ -26,6 +27,7 @@ function findCrossedMilestone(progress: number): number | null {
 }
 
 export function NotificationOrchestrator() {
+  const { t } = useTranslation("notifications");
   const { goals } = useGoals();
   const { state: trackingState } = useTracking();
   const { notify, hasDedupKey } = useNotifications();
@@ -48,17 +50,17 @@ export function NotificationOrchestrator() {
         severity: milestone === 100 ? "success" : "info",
         title:
           milestone === 100
-            ? `🎉 ${goal.title}: 100% complete!`
-            : `${milestone}% milestone reached`,
+            ? t("orchestrator.milestone100Title", { goal: goal.title })
+            : t("orchestrator.milestoneTitle", { count: milestone }),
         body:
           milestone === 100
-            ? `You've completed every action step in ${goal.title}. Consider re-rating your skills or adding a new goal.`
-            : `You're ${milestone}% through ${goal.title}. Keep the streak going.`,
+            ? t("orchestrator.milestone100Body", { goal: goal.title })
+            : t("orchestrator.milestoneBody", { count: milestone, goal: goal.title }),
         link: `/career-goal/${goal.id}/plan-tracking`,
         dedupKey,
       });
     }
-  }, [goals, trackingState, notify, hasDedupKey]);
+  }, [goals, trackingState, notify, hasDedupKey, t]);
 
   React.useEffect(() => {
     for (const goal of goals) {
@@ -85,8 +87,8 @@ export function NotificationOrchestrator() {
       notify({
         type: "week",
         severity: "info",
-        title: `Fresh weekly focus for ${goal.title}`,
-        body: `${current.length} new actions picked from your weakest skills. Ready when you are.`,
+        title: t("orchestrator.weekTitle", { goal: goal.title }),
+        body: t("orchestrator.weekBody", { count: current.length }),
         link: `/career-goal/${goal.id}/plan-tracking`,
         dedupKey,
       });
@@ -95,7 +97,7 @@ export function NotificationOrchestrator() {
     if (!initializedRef.current) {
       initializedRef.current = true;
     }
-  }, [goals, trackingState, notify, hasDedupKey]);
+  }, [goals, trackingState, notify, hasDedupKey, t]);
 
   return null;
 }

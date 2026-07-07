@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router";
 import { ChevronRight, Plus, Trash2, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   EMPTY_EDUCATION,
   EMPTY_INTERNSHIP,
@@ -52,6 +53,7 @@ function SectionHeader({
   title: string;
   onAdd: () => void;
 }) {
+  const { t } = useTranslation("profile");
   return (
     <div className="flex items-center justify-between">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -63,7 +65,7 @@ function SectionHeader({
         className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50"
       >
         <Plus className="h-4 w-4" />
-        Add
+        {t("add")}
       </button>
     </div>
   );
@@ -86,6 +88,7 @@ function RemoveButton({ onClick, label }: { onClick: () => void; label: string }
 type EducationDraft = Omit<Education, "grade"> & { gradeText: string };
 
 export function ProfileEdit() {
+  const { t } = useTranslation(["profile", "nav"]);
   const { profile, saveProfile } = useProfile();
 
   const [name, setName] = React.useState(profile?.name ?? "");
@@ -162,38 +165,42 @@ export function ProfileEdit() {
               to="/"
               className="rounded-md px-1 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              Dashboard
+              {t("nav:dashboard")}
             </Link>
           </li>
           <li aria-hidden="true">
             <ChevronRight className="h-4 w-4 text-slate-400" />
           </li>
-          <li className="font-medium text-slate-900">Profile</li>
+          <li className="font-medium text-slate-900">{t("breadcrumb")}</li>
         </ol>
       </nav>
 
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Edit profile
+          {t("title")}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Keep your details up to date so plans and recommendations stay relevant.
-        </p>
+        <p className="mt-1 text-sm text-slate-500">{t("subtitle")}</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-8">
         <section className="space-y-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Basics
+            {t("sections.basics")}
           </h2>
-          <FieldRow id="name" label="Name" value={name} onChange={setName} placeholder="Alex" />
+          <FieldRow
+            id="name"
+            label={t("fields.name")}
+            value={name}
+            onChange={setName}
+            placeholder={t("placeholders.name")}
+          />
         </section>
 
         <div className="h-px bg-slate-200/70" />
 
         <section className="space-y-4">
           <SectionHeader
-            title="Education"
+            title={t("sections.education")}
             onAdd={() =>
               setEducation((prev) => [
                 ...prev,
@@ -202,7 +209,7 @@ export function ProfileEdit() {
             }
           />
           {education.length === 0 ? (
-            <p className="text-sm text-slate-500">No education added yet.</p>
+            <p className="text-sm text-slate-500">{t("empty.education")}</p>
           ) : (
             <div className="space-y-5">
               {education.map((edu, idx) => (
@@ -210,48 +217,48 @@ export function ProfileEdit() {
                   <div className="grid gap-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end">
                     <FieldRow
                       id={`edu-degree-${idx}`}
-                      label="Degree"
+                      label={t("fields.degree")}
                       value={edu.degree}
                       onChange={(v) => updateAt(setEducation, idx, { degree: v })}
                       placeholder="BSc"
                     />
                     <FieldRow
                       id={`edu-school-${idx}`}
-                      label="School"
+                      label={t("fields.school")}
                       value={edu.school}
                       onChange={(v) => updateAt(setEducation, idx, { school: v })}
-                      placeholder="State University"
+                      placeholder={t("placeholders.school")}
                     />
                     <RemoveButton
                       onClick={() => removeAt(setEducation, idx)}
-                      label="Remove education"
+                      label={t("remove.education")}
                     />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <FieldRow
                       id={`edu-major-${idx}`}
-                      label="Major"
+                      label={t("fields.major")}
                       value={edu.major}
                       onChange={(v) => updateAt(setEducation, idx, { major: v })}
-                      placeholder="Computer Science"
+                      placeholder={t("placeholders.major")}
                     />
                     <FieldRow
                       id={`edu-grade-${idx}`}
-                      label="GPA"
+                      label={t("fields.gpa")}
                       value={edu.gradeText}
                       onChange={(v) => updateAt(setEducation, idx, { gradeText: v })}
                       placeholder="3.7"
                     />
                     <FieldRow
                       id={`edu-start-${idx}`}
-                      label="Start (YYYY-MM)"
+                      label={t("fields.start")}
                       value={edu.start}
                       onChange={(v) => updateAt(setEducation, idx, { start: v })}
                       placeholder="2022-09"
                     />
                     <FieldRow
                       id={`edu-end-${idx}`}
-                      label="End (YYYY-MM, blank = present)"
+                      label={t("fields.end")}
                       value={edu.end ?? ""}
                       onChange={(v) => updateAt(setEducation, idx, { end: v })}
                       placeholder="2026-06"
@@ -267,21 +274,21 @@ export function ProfileEdit() {
 
         <section className="space-y-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Skills & coursework
+            {t("sections.skills")}
           </h2>
           <FieldRow
             id="skills"
-            label="Skills (comma separated)"
+            label={t("fields.skills")}
             value={skillsText}
             onChange={setSkillsText}
-            placeholder="JavaScript, Python, React"
+            placeholder={t("placeholders.skills")}
           />
           <FieldRow
             id="coursework"
-            label="Coursework (comma separated)"
+            label={t("fields.coursework")}
             value={courseworkText}
             onChange={setCourseworkText}
-            placeholder="Data Structures, Algorithms"
+            placeholder={t("placeholders.coursework")}
           />
         </section>
 
@@ -289,13 +296,13 @@ export function ProfileEdit() {
 
         <section className="space-y-4">
           <SectionHeader
-            title="Internships"
+            title={t("sections.internships")}
             onAdd={() =>
               setInternships((prev) => [...prev, { ...EMPTY_INTERNSHIP }])
             }
           />
           {internships.length === 0 ? (
-            <p className="text-sm text-slate-500">No internships added yet.</p>
+            <p className="text-sm text-slate-500">{t("empty.internships")}</p>
           ) : (
             <div className="space-y-5">
               {internships.map((item, idx) => (
@@ -303,34 +310,34 @@ export function ProfileEdit() {
                   <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                     <FieldRow
                       id={`int-title-${idx}`}
-                      label="Role"
+                      label={t("fields.role")}
                       value={item.title}
                       onChange={(v) => updateAt(setInternships, idx, { title: v })}
-                      placeholder="Software Intern"
+                      placeholder={t("placeholders.role")}
                     />
                     <FieldRow
                       id={`int-company-${idx}`}
-                      label="Company"
+                      label={t("fields.company")}
                       value={item.company}
                       onChange={(v) => updateAt(setInternships, idx, { company: v })}
-                      placeholder="Tech Startup"
+                      placeholder={t("placeholders.company")}
                     />
                     <RemoveButton
                       onClick={() => removeAt(setInternships, idx)}
-                      label="Remove internship"
+                      label={t("remove.internship")}
                     />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <FieldRow
                       id={`int-start-${idx}`}
-                      label="Start (YYYY-MM)"
+                      label={t("fields.start")}
                       value={item.start}
                       onChange={(v) => updateAt(setInternships, idx, { start: v })}
                       placeholder="2025-06"
                     />
                     <FieldRow
                       id={`int-end-${idx}`}
-                      label="End (YYYY-MM, blank = present)"
+                      label={t("fields.end")}
                       value={item.end ?? ""}
                       onChange={(v) => updateAt(setInternships, idx, { end: v })}
                       placeholder="2025-09"
@@ -338,10 +345,10 @@ export function ProfileEdit() {
                   </div>
                   <FieldRow
                     id={`int-desc-${idx}`}
-                    label="Description"
+                    label={t("fields.description")}
                     value={item.description}
                     onChange={(v) => updateAt(setInternships, idx, { description: v })}
-                    placeholder="What did you build or improve?"
+                    placeholder={t("placeholders.internDesc")}
                   />
                 </div>
               ))}
@@ -353,11 +360,11 @@ export function ProfileEdit() {
 
         <section className="space-y-4">
           <SectionHeader
-            title="Projects"
+            title={t("sections.projects")}
             onAdd={() => setProjects((prev) => [...prev, { ...EMPTY_PROJECT }])}
           />
           {projects.length === 0 ? (
-            <p className="text-sm text-slate-500">No projects added yet.</p>
+            <p className="text-sm text-slate-500">{t("empty.projects")}</p>
           ) : (
             <div className="space-y-5">
               {projects.map((item, idx) => (
@@ -365,27 +372,27 @@ export function ProfileEdit() {
                   <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                     <FieldRow
                       id={`proj-title-${idx}`}
-                      label="Title"
+                      label={t("fields.title")}
                       value={item.title}
                       onChange={(v) => updateAt(setProjects, idx, { title: v })}
-                      placeholder="Course planner app"
+                      placeholder={t("placeholders.projTitle")}
                     />
                     <RemoveButton
                       onClick={() => removeAt(setProjects, idx)}
-                      label="Remove project"
+                      label={t("remove.project")}
                     />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <FieldRow
                       id={`proj-start-${idx}`}
-                      label="Start (YYYY-MM)"
+                      label={t("fields.start")}
                       value={item.start}
                       onChange={(v) => updateAt(setProjects, idx, { start: v })}
                       placeholder="2025-09"
                     />
                     <FieldRow
                       id={`proj-end-${idx}`}
-                      label="End (YYYY-MM, blank = present)"
+                      label={t("fields.end")}
                       value={item.end ?? ""}
                       onChange={(v) => updateAt(setProjects, idx, { end: v })}
                       placeholder="2025-12"
@@ -393,10 +400,10 @@ export function ProfileEdit() {
                   </div>
                   <FieldRow
                     id={`proj-desc-${idx}`}
-                    label="Description"
+                    label={t("fields.description")}
                     value={item.description}
                     onChange={(v) => updateAt(setProjects, idx, { description: v })}
-                    placeholder="What does it do, and what was your impact?"
+                    placeholder={t("placeholders.projDesc")}
                   />
                 </div>
               ))}
@@ -408,20 +415,20 @@ export function ProfileEdit() {
           {saved && (
             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700">
               <Check className="h-4 w-4" />
-              Saved
+              {t("saved")}
             </span>
           )}
           <Link
             to="/"
             className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
-            Back
+            {t("back")}
           </Link>
           <button
             type="submit"
             className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
-            Save changes
+            {t("save")}
           </button>
         </div>
       </form>

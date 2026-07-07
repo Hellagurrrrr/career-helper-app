@@ -1,9 +1,11 @@
 import React from "react";
 import { Outlet, NavLink, Link, useParams } from "react-router";
 import { Target, Briefcase, ChevronRight, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGoals } from "../lib/goals";
 
 export function CareerGoalLayout() {
+  const { t } = useTranslation(["tracking", "nav"]);
   const { goalId } = useParams();
   const { getGoal } = useGoals();
   const goal = goalId ? getGoal(goalId) : undefined;
@@ -11,31 +13,28 @@ export function CareerGoalLayout() {
   if (!goal) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-        <h2 className="text-lg font-semibold text-slate-950">Career goal not found</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          You haven't added this goal yet. Pick one from the catalog and we'll
-          build a learning plan for you.
-        </p>
+        <h2 className="text-lg font-semibold text-slate-950">{t("layout.notFoundTitle")}</h2>
+        <p className="mt-2 text-sm text-slate-600">{t("layout.notFoundBody")}</p>
         <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
           <Link
             to="/"
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
-            Back to dashboard
+            {t("layout.backToDashboard")}
           </Link>
           <Link
             to="/new-goal"
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
             <Plus className="h-4 w-4" />
-            Add a goal
+            {t("layout.addGoal")}
           </Link>
         </div>
       </div>
     );
   }
 
-  const currentSection = "Plan Tracking";
+  const currentSection = t("layout.planTracking");
 
   return (
     <div className="space-y-6">
@@ -47,7 +46,7 @@ export function CareerGoalLayout() {
                 to="/"
                 className="rounded-md px-1 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                Dashboard
+                {t("nav:dashboard")}
               </Link>
             </li>
             <li aria-hidden="true">
@@ -73,13 +72,14 @@ export function CareerGoalLayout() {
                 {goal.title}
               </h1>
               <p className="text-sm text-slate-600">
-                Explore your path to becoming a {goal.title.toLowerCase()}
+                {t("layout.explore", { title: goal.title.toLowerCase() })}
               </p>
             </div>
           </div>
 
           <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm text-slate-700">
-            <span className="font-semibold text-blue-800">{goal.progress}%</span> overall progress
+            <span className="font-semibold text-blue-800">{goal.progress}%</span>{" "}
+            {t("layout.overallProgressLabel")}
           </div>
         </div>
 
@@ -95,14 +95,14 @@ export function CareerGoalLayout() {
             }
           >
             <Target className="h-4 w-4" />
-            Plan Tracking
+            {t("layout.planTracking")}
           </NavLink>
           <Link
             to={`/jobs?goal=${goalId}`}
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
           >
             <Briefcase className="h-4 w-4" />
-            View jobs for this goal
+            {t("layout.viewJobs")}
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>

@@ -1,0 +1,36 @@
+{
+  "select": {
+    "step": "第 1 步（共 2 步）· 选择目标",
+    "title": "选择一条想探索的职业路径",
+    "subtitleRanked": "我们已按与你背景的契合度排序。选一个继续。",
+    "subtitleNoSkills": "在个人资料里添加技能，下次我们会为你个性化这些推荐。",
+    "cancel": "取消",
+    "recommended": "推荐",
+    "added": "已添加",
+    "coreSkills": "{{count}} 项核心技能",
+    "matches": "匹配你的 {{count}} 项技能",
+    "alreadyAdded": "已添加",
+    "startQuiz": "开始测评"
+  },
+  "quiz": {
+    "step": "第 2 步（共 2 步）· 技能测评",
+    "title": "评估你的信心",
+    "subtitle": "针对 <goal>{{title}}</goal> 的每项核心技能，告诉我们你的信心程度。我们会据此优先安排你的学习计划。",
+    "changeGoal": "更换目标",
+    "answered": "已回答 {{answered}}/{{total}} 项技能",
+    "needFocus": "{{count}} 项需重点提升",
+    "alreadyStrong": "{{count}} 项已较强",
+    "back": "返回",
+    "buildPlan": "生成我的计划",
+    "pickRating": "选择一个评分以继续。"
+  },
+  "notify": {
+    "jobsMatchTitle": "{{count}} 个职位匹配 {{goal}}",
+    "jobsMatchBodyPartner_other": "{{count}} 个合作方职位自带内推，另有 {{openCount}} 个公开市场匹配。",
+    "jobsMatchBodyPlain": "我们找到 {{count}} 个为你的新目标定制的在招职位。随时可以查看。",
+    "referralTitle_other": "已解锁 {{count}} 个内推职位",
+    "referralBody_other": "合作企业提供 {{count}} 个独家 {{goal}} 职位并自带内推。通过应用申请即可跳过常规投递。",
+    "alumniTitle": "{{count}} 位校友从事 {{goal}}",
+    "alumniBody": "他们已开放 coffee chat。开始对话，了解他们的成长路径。"
+  }
+}

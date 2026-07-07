@@ -1,0 +1,39 @@
+{
+  "select": {
+    "step": "Step 1 of 2 · Choose a goal",
+    "title": "Pick a career path to explore",
+    "subtitleRanked": "We've ranked these by how well they fit your background. Pick one to continue.",
+    "subtitleNoSkills": "Add skills in your profile and we'll personalize these recommendations next time.",
+    "cancel": "Cancel",
+    "recommended": "Recommended",
+    "added": "Added",
+    "coreSkills": "{{count}} core skills",
+    "matches": "Matches {{count}} of your skills",
+    "alreadyAdded": "Already added",
+    "startQuiz": "Start quiz"
+  },
+  "quiz": {
+    "step": "Step 2 of 2 · Skill quiz",
+    "title": "Rate your confidence",
+    "subtitle": "For each core skill of <goal>{{title}}</goal>, tell us how confident you feel. We'll prioritize your learning plan accordingly.",
+    "changeGoal": "Change goal",
+    "answered": "{{answered}}/{{total}} skills answered",
+    "needFocus": "{{count}} need focus",
+    "alreadyStrong": "{{count}} already strong",
+    "back": "Back",
+    "buildPlan": "Build my plan",
+    "pickRating": "Pick a rating to continue."
+  },
+  "notify": {
+    "jobsMatchTitle": "{{count}} jobs match {{goal}}",
+    "jobsMatchBodyPartner_one": "{{count}} partner role includes a built-in referral, plus {{openCount}} open-market matches.",
+    "jobsMatchBodyPartner_other": "{{count}} partner roles include a built-in referral, plus {{openCount}} open-market matches.",
+    "jobsMatchBodyPlain": "We found {{count}} open roles tailored to your new goal. Review them whenever you're ready.",
+    "referralTitle_one": "{{count}} referral role unlocked",
+    "referralTitle_other": "{{count}} referral roles unlocked",
+    "referralBody_one": "Partner companies offer {{count}} exclusive {{goal}} role with a built-in referral. Apply through the app to skip the standard pile.",
+    "referralBody_other": "Partner companies offer {{count}} exclusive {{goal}} roles with a built-in referral. Apply through the app to skip the standard pile.",
+    "alumniTitle": "{{count}} alumni work as {{goal}}",
+    "alumniBody": "They've opted in to coffee chats. Start a conversation to learn their path."
+  }
+}

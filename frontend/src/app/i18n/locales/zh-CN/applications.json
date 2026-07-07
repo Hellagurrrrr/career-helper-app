@@ -1,0 +1,49 @@
+{
+  "header": {
+    "eyebrow": "申请",
+    "title": "求职申请追踪",
+    "intro": "你在各职业目标下申请的所有职位。使用 <coaching>AI 辅导</coaching> 对每个职位进行面试复盘和语音模拟练习。<b>合作方 / 独家</b>职位会自动更新状态；<b>其他职位</b>使用你设置的状态。",
+    "refresh": "刷新",
+    "refreshTitle": "刷新状态显示"
+  },
+  "stats": {
+    "total": "总计",
+    "partner": "合作方",
+    "selfTracked": "自行追踪",
+    "inProgress": "进行中",
+    "offers": "offer"
+  },
+  "details": {
+    "title": "申请详情",
+    "careerGoal": "职业目标",
+    "allGoals": "所有目标",
+    "emptyTitle": "还没有申请",
+    "emptyBody": "打开某个职业目标的<jobs>职位</jobs>页面，使用<b>申请</b>或<b>通过内推申请</b>。"
+  },
+  "card": {
+    "exclusiveAuto": "独家 · 自动",
+    "selfTracked": "自行追踪",
+    "appliedOn": "申请于 {{date}}",
+    "statusAuto": "状态（自动）",
+    "autoDesc": "状态会根据你的申请时间推进（内推 → 审核 → 面试 → offer）。时间线根据申请后经过的小时数模拟；如果页面开了很久，请点刷新。",
+    "yourStatus": "你的状态",
+    "reviewCount_other": "{{count}} 次复盘",
+    "mockCount_other": "{{count}} 次模拟",
+    "openInCoaching": "在 AI 辅导中打开"
+  },
+  "manualStatus": {
+    "applied": "已申请",
+    "screening": "筛选 / 审核",
+    "interview": "面试",
+    "offer": "Offer",
+    "rejected": "已拒绝",
+    "withdrawn": "已撤回"
+  },
+  "partnerStatus": {
+    "referral_sent": "已发送内推",
+    "under_review": "审核中",
+    "interview": "面试",
+    "final_round": "终面",
+    "offer_extended": "已发 offer"
+  }
+}

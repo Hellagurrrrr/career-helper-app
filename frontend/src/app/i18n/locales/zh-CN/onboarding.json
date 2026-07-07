@@ -1,0 +1,82 @@
+{
+  "skipForNow": "暂时跳过",
+  "friend": "朋友",
+  "back": "返回",
+  "notify": {
+    "welcomeTitle": "欢迎加入，{{name}}！",
+    "welcomeBody": "选择一个职业目标，获取个性化学习计划和匹配的职位。"
+  },
+  "welcome": {
+    "eyebrow": "开始",
+    "title": "来搭建你的职业档案",
+    "subtitle": "我们会用这些信息为你个性化学习计划，并匹配合适的工作机会。",
+    "uploadTitle": "上传我的简历",
+    "uploadBody": "已经有简历了？上传它，我们会自动提取你的技能、教育和经历。",
+    "uploadCta": "上传简历",
+    "chatTitle": "与助手对话",
+    "chatBody": "还没有简历？回答几个小问题，我们在引导式对话中一起搭建你的档案。",
+    "chatCta": "开始对话",
+    "skipExplore": "跳过并浏览仪表盘"
+  },
+  "upload": {
+    "eyebrow": "第 1 步（共 2 步）",
+    "title": "上传你的简历",
+    "description": "我们会分析你的简历，预填你的职业档案。",
+    "dropHere": "把简历拖放到这里",
+    "supports": "支持 PDF、DOC、DOCX 和 TXT 文件。文件保留在你的设备上。",
+    "chooseFile": "选择文件",
+    "readyToAnalyze": "准备分析",
+    "removeFile": "移除文件",
+    "extractInfo": "提取信息"
+  },
+  "extracting": {
+    "yourResume": "你的简历",
+    "analyzing": "正在分析 {{fileName}}",
+    "stage1": "正在读取你的简历…",
+    "stage2": "正在识别技能和课程…",
+    "stage3": "正在生成你的档案草稿…",
+    "projectTitle": "从简历中提取的项目",
+    "projectDesc": "编辑此条目以描述你的项目。"
+  },
+  "chat": {
+    "questionOf": "第 {{current}} 个问题（共 {{total}} 个）",
+    "title": "介绍一下你自己",
+    "description": "简短对话能帮我们了解你的背景。",
+    "done": "太好了，谢谢！我们来核对一下你填写的信息。",
+    "sending": "发送中…",
+    "send": "发送",
+    "questions": {
+      "name": {
+        "prompt": "你好！我是你的职业助手。我该怎么称呼你？",
+        "placeholder": "你的名字"
+      },
+      "school": {
+        "prompt": "很高兴认识你！你在哪所学校就读？",
+        "placeholder": "如：某某大学"
+      },
+      "major": {
+        "prompt": "你的专业是什么？",
+        "placeholder": "如：计算机科学"
+      },
+      "degree": {
+        "prompt": "你正在攻读什么学位？",
+        "placeholder": "如：BSc"
+      },
+      "skills": {
+        "prompt": "你最擅长的技能有哪些？用逗号分隔列几个。",
+        "placeholder": "JavaScript、Python、React"
+      },
+      "coursework": {
+        "prompt": "你上过哪些相关课程？（用逗号分隔）",
+        "placeholder": "数据结构、算法"
+      }
+    }
+  },
+  "review": {
+    "eyebrow": "就快好了",
+    "title": "核对你的档案",
+    "description": "确认或修正有误的地方，然后进入仪表盘。",
+    "internshipTitle": "最近一段实习（可选）",
+    "continue": "进入仪表盘"
+  }
+}

@@ -126,6 +126,12 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Latin system stack first, then CJK fallbacks so Simplified Chinese
+       renders with a proper sans-serif face instead of a serif fallback. */
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans CJK SC",
+      "Source Han Sans SC", sans-serif;
   }
 
   /**

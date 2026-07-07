@@ -1,0 +1,30 @@
+{
+  "title": "通知",
+  "ariaWithCount": "通知（{{count}} 条未读）",
+  "aria": "通知",
+  "unreadCount": "{{count}} 条未读",
+  "allCaughtUp": "暂无新消息 —— 你已全部查看",
+  "markAllRead": "全部标为已读",
+  "emptyTitle": "还没有通知",
+  "emptyBody": "有新的职位匹配、校友动态或进度里程碑时，我们会通知你。",
+  "unread": "未读",
+  "dismiss": "忽略",
+  "dismissNotification": "忽略通知",
+  "clearAll": "全部清除",
+  "relativeTime": {
+    "justNow": "刚刚",
+    "minutes": "{{count}} 分钟前",
+    "hours": "{{count}} 小时前",
+    "days": "{{count}} 天前",
+    "weeks": "{{count}} 周前",
+    "months": "{{count}} 个月前"
+  },
+  "orchestrator": {
+    "milestone100Title": "🎉 {{goal}}：100% 完成！",
+    "milestoneTitle": "达成 {{count}}% 里程碑",
+    "milestone100Body": "你已完成「{{goal}}」的所有行动步骤。可以重新评估技能，或添加一个新目标。",
+    "milestoneBody": "「{{goal}}」你已完成 {{count}}%。保持势头。",
+    "weekTitle": "「{{goal}}」的本周新重点",
+    "weekBody_other": "根据你最弱的技能挑选了 {{count}} 项新行动。准备好了就开始。"
+  }
+}

@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Send,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { CoachingFeedbackResults } from "./CoachingFeedbackResults";
 import {
   getSpeechRecognitionCtor,
@@ -38,6 +39,7 @@ function newTurn(role: "coach" | "user", text: string): MockInterviewTurn {
 }
 
 export function MockInterviewPanel({ context }: { context: MockInterviewContext }) {
+  const { t } = useTranslation("coaching");
   const { getSessionsForApplication, saveSession, deleteSession } = useMockInterviews();
   const archived = getSessionsForApplication(context.applicationId);
 
@@ -94,9 +96,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
 
   const startInterview = async () => {
     if (!voiceReady) {
-      setError(
-        "Voice coaching requires speech synthesis and recognition (Chrome or Edge recommended)."
-      );
+      setError(t("mock.errors.voiceUnsupported"));
       return;
     }
     setError(null);
@@ -111,7 +111,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
       setTotalQuestions(started.totalQuestions);
       askQuestion(started.questionIndex, started.question);
     } catch {
-      setError("Could not start the mock interview. Try again.");
+      setError(t("mock.errors.startFailed"));
       setPhase("idle");
     }
   };
@@ -137,19 +137,15 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       const reason: Record<string, string> = {
-        "not-allowed":
-          "Microphone access is blocked. Allow mic permission for this site in your browser, then tap record again.",
-        "service-not-allowed":
-          "Speech recognition is blocked. Allow mic permission for this site, then tap record again.",
-        "audio-capture": "No microphone was found. Connect a mic and try again.",
-        "no-speech": "No speech was detected. Speak clearly into your mic, then tap record again.",
-        "network":
-          "Speech recognition needs an internet connection (Chrome streams the audio to Google to transcribe).",
-        "aborted": "Recording was interrupted. Tap record to try again.",
+        "not-allowed": t("mock.errors.notAllowed"),
+        "service-not-allowed": t("mock.errors.serviceNotAllowed"),
+        "audio-capture": t("mock.errors.audioCapture"),
+        "no-speech": t("mock.errors.noSpeech"),
+        "network": t("mock.errors.network"),
+        "aborted": t("mock.errors.aborted"),
       };
       setError(
-        reason[event.error] ??
-          `Recording failed (${event.error}). Voice answers need Chrome or Edge with microphone access.`
+        reason[event.error] ?? t("mock.errors.recordFailedGeneric", { error: event.error })
       );
       setPhase("ready");
     };
@@ -158,9 +154,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
       recognition.start();
       setPhase("recording");
     } catch {
-      setError(
-        "Could not start recording. Check that your browser allows microphone access for this site (Chrome or Edge recommended)."
-      );
+      setError(t("mock.errors.startRecordFailed"));
       setPhase("ready");
     }
   };
@@ -169,7 +163,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
     recognitionRef.current?.abort();
     const answer = liveTranscript.trim();
     if (!answer) {
-      setError("No speech detected. Try speaking again or type is not supported in this demo.");
+      setError(t("mock.errors.noSpeechSubmit"));
       setPhase("ready");
       return;
     }
@@ -181,7 +175,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
     turnsRef.current = updated;
 
     if (!serverSessionId) {
-      setError("Mock interview session was not created. Start again.");
+      setError(t("mock.errors.noSession"));
       setPhase("idle");
       return;
     }
@@ -198,7 +192,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
         setPhase("complete");
       }
     } catch {
-      setError("Could not submit your answer. Try again.");
+      setError(t("mock.errors.submitFailed"));
       setPhase("ready");
     }
   };
@@ -219,7 +213,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
         setPhase("ready");
       }
     } catch {
-      setError("Evaluation failed. Please try again.");
+      setError(t("mock.errors.evalFailed"));
       setPhase("idle");
     }
   };
@@ -227,7 +221,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
   const endEarly = () => {
     stopCoachSpeech();
     recognitionRef.current?.abort();
-    if (turnsRef.current.filter((t) => t.role === "user").length > 0) {
+    if (turnsRef.current.filter((turn) => turn.role === "user").length > 0) {
       void finishSession();
     } else {
       setPhase("idle");
@@ -251,16 +245,16 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
   return (
     <div className="space-y-4">
       <p className="text-xs leading-relaxed text-slate-500">
-        Practice a live mock interview for{" "}
-        <span className="font-medium text-slate-700">{context.jobTitle}</span>. The AI coach
-        speaks questions aloud; record your voice answers. After {MOCK_QUESTION_COUNT} prompts
-        you receive scored feedback. Each session is archived (demo — browser speech APIs).
+        <Trans
+          i18nKey="coaching:mock.intro"
+          values={{ jobTitle: context.jobTitle, count: MOCK_QUESTION_COUNT }}
+          components={{ role: <span className="font-medium text-slate-700" /> }}
+        />
       </p>
 
       {!voiceReady && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Voice input/output may be limited in this browser. Use Chrome or Edge for the full
-          experience.
+          {t("mock.voiceLimited")}
         </p>
       )}
 
@@ -271,7 +265,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 sm:w-auto"
         >
           <Play className="h-4 w-4" />
-          Start mock interview
+          {t("mock.start")}
         </button>
       )}
 
@@ -282,45 +276,48 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
               {phase === "coach_speaking" && (
                 <>
                   <Volume2 className="h-4 w-4 animate-pulse" />
-                  Coach speaking…
+                  {t("mock.coachSpeaking")}
                 </>
               )}
               {phase === "ready" && (
                 <>
                   <Mic className="h-4 w-4" />
-                  Ready for your answer
+                  {t("mock.ready")}
                 </>
               )}
               {phase === "recording" && (
                 <>
                   <Mic className="h-4 w-4 animate-pulse text-red-600" />
-                  Recording…
+                  {t("mock.recording")}
                 </>
               )}
               {phase === "evaluating" && (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Evaluating your performance…
+                  {t("mock.evaluating")}
                 </>
               )}
             </span>
             <span className="text-xs text-slate-500">
-              Q {Math.min(questionIndex + 1, totalQuestions)}/{totalQuestions}
+              {t("mock.question", {
+                current: Math.min(questionIndex + 1, totalQuestions),
+                total: totalQuestions,
+              })}
             </span>
           </div>
 
           <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-3">
-            {turns.map((t) => (
+            {turns.map((turn) => (
               <div
-                key={t.id}
+                key={turn.id}
                 className={`text-sm leading-relaxed ${
-                  t.role === "coach" ? "text-indigo-900" : "text-slate-800"
+                  turn.role === "coach" ? "text-indigo-900" : "text-slate-800"
                 }`}
               >
                 <span className="font-semibold">
-                  {t.role === "coach" ? "Coach" : "You"}:
+                  {turn.role === "coach" ? t("mock.roleCoach") : t("mock.roleYou")}:
                 </span>{" "}
-                {t.text}
+                {turn.text}
               </div>
             ))}
             {liveTranscript && (
@@ -336,7 +333,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
                 className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-indigo-900 ring-1 ring-indigo-200 hover:bg-indigo-50"
               >
                 <Mic className="h-4 w-4" />
-                Record answer
+                {t("mock.recordAnswer")}
               </button>
             )}
             {phase === "recording" && (
@@ -346,7 +343,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
                 className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
               >
                 <Send className="h-4 w-4" />
-                Submit answer
+                {t("mock.submitAnswer")}
               </button>
             )}
             <button
@@ -356,7 +353,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               <Square className="h-3.5 w-3.5" />
-              End early
+              {t("mock.endEarly")}
             </button>
           </div>
         </div>
@@ -372,10 +369,13 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
         <div className="rounded-xl border border-green-100 bg-white p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-green-800">
             <Sparkles className="h-4 w-4" />
-            Mock interview complete — archived
+            {t("mock.complete")}
           </div>
           <CoachingFeedbackResults
-            subtitle={`${Math.round(completedSession.durationSec / 60)} min · ${new Date(completedSession.completedAt).toLocaleString()}`}
+            subtitle={t("results.durationSubtitle", {
+              minutes: Math.round(completedSession.durationSec / 60),
+              date: new Date(completedSession.completedAt).toLocaleString(),
+            })}
             overallSummary={completedSession.overallSummary}
             dimensions={completedSession.dimensions}
             improvementAdvice={completedSession.improvementAdvice}
@@ -386,7 +386,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
             onClick={resetToIdle}
             className="mt-3 text-sm font-medium text-indigo-700 hover:underline"
           >
-            Start another mock
+            {t("mock.startAnother")}
           </button>
         </div>
       )}
@@ -394,7 +394,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
       {archived.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Archived mock interviews ({archived.length})
+            {t("mock.archived", { count: archived.length })}
           </h4>
           {archived.map((session) => (
             <details
@@ -404,7 +404,7 @@ export function MockInterviewPanel({ context }: { context: MockInterviewContext 
               <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-slate-800">
                 <MessageSquare className="h-4 w-4 shrink-0 text-indigo-600" />
                 <span className="min-w-0 flex-1 truncate">
-                  Mock · {Math.round(session.durationSec / 60)} min
+                  {t("mock.archivedItem", { minutes: Math.round(session.durationSec / 60) })}
                 </span>
                 <span className="shrink-0 text-xs text-slate-500">
                   {new Date(session.completedAt).toLocaleDateString()}

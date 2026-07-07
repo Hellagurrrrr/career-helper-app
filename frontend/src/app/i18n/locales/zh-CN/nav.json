@@ -1,0 +1,22 @@
+{
+  "navigation": "导航",
+  "dashboard": "仪表盘",
+  "applications": "申请",
+  "aiCoaching": "AI 辅导",
+  "jobs": "职位",
+  "network": "人脉",
+  "careerGoals": "职业目标",
+  "addGoal": "添加职业目标",
+  "addFirstGoal": "添加你的第一个目标",
+  "manageGoal": "管理 {{title}}",
+  "moveUp": "上移",
+  "moveDown": "下移",
+  "deleteGoal": "删除目标",
+  "profile": "个人资料",
+  "settings": "设置",
+  "logout": "退出登录",
+  "deleteGoalTitle": "删除这个职业目标？",
+  "deleteGoalConfirm": "你即将永久删除 <bold>{{title}}</bold>。该目标的信心测评答案和进度将会丢失。此操作无法撤销。",
+  "keepGoal": "保留目标",
+  "confirmDelete": "确认删除"
+}

@@ -1,0 +1,53 @@
+{
+  "breadcrumb": "Profile",
+  "title": "Edit profile",
+  "subtitle": "Keep your details up to date so plans and recommendations stay relevant.",
+  "add": "Add",
+  "sections": {
+    "basics": "Basics",
+    "education": "Education",
+    "skills": "Skills & coursework",
+    "internships": "Internships",
+    "projects": "Projects"
+  },
+  "empty": {
+    "education": "No education added yet.",
+    "internships": "No internships added yet.",
+    "projects": "No projects added yet."
+  },
+  "remove": {
+    "education": "Remove education",
+    "internship": "Remove internship",
+    "project": "Remove project"
+  },
+  "fields": {
+    "name": "Name",
+    "degree": "Degree",
+    "school": "School",
+    "major": "Major",
+    "gpa": "GPA",
+    "start": "Start (YYYY-MM)",
+    "end": "End (YYYY-MM, blank = present)",
+    "skills": "Skills (comma separated)",
+    "coursework": "Coursework (comma separated)",
+    "role": "Role",
+    "company": "Company",
+    "title": "Title",
+    "description": "Description"
+  },
+  "placeholders": {
+    "name": "Alex",
+    "school": "State University",
+    "major": "Computer Science",
+    "skills": "JavaScript, Python, React",
+    "coursework": "Data Structures, Algorithms",
+    "role": "Software Intern",
+    "company": "Tech Startup",
+    "internDesc": "What did you build or improve?",
+    "projTitle": "Course planner app",
+    "projDesc": "What does it do, and what was your impact?"
+  },
+  "saved": "Saved",
+  "back": "Back",
+  "save": "Save changes"
+}

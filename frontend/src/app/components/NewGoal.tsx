@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   TrendingUp,
 } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { latestEducation, useProfile } from "../lib/profile";
 import {
   CatalogGoal,
@@ -25,6 +26,7 @@ type Step = "select" | "quiz";
 
 export function NewGoal() {
   const navigate = useNavigate();
+  const { t } = useTranslation("newGoal");
   const { profile } = useProfile();
   const { goals, addGoal } = useGoals();
   const { notify } = useNotifications();
@@ -90,11 +92,14 @@ export function NewGoal() {
       notify({
         type: "job",
         severity: "info",
-        title: `${jobCount} jobs match ${savedGoal.title}`,
+        title: t("notify.jobsMatchTitle", { count: jobCount, goal: savedGoal.title }),
         body:
           partnerCount > 0
-            ? `${partnerCount} partner role${partnerCount === 1 ? "" : "s"} include a built-in referral, plus ${jobCount - partnerCount} open-market matches.`
-            : `We found ${jobCount} open roles tailored to your new goal. Review them whenever you're ready.`,
+            ? t("notify.jobsMatchBodyPartner", {
+                count: partnerCount,
+                openCount: jobCount - partnerCount,
+              })
+            : t("notify.jobsMatchBodyPlain", { count: jobCount }),
         link: `/jobs?goal=${savedGoal.id}`,
         dedupKey: `jobs:${savedGoal.id}`,
       });
@@ -103,8 +108,8 @@ export function NewGoal() {
       notify({
         type: "job",
         severity: "success",
-        title: `${partnerCount} referral role${partnerCount === 1 ? "" : "s"} unlocked`,
-        body: `Partner companies offer ${partnerCount} exclusive ${savedGoal.title} role${partnerCount === 1 ? "" : "s"} with a built-in referral. Apply through the app to skip the standard pile.`,
+        title: t("notify.referralTitle", { count: partnerCount }),
+        body: t("notify.referralBody", { count: partnerCount, goal: savedGoal.title }),
         link: `/jobs?goal=${savedGoal.id}`,
         dedupKey: `partner-jobs:${savedGoal.id}`,
       });
@@ -116,8 +121,8 @@ export function NewGoal() {
       notify({
         type: "alumni",
         severity: "info",
-        title: `${alumniCount} alumni work as ${savedGoal.title}`,
-        body: `They've opted in to coffee chats. Start a conversation to learn their path.`,
+        title: t("notify.alumniTitle", { count: alumniCount, goal: savedGoal.title }),
+        body: t("notify.alumniBody"),
         link: `/alumni?expertise=${encodeURIComponent(savedGoal.title)}`,
         dedupKey: `alumni:${savedGoal.id}`,
       });
@@ -163,6 +168,7 @@ function SelectStep({
   onCancel: () => void;
   onSelect: (g: CatalogGoal) => void;
 }) {
+  const { t } = useTranslation("newGoal");
   const topScore = ranked[0]?.score ?? 0;
 
   return (
@@ -170,15 +176,13 @@ function SelectStep({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
-            Step 1 of 2 · Choose a goal
+            {t("select.step")}
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-            Pick a career path to explore
+            {t("select.title")}
           </h1>
           <p className="mt-1 text-slate-600">
-            {hasProfileSkills
-              ? "We've ranked these by how well they fit your background. Pick one to continue."
-              : "Add skills in your profile and we'll personalize these recommendations next time."}
+            {hasProfileSkills ? t("select.subtitleRanked") : t("select.subtitleNoSkills")}
           </p>
         </div>
         <Link
@@ -190,7 +194,7 @@ function SelectStep({
           className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
           <ArrowLeft className="h-4 w-4" />
-          Cancel
+          {t("select.cancel")}
         </Link>
       </div>
 
@@ -217,13 +221,13 @@ function SelectStep({
                 {isRecommended && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Recommended
+                    {t("select.recommended")}
                   </span>
                 )}
                 {owned && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-800">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Added
+                    {t("select.added")}
                   </span>
                 )}
               </div>
@@ -238,7 +242,7 @@ function SelectStep({
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {goal.coreSkills.length} core skills
+                    {t("select.coreSkills", { count: goal.coreSkills.length })}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {goal.coreSkills.slice(0, 4).map((s) => (
@@ -260,7 +264,9 @@ function SelectStep({
                 {hasProfileSkills && score > 0 && (
                   <div className="flex items-center gap-2 text-xs text-slate-600">
                     <TrendingUp className="h-3.5 w-3.5 text-blue-700" />
-                    Matches {Math.min(Math.ceil(score / 2), goal.matchSignals.length)} of your skills
+                    {t("select.matches", {
+                      count: Math.min(Math.ceil(score / 2), goal.matchSignals.length),
+                    })}
                   </div>
                 )}
               </div>
@@ -270,7 +276,7 @@ function SelectStep({
                 disabled={owned}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
               >
-                {owned ? "Already added" : "Start quiz"}
+                {owned ? t("select.alreadyAdded") : t("select.startQuiz")}
                 {!owned && <ArrowRight className="h-4 w-4" />}
               </button>
             </article>
@@ -294,6 +300,7 @@ function QuizStep({
   onBack: () => void;
   onFinish: () => void;
 }) {
+  const { t } = useTranslation("newGoal");
   const answered = goal.coreSkills.filter((s) => confidence[s.id] !== undefined)
     .length;
   const total = goal.coreSkills.length;
@@ -315,14 +322,17 @@ function QuizStep({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
-            Step 2 of 2 · Skill quiz
+            {t("quiz.step")}
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-            Rate your confidence
+            {t("quiz.title")}
           </h1>
           <p className="mt-1 text-slate-600">
-            For each core skill of <span className="font-semibold text-slate-900">{goal.title}</span>,
-            tell us how confident you feel. We'll prioritize your learning plan accordingly.
+            <Trans
+              i18nKey="newGoal:quiz.subtitle"
+              values={{ title: goal.title }}
+              components={{ goal: <span className="font-semibold text-slate-900" /> }}
+            />
           </p>
         </div>
         <button
@@ -330,7 +340,7 @@ function QuizStep({
           className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
           <ArrowLeft className="h-4 w-4" />
-          Change goal
+          {t("quiz.changeGoal")}
         </button>
       </div>
 
@@ -345,16 +355,16 @@ function QuizStep({
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-slate-950">{goal.title}</h2>
               <p className="text-sm text-slate-600">
-                {answered}/{total} skills answered
+                {t("quiz.answered", { answered, total })}
               </p>
             </div>
           </div>
           <div className="flex gap-2 text-xs">
             <span className="rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-800">
-              {lowCount} need focus
+              {t("quiz.needFocus", { count: lowCount })}
             </span>
             <span className="rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-800">
-              {strongCount} already strong
+              {t("quiz.alreadyStrong", { count: strongCount })}
             </span>
           </div>
         </div>
@@ -398,7 +408,7 @@ function QuizStep({
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("quiz.back")}
         </button>
         <button
           onClick={onFinish}
@@ -406,7 +416,7 @@ function QuizStep({
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
           <CheckCircle2 className="h-4 w-4" />
-          Build my plan
+          {t("quiz.buildPlan")}
         </button>
       </div>
     </div>
@@ -420,6 +430,7 @@ function ConfidencePicker({
   value: number | undefined;
   onChange: (v: number) => void;
 }) {
+  const { t } = useTranslation(["tracking", "newGoal"]);
   const options = [1, 2, 3, 4, 5];
   return (
     <div className="flex flex-col gap-2">
@@ -440,14 +451,14 @@ function ConfidencePicker({
             >
               <div className="text-base font-bold">{v}</div>
               <div className="text-[11px] font-medium opacity-80">
-                {confidenceLabel(v)}
+                {confidenceLabel(v, t)}
               </div>
             </button>
           );
         })}
       </div>
       {value === undefined && (
-        <p className="text-xs text-slate-500">Pick a rating to continue.</p>
+        <p className="text-xs text-slate-500">{t("newGoal:quiz.pickRating")}</p>
       )}
     </div>
   );

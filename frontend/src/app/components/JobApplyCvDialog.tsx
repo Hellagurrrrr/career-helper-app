@@ -17,6 +17,7 @@ import {
   openCvPrintPreview,
 } from "../lib/tailored-cv";
 import { ExternalLink, FileImage, FileText, Printer, Sparkles } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 
 type JobApplyCvDialogProps = {
   open: boolean;
@@ -35,6 +36,7 @@ export function JobApplyCvDialog({
   isPartner,
   onSubmitApplication,
 }: JobApplyCvDialogProps) {
+  const { t } = useTranslation("jobs");
   const { profile } = useProfile();
   const [cvText, setCvText] = React.useState("");
   const [reviewed, setReviewed] = React.useState(false);
@@ -68,40 +70,28 @@ export function JobApplyCvDialog({
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle className="pr-8 text-left text-slate-950">
-              {isPartner ? "Tailored CV · Referral application" : "Tailored CV · Review & export"}
+              {isPartner ? t("apply.titlePartner") : t("apply.titleStandard")}
             </DialogTitle>
             <DialogDescription className="text-left text-slate-600">
-              {isPartner ? (
-                <>
-                  We generated a CV aimed at{" "}
-                  <span className="font-medium text-slate-800">
-                    {job.title}
-                  </span>{" "}
-                  at {job.company}. Edit the text if needed, confirm you have reviewed it, then
-                  submit — your referral application is sent with this version.
-                </>
-              ) : (
-                <>
-                  This draft highlights fit for{" "}
-                  <span className="font-medium text-slate-800">
-                    {job.title}
-                  </span>{" "}
-                  at {job.company}. Edit freely, then export as PDF (via print), Word, or PNG. When
-                  you are ready, save the application to your tracker.
-                </>
-              )}
+              <Trans
+                i18nKey={isPartner ? "jobs:apply.descPartner" : "jobs:apply.descStandard"}
+                values={{ title: job.title, company: job.company }}
+                components={{ b: <span className="font-medium text-slate-800" /> }}
+              />
             </DialogDescription>
           </DialogHeader>
 
           {applicationUrl && (
             <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                Company application
+                {t("apply.companyApplication")}
               </p>
               <p className="mt-1 text-sm leading-relaxed text-slate-700">
-                Export your tailored CV below, then complete your application on{" "}
-                <span className="font-medium text-slate-900">{job.company}</span>&apos;s careers
-                site.
+                <Trans
+                  i18nKey="jobs:apply.companyApplicationBody"
+                  values={{ company: job.company }}
+                  components={{ b: <span className="font-medium text-slate-900" /> }}
+                />
               </p>
               <a
                 href={applicationUrl}
@@ -110,14 +100,14 @@ export function JobApplyCvDialog({
                 className="mt-3 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-emerald-900 shadow-sm ring-1 ring-emerald-200 transition-colors hover:bg-emerald-50"
               >
                 <ExternalLink className="h-4 w-4 shrink-0" />
-                Open application page
+                {t("apply.openApplicationPage")}
               </a>
               <p className="mt-2 break-all text-xs text-slate-500">{applicationUrl}</p>
             </div>
           )}
 
           <label htmlFor="tailored-cv-editor" className="mt-4 block text-sm font-medium text-slate-700">
-            CV content
+            {t("apply.cvContent")}
           </label>
           <textarea
             id="tailored-cv-editor"
@@ -128,13 +118,13 @@ export function JobApplyCvDialog({
             aria-describedby="cv-editor-hint"
           />
           <p id="cv-editor-hint" className="mt-2 text-xs text-slate-500">
-            Tip: tighten bullets to real metrics before you submit or export.
+            {t("apply.tip")}
           </p>
 
           {!isPartner && (
             <div className="mt-4 border-t border-slate-200 pt-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Export tailored CV
+                {t("apply.exportTitle")}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -142,11 +132,14 @@ export function JobApplyCvDialog({
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    openCvPrintPreview(`Tailored CV — ${job.title} @ ${job.company}`, cvText)
+                    openCvPrintPreview(
+                      t("apply.printTitle", { title: job.title, company: job.company }),
+                      cvText,
+                    )
                   }
                 >
                   <Printer className="h-4 w-4" />
-                  PDF (print)
+                  {t("apply.pdfPrint")}
                 </Button>
                 <Button
                   type="button"
@@ -155,7 +148,7 @@ export function JobApplyCvDialog({
                   onClick={() => downloadCvAsWord(cvText, fileBase)}
                 >
                   <FileText className="h-4 w-4" />
-                  Word
+                  {t("apply.word")}
                 </Button>
                 <Button
                   type="button"
@@ -164,7 +157,7 @@ export function JobApplyCvDialog({
                   onClick={() => downloadCvAsPng(cvText, fileBase)}
                 >
                   <FileImage className="h-4 w-4" />
-                  PNG
+                  {t("apply.png")}
                 </Button>
               </div>
             </div>
@@ -178,10 +171,7 @@ export function JobApplyCvDialog({
                 onChange={(e) => setReviewed(e.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               />
-              <span>
-                I have reviewed this tailored CV and confirm it is accurate enough to submit with
-                my referral application.
-              </span>
+              <span>{t("apply.reviewConfirm")}</span>
             </label>
           )}
         </div>
@@ -190,7 +180,7 @@ export function JobApplyCvDialog({
           {isPartner ? (
             <>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("apply.cancel")}
               </Button>
               <Button
                 type="button"
@@ -199,13 +189,13 @@ export function JobApplyCvDialog({
                 onClick={handlePartnerSubmit}
               >
                 <Sparkles className="h-4 w-4" />
-                Submit referral with this CV
+                {t("apply.submitReferral")}
               </Button>
             </>
           ) : (
             <>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("apply.cancel")}
               </Button>
               <Button
                 type="button"
@@ -214,7 +204,7 @@ export function JobApplyCvDialog({
                   onOpenChange(false);
                 }}
               >
-                Save to application tracker
+                {t("apply.saveToTracker")}
               </Button>
             </>
           )}

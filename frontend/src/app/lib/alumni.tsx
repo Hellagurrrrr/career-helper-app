@@ -176,16 +176,19 @@ export function useMeetings() {
   };
 }
 
-export function formatRelativeDate(ts: number): string {
+// Accepts the `alumni`-namespace translator so relative labels localize.
+type RelativeTimeTranslate = (key: string, options?: { count?: number }) => string;
+
+export function formatRelativeDate(ts: number, t: RelativeTimeTranslate): string {
   const diff = Date.now() - ts;
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "just now";
+  if (sec < 60) return t("relativeTime.justNow");
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} min ago`;
+  if (min < 60) return t("relativeTime.minutes", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  if (hr < 24) return t("relativeTime.hours", { count: hr });
   const days = Math.floor(hr / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (days < 30) return t("relativeTime.days", { count: days });
   const months = Math.floor(days / 30);
-  return `${months} month${months === 1 ? "" : "s"} ago`;
+  return t("relativeTime.months", { count: months });
 }

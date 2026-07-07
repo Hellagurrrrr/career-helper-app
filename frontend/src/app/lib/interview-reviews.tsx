@@ -60,7 +60,9 @@ export async function getAudioDurationSec(file: File): Promise<number | null> {
   });
 }
 
-export function validateInterviewAudioFile(file: File): string | null {
+export type AudioValidationError = "not-audio" | "too-large";
+
+export function validateInterviewAudioFile(file: File): AudioValidationError | null {
   const type = file.type.toLowerCase();
   const name = file.name.toLowerCase();
   const audioLike =
@@ -69,8 +71,8 @@ export function validateInterviewAudioFile(file: File): string | null {
     name.endsWith(".wav") ||
     name.endsWith(".m4a") ||
     name.endsWith(".webm");
-  if (!audioLike) return "Please upload an audio file (MP3, WAV, M4A, or WebM).";
-  if (file.size > MAX_FILE_BYTES) return "File is too large for this demo (max 25 MB).";
+  if (!audioLike) return "not-audio";
+  if (file.size > MAX_FILE_BYTES) return "too-large";
   return null;
 }
 

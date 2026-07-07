@@ -1,8 +1,8 @@
 import React from "react";
 import { Upload, Sparkles, Loader2, FileAudio } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { CoachingFeedbackResults } from "./CoachingFeedbackResults";
 import {
-  ANALYSIS_STEP_LABELS,
   InterviewAnalysisStep,
   InterviewReview,
   InterviewReviewContext,
@@ -18,6 +18,7 @@ export function InterviewReviewPanel({
   context: InterviewReviewContext;
   showArchive?: boolean;
 }) {
+  const { t } = useTranslation("coaching");
   const { getReviewsForApplication, saveReview, deleteReview } = useInterviewReviews();
   const archived = getReviewsForApplication(context.applicationId);
 
@@ -31,7 +32,7 @@ export function InterviewReviewPanel({
   const handleFile = async (file: File) => {
     const validationError = validateInterviewAudioFile(file);
     if (validationError) {
-      setError(validationError);
+      setError(validationError === "not-audio" ? t("validate.notAudio") : t("validate.tooLarge"));
       return;
     }
     setError(null);
@@ -45,7 +46,7 @@ export function InterviewReviewPanel({
       setStep("complete");
       window.setTimeout(() => setStep(null), 400);
     } catch {
-      setError("Analysis failed. Please try another file.");
+      setError(t("review.analysisFailed"));
       setStep(null);
     }
   };
@@ -53,10 +54,11 @@ export function InterviewReviewPanel({
   return (
     <div className="space-y-4">
       <p className="text-xs leading-relaxed text-slate-500">
-        Upload a recorded interview for this role. The coach transcribes, summarizes, scores key
-        dimensions, and suggests improvements — tailored to{" "}
-        <span className="font-medium text-slate-700">{context.jobTitle}</span> (demo, no server).
-        Each upload is archived.
+        <Trans
+          i18nKey="coaching:review.intro"
+          values={{ jobTitle: context.jobTitle }}
+          components={{ role: <span className="font-medium text-slate-700" /> }}
+        />
       </p>
 
       <input
@@ -81,12 +83,12 @@ export function InterviewReviewPanel({
         {busy ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            {step ? ANALYSIS_STEP_LABELS[step] : "Processing…"}
+            {step ? t(`steps.${step}`) : t("review.processing")}
           </>
         ) : (
           <>
             <Upload className="h-4 w-4" />
-            Upload interview audio
+            {t("review.upload")}
           </>
         )}
       </button>
@@ -101,13 +103,16 @@ export function InterviewReviewPanel({
         <div className="rounded-xl border border-indigo-100 bg-white p-4">
           <div className="mb-3 flex items-center gap-2 text-sm text-slate-600">
             <Sparkles className="h-4 w-4 text-indigo-600" />
-            <span className="font-medium text-slate-800">Latest analysis</span>
+            <span className="font-medium text-slate-800">{t("review.latestAnalysis")}</span>
           </div>
           <CoachingFeedbackResults
             title={activeReview.fileName}
             subtitle={
               activeReview.durationSec != null
-                ? `${Math.round(activeReview.durationSec / 60)} min · ${new Date(activeReview.uploadedAt).toLocaleString()}`
+                ? t("results.durationSubtitle", {
+                    minutes: Math.round(activeReview.durationSec / 60),
+                    date: new Date(activeReview.uploadedAt).toLocaleString(),
+                  })
                 : new Date(activeReview.uploadedAt).toLocaleString()
             }
             overallSummary={activeReview.overallSummary}
@@ -121,7 +126,7 @@ export function InterviewReviewPanel({
       {showArchive && archived.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Archived reviews ({archived.length})
+            {t("review.archived", { count: archived.length })}
           </h4>
           {archived.map((review) => (
             <details

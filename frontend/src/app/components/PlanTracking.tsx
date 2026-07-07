@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Star,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Accordion,
   AccordionContent,
@@ -43,6 +44,7 @@ import { countAlumniForKeywords } from "../lib/alumni";
 const RERATE_THRESHOLD = 2;
 
 export function PlanTracking() {
+  const { t } = useTranslation("tracking");
   const { goalId } = useParams();
   const { getGoal, updateConfidence } = useGoals();
   const tracking = useTracking();
@@ -72,11 +74,9 @@ export function PlanTracking() {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
         <h2 className="text-lg font-semibold text-slate-950">
-          No learning plan available
+          {t("plan.notFoundTitle")}
         </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          We couldn't find the catalog data for this goal.
-        </p>
+        <p className="mt-2 text-sm text-slate-600">{t("plan.notFoundBody")}</p>
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function PlanTracking() {
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-medium text-slate-500">Overall progress</p>
+          <p className="text-sm font-medium text-slate-500">{t("plan.overallProgress")}</p>
           <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
             {overallProgress}%
           </p>
@@ -138,28 +138,28 @@ export function PlanTracking() {
             />
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Averaged across {catalogGoal.coreSkills.length} skill modules.
+            {t("plan.averagedAcross", { count: catalogGoal.coreSkills.length })}
           </p>
         </div>
         <div className="rounded-xl border border-red-100 bg-red-50 p-4">
           <div className="flex items-center gap-2.5">
             <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
-            <p className="text-sm font-medium text-red-800">Needs focus</p>
+            <p className="text-sm font-medium text-red-800">{t("plan.needsFocus")}</p>
           </div>
           <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
             {focusCount}
           </p>
-          <p className="text-sm text-slate-600">Skills rated 1-2</p>
+          <p className="text-sm text-slate-600">{t("plan.ratedLow")}</p>
         </div>
         <div className="rounded-xl border border-green-100 bg-green-50 p-4 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center gap-2.5">
             <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
-            <p className="text-sm font-medium text-green-800">Already strong</p>
+            <p className="text-sm font-medium text-green-800">{t("plan.alreadyStrong")}</p>
           </div>
           <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
             {strongCount}
           </p>
-          <p className="text-sm text-slate-600">Skills rated 4-5</p>
+          <p className="text-sm text-slate-600">{t("plan.ratedHigh")}</p>
         </div>
       </section>
 
@@ -167,10 +167,10 @@ export function PlanTracking() {
         <div className="mb-4 flex items-center gap-2.5">
           <BookOpen className="h-5 w-5 text-blue-600" />
           <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-            Core Skill Modules
+            {t("plan.coreModules")}
           </h2>
           <span className="ml-auto text-sm text-slate-500">
-            {catalogGoal.coreSkills.length} modules · sorted by need
+            {t("plan.modulesSorted", { count: catalogGoal.coreSkills.length })}
           </span>
         </div>
 
@@ -224,6 +224,7 @@ function WeekFocusCard({
   onToggle: (moduleId: string, stepIdx: number) => void;
   onReroll: () => void;
 }) {
+  const { t } = useTranslation("tracking");
   void goalId;
   if (!catalogGoal || focusKeys.length === 0) {
     return (
@@ -234,12 +235,9 @@ function WeekFocusCard({
           </div>
           <div>
             <h2 className="text-base font-semibold tracking-tight text-slate-950">
-              All caught up!
+              {t("week.allCaughtUpTitle")}
             </h2>
-            <p className="text-sm text-slate-600">
-              No outstanding actions this week. Mark some steps incomplete or
-              add a new goal to keep moving.
-            </p>
+            <p className="text-sm text-slate-600">{t("week.allCaughtUpBody")}</p>
           </div>
         </div>
       </section>
@@ -272,16 +270,14 @@ function WeekFocusCard({
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-              This week's focus
+              {t("week.eyebrow")}
             </p>
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">
               {allDone
-                ? "Great week — ready for the next batch?"
-                : `Pick off ${items.length - doneCount} more this week`}
+                ? t("week.greatWeek")
+                : t("week.pickOff", { count: items.length - doneCount })}
             </h2>
-            <p className="mt-0.5 text-sm text-slate-600">
-              Drawn from your weakest-confidence modules. Resets every 7 days.
-            </p>
+            <p className="mt-0.5 text-sm text-slate-600">{t("week.drawnFrom")}</p>
           </div>
         </div>
         <button
@@ -289,7 +285,7 @@ function WeekFocusCard({
           className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-800 transition-colors hover:bg-blue-50"
         >
           <RefreshCw className="h-4 w-4" />
-          Pick different focus
+          {t("week.pickDifferent")}
         </button>
       </div>
 
@@ -341,11 +337,15 @@ function WeekFocusCard({
 
 // "Where you are" copy, derived from the user's actual module progress (the old
 // code showed the catalog's raw default_status enum, e.g. "not_started").
-function whereYouAreText(progress: number, stepCount: number): string {
-  if (stepCount === 0) return "No action steps yet for this module.";
-  if (progress <= 0) return "You haven't started this module yet — pick a step below to begin.";
-  if (progress >= 100) return "You've completed every step in this module. Nice work!";
-  return `You're ${progress}% through this module — keep going on the steps below.`;
+function whereYouAreText(
+  progress: number,
+  stepCount: number,
+  t: (key: string, options?: { progress?: number }) => string,
+): string {
+  if (stepCount === 0) return t("whereYouAre.noSteps");
+  if (progress <= 0) return t("whereYouAre.notStarted");
+  if (progress >= 100) return t("whereYouAre.complete");
+  return t("whereYouAre.inProgress", { progress });
 }
 
 function ModuleAccordionItem({
@@ -369,6 +369,7 @@ function ModuleAccordionItem({
   onRerate: (value: number) => void;
   onDismissRerate: () => void;
 }) {
+  const { t } = useTranslation("tracking");
   void goalId;
   const stepCount = module.whatToDo.length;
   const resourceCount = module.resources.length;
@@ -405,17 +406,15 @@ function ModuleAccordionItem({
                   {module.name}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-                  <span>
-                    {completedSteps.size}/{stepCount} steps done
-                  </span>
+                  <span>{t("module.stepsDone", { done: completedSteps.size, total: stepCount })}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{resourceCount} resources</span>
+                  <span>{t("module.resources", { count: resourceCount })}</span>
                   {alumniCount > 0 && (
                     <>
                       <span aria-hidden="true">·</span>
                       <span className="inline-flex items-center gap-0.5">
                         <Users className="h-3 w-3" />
-                        {alumniCount} alumni
+                        {t("module.alumni", { count: alumniCount })}
                       </span>
                     </>
                   )}
@@ -424,7 +423,7 @@ function ModuleAccordionItem({
                       <span aria-hidden="true">·</span>
                       <span className="inline-flex items-center gap-0.5">
                         <Briefcase className="h-3 w-3" />
-                        {jobCount} open jobs
+                        {t("module.openJobs", { count: jobCount })}
                       </span>
                     </>
                   )}
@@ -438,7 +437,7 @@ function ModuleAccordionItem({
                     confidenceValue
                   )}`}
                 >
-                  {confidenceLabel(confidenceValue)}
+                  {confidenceLabel(confidenceValue, t)}
                 </span>
               )}
             </div>
@@ -465,11 +464,11 @@ function ModuleAccordionItem({
                 <TrendingUp className="h-4 w-4 text-blue-700" />
               </div>
               <h4 className="text-sm font-semibold text-slate-950">
-                Where you are
+                {t("whereYouAre.heading")}
               </h4>
             </div>
             <p className="text-sm leading-relaxed text-slate-700">
-              {whereYouAreText(progress, stepCount)}
+              {whereYouAreText(progress, stepCount, t)}
             </p>
             {(alumniCount > 0 || jobCount > 0) && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -479,7 +478,7 @@ function ModuleAccordionItem({
                     className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-100"
                   >
                     <Users className="h-3.5 w-3.5" />
-                    Find {alumniCount} alumni who can help
+                    {t("module.findAlumni", { count: alumniCount })}
                     <ChevronRight className="h-3 w-3" />
                   </Link>
                 )}
@@ -489,7 +488,7 @@ function ModuleAccordionItem({
                     className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-100"
                   >
                     <Briefcase className="h-3.5 w-3.5" />
-                    {jobCount} open jobs need this
+                    {t("module.jobsNeedThis", { count: jobCount })}
                     <ChevronRight className="h-3 w-3" />
                   </Link>
                 )}
@@ -517,11 +516,11 @@ function ModuleAccordionItem({
                   <Zap className="h-4 w-4 text-amber-700" />
                 </div>
                 <h4 className="text-sm font-semibold text-slate-950">
-                  Action Steps
+                  {t("module.actionSteps")}
                 </h4>
               </div>
               <span className="text-xs font-medium text-amber-900">
-                {completedSteps.size}/{stepCount} complete
+                {t("module.stepsComplete", { done: completedSteps.size, total: stepCount })}
               </span>
             </div>
             <ul className="space-y-2">
@@ -564,11 +563,11 @@ function ModuleAccordionItem({
                   <BookOpen className="h-4 w-4 text-blue-700" />
                 </div>
                 <h4 className="text-sm font-semibold text-slate-950">
-                  Recommended Resources
+                  {t("module.recommendedResources")}
                 </h4>
               </div>
               <span className="text-xs font-medium text-slate-500">
-                {consumedResources.size}/{resourceCount} done
+                {t("module.resourcesDone", { done: consumedResources.size, total: resourceCount })}
               </span>
             </div>
             <div className="grid gap-3 md:grid-cols-3">
@@ -587,12 +586,8 @@ function ModuleAccordionItem({
                       type="button"
                       onClick={() => onToggleResource(idx)}
                       className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
-                      aria-label={
-                        consumed ? "Mark unread" : "Mark resource as consumed"
-                      }
-                      title={
-                        consumed ? "Mark unread" : "Mark resource as consumed"
-                      }
+                      aria-label={consumed ? t("module.markUnread") : t("module.markConsumed")}
+                      title={consumed ? t("module.markUnread") : t("module.markConsumed")}
                     >
                       {consumed ? (
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -644,6 +639,7 @@ function RerateCard({
   onDismiss: () => void;
   moduleName: string;
 }) {
+  const { t } = useTranslation("tracking");
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
       <div className="flex items-start gap-2.5">
@@ -652,10 +648,14 @@ function RerateCard({
         </div>
         <div className="flex-1">
           <h4 className="text-sm font-semibold text-slate-950">
-            Re-rate your confidence
+            {t("rerate.title")}
           </h4>
           <p className="mt-0.5 text-xs text-slate-600">
-            You've made progress in {moduleName}. Current: {confidenceLabel(currentValue)} ({currentValue}/5).
+            {t("rerate.body", {
+              module: moduleName,
+              label: confidenceLabel(currentValue, t),
+              value: currentValue,
+            })}
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {[1, 2, 3, 4, 5].map((v) => {
@@ -671,7 +671,7 @@ function RerateCard({
                       : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50"
                   }`}
                   aria-pressed={active}
-                  title={confidenceLabel(v)}
+                  title={confidenceLabel(v, t)}
                 >
                   {v}
                 </button>
@@ -682,7 +682,7 @@ function RerateCard({
             onClick={onDismiss}
             className="mt-3 text-xs font-medium text-slate-500 hover:text-slate-800"
           >
-            Not now
+            {t("rerate.notNow")}
           </button>
         </div>
       </div>
