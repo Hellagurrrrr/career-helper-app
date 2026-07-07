@@ -1,0 +1,53 @@
+{
+  "breadcrumb": "个人资料",
+  "title": "编辑个人资料",
+  "subtitle": "保持信息更新，让计划和推荐始终贴合你。",
+  "add": "添加",
+  "sections": {
+    "basics": "基本信息",
+    "education": "教育经历",
+    "skills": "技能与课程",
+    "internships": "实习经历",
+    "projects": "项目"
+  },
+  "empty": {
+    "education": "还没有添加教育经历。",
+    "internships": "还没有添加实习经历。",
+    "projects": "还没有添加项目。"
+  },
+  "remove": {
+    "education": "移除教育经历",
+    "internship": "移除实习经历",
+    "project": "移除项目"
+  },
+  "fields": {
+    "name": "姓名",
+    "degree": "学位",
+    "school": "学校",
+    "major": "专业",
+    "gpa": "GPA",
+    "start": "开始（YYYY-MM）",
+    "end": "结束（YYYY-MM，留空=至今）",
+    "skills": "技能（逗号分隔）",
+    "coursework": "课程（逗号分隔）",
+    "role": "职位",
+    "company": "公司",
+    "title": "标题",
+    "description": "描述"
+  },
+  "placeholders": {
+    "name": "你的名字",
+    "school": "某某大学",
+    "major": "计算机科学",
+    "skills": "JavaScript、Python、React",
+    "coursework": "数据结构、算法",
+    "role": "软件实习生",
+    "company": "某科技公司",
+    "internDesc": "你构建或改进了什么？",
+    "projTitle": "选课规划应用",
+    "projDesc": "它能做什么？你的贡献是什么？"
+  },
+  "saved": "已保存",
+  "back": "返回",
+  "save": "保存更改"
+}

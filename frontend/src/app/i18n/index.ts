@@ -11,6 +11,7 @@ import dashboardEn from "./locales/en/dashboard.json";
 import jobsEn from "./locales/en/jobs.json";
 import navEn from "./locales/en/nav.json";
 import newGoalEn from "./locales/en/newGoal.json";
+import profileEn from "./locales/en/profile.json";
 import settingsEn from "./locales/en/settings.json";
 import trackingEn from "./locales/en/tracking.json";
 import alumniZh from "./locales/zh-CN/alumni.json";
@@ -22,6 +23,7 @@ import dashboardZh from "./locales/zh-CN/dashboard.json";
 import jobsZh from "./locales/zh-CN/jobs.json";
 import navZh from "./locales/zh-CN/nav.json";
 import newGoalZh from "./locales/zh-CN/newGoal.json";
+import profileZh from "./locales/zh-CN/profile.json";
 import settingsZh from "./locales/zh-CN/settings.json";
 import trackingZh from "./locales/zh-CN/tracking.json";
 
@@ -49,6 +51,7 @@ export const resources = {
     alumni: alumniEn,
     newGoal: newGoalEn,
     tracking: trackingEn,
+    profile: profileEn,
   },
   "zh-CN": {
     common: commonZh,
@@ -62,6 +65,7 @@ export const resources = {
     alumni: alumniZh,
     newGoal: newGoalZh,
     tracking: trackingZh,
+    profile: profileZh,
   },
 } as const;
 
@@ -85,6 +89,7 @@ i18n
       "alumni",
       "newGoal",
       "tracking",
+      "profile",
     ],
     interpolation: { escapeValue: false },
     detection: {
