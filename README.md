@@ -19,6 +19,9 @@ The AI capabilities (CV extraction, conversational onboarding, tailored CV,
 interview coaching with voice) can be switched from mock to **real large-model
 calls** with a single flag - see [Real AI integration](#real-ai-integration).
 
+The UI is fully **bilingual (English + Simplified Chinese)** with an in-app
+language switcher - see [Internationalization](#internationalization-i18n).
+
 ## Quick start
 
 Start the full local app with one command:
@@ -82,6 +85,26 @@ CAREER_ENABLE_REAL_AI=false pytest -q
 There is also a separate suite that exercises the **real** models - see
 [Testing the real AI](#testing-the-real-ai).
 
+## Internationalization (i18n)
+
+The frontend ships in **English** and **Simplified Chinese (`zh-CN`)**, switchable
+at runtime from the language selector in the app header (and on the auth pages).
+The choice is persisted to `localStorage` (`aichh:lang`) and otherwise detected
+from the browser.
+
+- Built on `react-i18next`; setup and resources live in
+  [`frontend/src/app/i18n/`](frontend/src/app/i18n). Strings are grouped into
+  per-feature namespaces (`nav`, `auth`, `dashboard`, `jobs`, `applications`,
+  `coaching`, `alumni`, `newGoal`, `tracking`, `profile`, `onboarding`,
+  `notifications`, `common`), each with an `en` and a `zh-CN` file.
+- English is the source of truth; `t()` keys are type-checked against it.
+- `npm run check:i18n` verifies every locale matches English on namespace files,
+  message keys (plural-suffix aware), and `{{interpolation}}` placeholders. It
+  runs in CI, so a missing or mismatched translation fails the build.
+
+Only the **UI chrome** is localized. Catalog content (goals, skills, jobs,
+alumni), backend API messages, and LLM-generated text remain English for now.
+
 ## Design decisions (mock phase)
 
 These are the defaults chosen for this mock backend. Each is intentionally easy
@@ -89,7 +112,7 @@ to swap for a real implementation later.
 
 | Area | Decision |
 | --- | --- |
-| Storage | Local **normalized SQLite** store ([`app/services/store.py`](app/services/store.py)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). If the runtime DB is missing, it is copied from the committed initial DB at `app/data/career_helper_initial.sqlite3`. |
+| Storage | Local **normalized SQLite** database ([`app/db.py`](app/db.py) + per-context modules in [`app/repositories/`](app/repositories)) at `CAREER_LOCAL_DATABASE_PATH` (`app/data/career_helper.sqlite3` by default). If the runtime DB is missing, it is copied from the committed initial DB at `app/data/career_helper_initial.sqlite3`. |
 | Auth | **Real JWT** (access + refresh) with rotation and refresh-token revocation, via `PyJWT`; passwords hashed with `bcrypt`. |
 | Async tasks | In mock mode CV extraction and interview-review analysis simulate progress by **advancing a stage on each poll** (`CAREER_ASYNC_PROCESSING_POLLS`). In real-AI mode they run in **FastAPI background tasks** and the poll just reports the live status. |
 | Public catalogs | Goal catalog / jobs / alumni are stored in SQLite. `career_helper_initial.sqlite3` contains the seed catalog data for CI and fresh local setup; `career_helper.sqlite3` is ignored local runtime state. |
@@ -197,13 +220,15 @@ python tests/test_llm/run_onboarding_chat.py api      # drives the real API rout
 
 ## Continuous integration
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines three jobs:
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines four jobs:
 
+- **lint**: enforces the `ruff` config in `pyproject.toml` with `ruff check` and
+  `ruff format --check` over `app/`, `tests/`, and `scripts/`.
 - **test** (runs on every push / PR): installs `requirements-dev.txt`, runs
   `pip check`, and runs `pytest -q` on Python 3.11 / 3.12 / 3.13 with
   `CAREER_ENABLE_REAL_AI=false`, so only deterministic mock tests execute.
-- **frontend**: installs the Vite app with `npm ci`, builds it, and runs
-  `npm audit --audit-level=high`.
+- **frontend**: installs the Vite app with `npm ci`, runs the i18n consistency
+  check (`npm run check:i18n`), builds it, and runs `npm audit --audit-level=high`.
 - **real-ai** (manual `workflow_dispatch` only): runs `tests/test_llm` against the
   real models using an `OPENAI_API_KEY` repository secret. It never runs
   automatically (the calls are billable) and is a no-op if the secret is unset.
@@ -231,9 +256,10 @@ app/
     prompts.py            # capability prompts
     io_schemas.py         # structured-output Pydantic models
     cv_extraction.py / onboarding.py / tailored_cv.py / interview.py
+  db.py                   # process-wide SQLite connection + schema (lazy init)
+  repositories/           # per-bounded-context data access (auth, goals, jobs, ...)
   services/
     ai_service.py         # single AI entry point; routes real vs mock by CAREER_ENABLE_REAL_AI
-    store.py              # local SQLite repository + seeding
     mock_ai.py            # mock CV extract / tailored CV / interview analysis / mock interview
     mock_match.py         # matchScore + recommendation ordering
     progress.py           # goal progress formula
@@ -269,8 +295,9 @@ All 11 modules from the API design are implemented:
 - AI: set `CAREER_ENABLE_REAL_AI=true` to route through `app/llm/` (real LLM / STT /
   TTS) instead of `services/mock_ai.py`. Swap in another provider by extending
   `app/llm/voice.py` / `app/llm/models.py`.
-- `services/store.py` now persists to normalized local SQLite tables while
-  preserving the original dict-like API used by routers. For production
-  multi-process deployments, split that compatibility layer into explicit
-  repository methods and move background tasks to a real queue like Celery/RQ.
+- Data access lives in [`app/repositories/`](app/repositories) (one module per
+  bounded context) over the normalized SQLite schema in
+  [`app/db.py`](app/db.py). For production multi-process deployments, point these
+  at a networked database and move background tasks to a real queue like
+  Celery/RQ.
 - Keep `routers/` and `schemas/` mostly unchanged - they are the public contract.
