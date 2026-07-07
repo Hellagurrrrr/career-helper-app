@@ -13,6 +13,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGoals } from "../lib/goals";
 import {
   ALUMNI_CATALOG,
@@ -27,6 +28,7 @@ import { useNotifications } from "../lib/notifications";
 type Tab = "browse" | "requests";
 
 export function AlumniBrowse() {
+  const { t } = useTranslation("alumni");
   const { goals } = useGoals();
   const { meetings, withdrawRequest, completeRequest } = useMeetings();
   const { notify } = useNotifications();
@@ -42,16 +44,17 @@ export function AlumniBrowse() {
           notify({
             type: "meeting",
             severity: "success",
-            title: `Coffee chat with ${alumni.firstName} ${alumni.lastInitial} completed`,
-            body:
-              "Nice work — log any takeaways while it's fresh. Want to chat with someone else?",
+            title: t("notify.completedTitle", {
+              name: `${alumni.firstName} ${alumni.lastInitial}`,
+            }),
+            body: t("notify.completedBody"),
             link: "/alumni",
             dedupKey: `meeting-completed:${id}`,
           });
         }
       }
     },
-    [meetings, completeRequest, notify]
+    [meetings, completeRequest, notify, t]
   );
 
   const initialTab: Tab = searchParams.get("tab") === "requests" ? "requests" : "browse";
@@ -100,28 +103,19 @@ export function AlumniBrowse() {
       <header className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-sm font-medium text-blue-700">
           <Users className="h-4 w-4" />
-          Alumni network
+          {t("header.eyebrow")}
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-          Connect with alumni working in your target roles
+          {t("header.title")}
         </h1>
-        <p className="max-w-2xl text-slate-600">
-          Browse alumni profiles and request a coffee chat. Profiles are
-          anonymized to first name + last initial. Personal contact info is
-          never shared on this platform.
-        </p>
+        <p className="max-w-2xl text-slate-600">{t("header.subtitle")}</p>
       </header>
 
       <section className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
         <Shield className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-700" />
         <div className="text-sm text-blue-900">
-          <p className="font-semibold">Your privacy and theirs.</p>
-          <p className="mt-0.5 text-blue-800">
-            Names appear as "First name + last initial" only. Alumni opt in to
-            specific chat topics and response cadences. Email is never shown —
-            once an alumnus accepts your request, the platform will introduce
-            you via a private channel.
-          </p>
+          <p className="font-semibold">{t("privacy.title")}</p>
+          <p className="mt-0.5 text-blue-800">{t("privacy.body")}</p>
         </div>
       </section>
 
@@ -129,13 +123,13 @@ export function AlumniBrowse() {
         <TabButton
           active={tab === "browse"}
           onClick={() => setTab("browse")}
-          label="Browse"
+          label={t("tabs.browse")}
           count={ALUMNI_CATALOG.length}
         />
         <TabButton
           active={tab === "requests"}
           onClick={() => setTab("requests")}
-          label="My requests"
+          label={t("tabs.requests")}
           count={totalCount}
         />
       </div>
@@ -214,6 +208,7 @@ function BrowsePanel({
   industries: string[];
   hasGoals: boolean;
 }) {
+  const { t } = useTranslation("alumni");
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -222,7 +217,7 @@ function BrowsePanel({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search role, company, topic..."
+            placeholder={t("browse.searchPlaceholder")}
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
           />
         </div>
@@ -237,7 +232,7 @@ function BrowsePanel({
                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
-              {i === "all" ? "All industries" : i}
+              {i === "all" ? t("browse.allIndustries") : i}
             </button>
           ))}
         </div>
@@ -245,10 +240,7 @@ function BrowsePanel({
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-sm text-slate-600">
-            No alumni matched your search. Try different keywords or clear the
-            filter.
-          </p>
+          <p className="text-sm text-slate-600">{t("browse.empty")}</p>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -272,6 +264,7 @@ function AlumniCard({
   alumni: AlumniProfile;
   recommended?: boolean;
 }) {
+  const { t } = useTranslation("alumni");
   const { getRequestForAlumni } = useMeetings();
   const existing = getRequestForAlumni(alumni.id);
 
@@ -296,13 +289,13 @@ function AlumniCard({
               {recommended && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
                   <Sparkles className="h-3 w-3" />
-                  Match
+                  {t("card.match")}
                 </span>
               )}
               {existing && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
                   <Clock className="h-3 w-3" />
-                  Request sent
+                  {t("card.requestSent")}
                 </span>
               )}
             </div>
@@ -316,7 +309,7 @@ function AlumniCard({
               </span>
               <span className="inline-flex items-center gap-1">
                 <GraduationCap className="h-3.5 w-3.5" />
-                Class of {alumni.graduationYear}
+                {t("card.classOf", { year: alumni.graduationYear })}
               </span>
             </div>
           </div>
@@ -344,7 +337,7 @@ function AlumniCard({
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1">
           <Shield className="h-3.5 w-3.5" />
-          Privacy protected
+          {t("card.privacy")}
         </span>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <a
@@ -352,7 +345,7 @@ function AlumniCard({
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#0A66C2]/35 bg-sky-50 px-2.5 py-1.5 text-xs font-semibold text-[#0A66C2] transition-colors hover:bg-sky-100"
-            aria-label={`View ${alumni.firstName}'s LinkedIn profile (opens in a new tab)`}
+            aria-label={t("card.linkedinAria", { name: alumni.firstName })}
           >
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
             LinkedIn
@@ -361,7 +354,7 @@ function AlumniCard({
             to={`/alumni/${alumni.id}`}
             className="inline-flex items-center gap-1 font-medium text-blue-700 transition-transform group-hover:translate-x-0.5"
           >
-            View profile
+            {t("card.viewProfile")}
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
@@ -383,6 +376,7 @@ function RequestsPanel({
   onWithdraw: (id: string) => void;
   onComplete: (id: string) => void;
 }) {
+  const { t } = useTranslation("alumni");
   const sorted = React.useMemo(
     () => [...meetings].sort((a, b) => b.submittedAt - a.submittedAt),
     [meetings]
@@ -392,23 +386,18 @@ function RequestsPanel({
     <div className="space-y-4">
       <section className="grid gap-3 sm:grid-cols-3">
         <StatCard
-          label="Total requests"
+          label={t("requests.total")}
           value={meetings.length}
           tone="slate"
         />
-        <StatCard label="Pending" value={pendingCount} tone="amber" />
-        <StatCard label="Completed" value={completedCount} tone="green" />
+        <StatCard label={t("requests.pending")} value={pendingCount} tone="amber" />
+        <StatCard label={t("requests.completed")} value={completedCount} tone="green" />
       </section>
 
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-sm font-medium text-slate-700">
-            You haven't requested any coffee chats yet.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Browse alumni profiles and tap "Request a coffee chat" to get
-            started.
-          </p>
+          <p className="text-sm font-medium text-slate-700">{t("requests.emptyTitle")}</p>
+          <p className="mt-1 text-sm text-slate-500">{t("requests.emptyBody")}</p>
         </div>
       ) : (
         <ul className="space-y-3">
@@ -442,10 +431,11 @@ function RequestsPanel({
                         {alumni.role} · {alumni.company}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Topic: <span className="text-slate-700">{req.topic}</span>
+                        {t("requests.topic")}{" "}
+                        <span className="text-slate-700">{req.topic}</span>
                       </p>
                       <p className="mt-1 text-xs text-slate-400">
-                        Sent {formatRelativeDate(req.submittedAt)}
+                        {t("requests.sent", { time: formatRelativeDate(req.submittedAt, t) })}
                       </p>
                     </div>
                   </Link>
@@ -457,21 +447,21 @@ function RequestsPanel({
                           className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                         >
                           <CheckCircle2 className="h-4 w-4" />
-                          Mark completed
+                          {t("requests.markCompleted")}
                         </button>
                         <button
                           onClick={() => onWithdraw(req.id)}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                         >
                           <X className="h-4 w-4" />
-                          Withdraw
+                          {t("requests.withdraw")}
                         </button>
                       </>
                     )}
                     {req.status === "completed" && (
                       <span className="inline-flex items-center gap-1.5 rounded-xl bg-green-50 px-3 py-2 text-sm font-medium text-green-800">
                         <CheckCircle2 className="h-4 w-4" />
-                        Chat completed
+                        {t("requests.chatCompleted")}
                       </span>
                     )}
                   </div>
@@ -515,11 +505,12 @@ function StatCard({
 }
 
 function StatusBadge({ status }: { status: "pending" | "completed" | "withdrawn" }) {
+  const { t } = useTranslation("alumni");
   if (status === "pending") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
         <Clock className="h-3 w-3" />
-        Awaiting response
+        {t("requests.awaitingResponse")}
       </span>
     );
   }
@@ -527,7 +518,7 @@ function StatusBadge({ status }: { status: "pending" | "completed" | "withdrawn"
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800">
         <CheckCircle2 className="h-3 w-3" />
-        Completed
+        {t("requests.statusCompleted")}
       </span>
     );
   }

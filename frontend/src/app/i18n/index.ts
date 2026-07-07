@@ -2,6 +2,7 @@ import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 
+import alumniEn from "./locales/en/alumni.json";
 import applicationsEn from "./locales/en/applications.json";
 import authEn from "./locales/en/auth.json";
 import coachingEn from "./locales/en/coaching.json";
@@ -10,6 +11,7 @@ import dashboardEn from "./locales/en/dashboard.json";
 import jobsEn from "./locales/en/jobs.json";
 import navEn from "./locales/en/nav.json";
 import settingsEn from "./locales/en/settings.json";
+import alumniZh from "./locales/zh-CN/alumni.json";
 import applicationsZh from "./locales/zh-CN/applications.json";
 import authZh from "./locales/zh-CN/auth.json";
 import coachingZh from "./locales/zh-CN/coaching.json";
@@ -40,6 +42,7 @@ export const resources = {
     jobs: jobsEn,
     applications: applicationsEn,
     coaching: coachingEn,
+    alumni: alumniEn,
   },
   "zh-CN": {
     common: commonZh,
@@ -50,6 +53,7 @@ export const resources = {
     jobs: jobsZh,
     applications: applicationsZh,
     coaching: coachingZh,
+    alumni: alumniZh,
   },
 } as const;
 
@@ -61,7 +65,17 @@ i18n
     fallbackLng: "en",
     supportedLngs: [...supportedLngs],
     defaultNS,
-    ns: ["common", "nav", "auth", "settings", "dashboard", "jobs", "applications", "coaching"],
+    ns: [
+      "common",
+      "nav",
+      "auth",
+      "settings",
+      "dashboard",
+      "jobs",
+      "applications",
+      "coaching",
+      "alumni",
+    ],
     interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],

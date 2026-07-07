@@ -15,6 +15,7 @@ import {
   Sparkles,
   ExternalLink,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   AlumniProfile,
   formatRelativeDate,
@@ -24,6 +25,7 @@ import {
 import { useNotifications } from "../lib/notifications";
 
 export function AlumniDetail() {
+  const { t } = useTranslation(["alumni", "nav"]);
   const { id } = useParams();
   const navigate = useNavigate();
   const alumni = id ? getAlumni(id) : undefined;
@@ -32,16 +34,13 @@ export function AlumniDetail() {
   if (!alumni) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-        <h2 className="text-lg font-semibold text-slate-950">Profile not found</h2>
-        <p className="mt-2 text-sm text-slate-600">
-          This alumnus may have paused chat requests. Browse the directory for
-          others.
-        </p>
+        <h2 className="text-lg font-semibold text-slate-950">{t("detail.notFoundTitle")}</h2>
+        <p className="mt-2 text-sm text-slate-600">{t("detail.notFoundBody")}</p>
         <Link
           to="/alumni"
           className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
-          Back to network
+          {t("detail.backToNetwork")}
         </Link>
       </div>
     );
@@ -58,7 +57,7 @@ export function AlumniDetail() {
               to="/"
               className="rounded-md px-1 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              Dashboard
+              {t("nav:dashboard")}
             </Link>
           </li>
           <li aria-hidden="true">
@@ -69,7 +68,7 @@ export function AlumniDetail() {
               to="/alumni"
               className="rounded-md px-1 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              Alumni network
+              {t("detail.networkCrumb")}
             </Link>
           </li>
           <li aria-hidden="true">
@@ -101,14 +100,14 @@ export function AlumniDetail() {
                 </h1>
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
                   <Shield className="h-3 w-3" />
-                  Privacy protected
+                  {t("card.privacy")}
                 </span>
                 <a
                   href={alumni.linkedinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[#0A66C2]/35 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-[#0A66C2] shadow-sm transition-colors hover:bg-sky-100"
-                  aria-label={`View ${alumni.firstName}'s LinkedIn profile (opens in a new tab)`}
+                  aria-label={t("card.linkedinAria", { name: alumni.firstName })}
                 >
                   <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
                   LinkedIn
@@ -124,11 +123,11 @@ export function AlumniDetail() {
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <GraduationCap className="h-4 w-4" />
-                  {alumni.major}, Class of {alumni.graduationYear}
+                  {t("detail.major", { major: alumni.major, year: alumni.graduationYear })}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Briefcase className="h-4 w-4" />
-                  {alumni.yearsExperience} yrs experience
+                  {t("detail.experience", { count: alumni.yearsExperience })}
                 </span>
               </div>
             </div>
@@ -145,7 +144,7 @@ export function AlumniDetail() {
           <section className="rounded-xl border border-slate-200 bg-white p-5">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-slate-950">
               <Sparkles className="h-4 w-4 text-blue-700" />
-              Open to chat about
+              {t("detail.openToChat")}
             </h2>
             <ul className="mt-3 space-y-2">
               {alumni.topics.map((topic) => (
@@ -162,7 +161,7 @@ export function AlumniDetail() {
 
           <section className="rounded-xl border border-slate-200 bg-white p-5">
             <h2 className="text-base font-semibold tracking-tight text-slate-950">
-              Expertise
+              {t("detail.expertise")}
             </h2>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {alumni.expertise.map((tag) => (
@@ -180,7 +179,7 @@ export function AlumniDetail() {
         <aside className="space-y-4">
           <section className="rounded-xl border border-slate-200 bg-white p-5">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Availability
+              {t("detail.availability")}
             </h3>
             <p className="mt-2 flex items-center gap-2 text-sm text-slate-800">
               <Clock className="h-4 w-4 text-slate-500" />
@@ -206,11 +205,10 @@ export function AlumniDetail() {
           <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-blue-900">
             <p className="flex items-center gap-1.5 font-semibold">
               <Shield className="h-4 w-4" />
-              How introductions work
+              {t("detail.introTitle")}
             </p>
             <p className="mt-1 text-blue-800">
-              When {alumni.firstName} accepts, we share contact details with
-              both of you privately. Your email stays hidden until then.
+              {t("detail.introBody", { name: alumni.firstName })}
             </p>
           </section>
         </aside>
@@ -230,23 +228,24 @@ function RequestSentCard({
   submittedAt: number;
   topic: string;
 }) {
+  const { t } = useTranslation("alumni");
   return (
     <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-5">
       <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
         <Clock className="h-4 w-4" />
-        Request sent
+        {t("sentCard.title")}
       </div>
       <p className="mt-2 text-sm text-amber-900">
-        We're waiting for {alumni.firstName}'s response. {alumni.responseTime}.
+        {t("sentCard.waiting", { name: alumni.firstName, responseTime: alumni.responseTime })}
       </p>
       <dl className="mt-3 space-y-1 text-xs text-amber-900">
         <div>
-          <dt className="inline font-semibold">Topic: </dt>
+          <dt className="inline font-semibold">{t("sentCard.topic")}</dt>
           <dd className="inline">{topic}</dd>
         </div>
         <div>
-          <dt className="inline font-semibold">Sent: </dt>
-          <dd className="inline">{formatRelativeDate(submittedAt)}</dd>
+          <dt className="inline font-semibold">{t("sentCard.sent")}</dt>
+          <dd className="inline">{formatRelativeDate(submittedAt, t)}</dd>
         </div>
       </dl>
       <button
@@ -254,7 +253,7 @@ function RequestSentCard({
         className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-50"
       >
         <X className="h-4 w-4" />
-        Withdraw request
+        {t("sentCard.withdraw")}
       </button>
     </section>
   );
@@ -267,6 +266,7 @@ function RequestChatForm({
   alumni: AlumniProfile;
   onSubmitted: () => void;
 }) {
+  const { t } = useTranslation("alumni");
   const { requestChat } = useMeetings();
   const { notify } = useNotifications();
 
@@ -285,7 +285,7 @@ function RequestChatForm({
   };
 
   const removeTime = (v: string) => {
-    setTimes((prev) => prev.filter((t) => t !== v));
+    setTimes((prev) => prev.filter((time) => time !== v));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -300,8 +300,8 @@ function RequestChatForm({
     notify({
       type: "meeting",
       severity: "info",
-      title: `Request sent to ${alumni.firstName} ${alumni.lastInitial}`,
-      body: `${alumni.responseTime}. We'll alert you when there's an update.`,
+      title: t("notify.sentTitle", { name: `${alumni.firstName} ${alumni.lastInitial}` }),
+      body: t("notify.sentBody", { responseTime: alumni.responseTime }),
       link: "/alumni?tab=requests",
       dedupKey: `meeting-sent:${created.id}`,
     });
@@ -315,10 +315,10 @@ function RequestChatForm({
     >
       <div>
         <h3 className="text-base font-semibold tracking-tight text-slate-950">
-          Request a coffee chat
+          {t("form.title")}
         </h3>
         <p className="mt-0.5 text-xs text-slate-500">
-          Keep it short. {alumni.firstName} responds best to specific questions.
+          {t("form.hint", { name: alumni.firstName })}
         </p>
       </div>
 
@@ -327,7 +327,7 @@ function RequestChatForm({
           htmlFor="topic"
           className="text-xs font-semibold uppercase tracking-wide text-slate-600"
         >
-          Topic
+          {t("form.topicLabel")}
         </label>
         <select
           id="topic"
@@ -335,9 +335,9 @@ function RequestChatForm({
           onChange={(e) => setTopic(e.target.value)}
           className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
         >
-          {alumni.topics.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {alumni.topics.map((topicOption) => (
+            <option key={topicOption} value={topicOption}>
+              {topicOption}
             </option>
           ))}
         </select>
@@ -348,22 +348,20 @@ function RequestChatForm({
           htmlFor="message"
           className="text-xs font-semibold uppercase tracking-wide text-slate-600"
         >
-          Your message
+          {t("form.messageLabel")}
         </label>
         <textarea
           id="message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
-          placeholder={`Hi ${alumni.firstName}, I'm a senior studying CS and would love to learn about your path into...`}
+          placeholder={t("form.messagePlaceholder", { name: alumni.firstName })}
           className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
         />
         <p className="mt-1 text-xs text-slate-500">
           {message.trim().length < 20
-            ? `${20 - message.trim().length} more character${
-                20 - message.trim().length === 1 ? "" : "s"
-              } recommended`
-            : "Looks good."}
+            ? t("form.charsHint", { count: 20 - message.trim().length })
+            : t("form.looksGood")}
         </p>
       </div>
 
@@ -372,7 +370,7 @@ function RequestChatForm({
           htmlFor="time"
           className="text-xs font-semibold uppercase tracking-wide text-slate-600"
         >
-          Preferred times (optional)
+          {t("form.timesLabel")}
         </label>
         <div className="mt-1.5 flex gap-2">
           <input
@@ -385,7 +383,7 @@ function RequestChatForm({
                 addTime();
               }
             }}
-            placeholder="Tue afternoon, weekend evenings..."
+            placeholder={t("form.timesPlaceholder")}
             className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-100"
           />
           <button
@@ -394,22 +392,22 @@ function RequestChatForm({
             className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
             <Plus className="h-4 w-4" />
-            Add
+            {t("form.add")}
           </button>
         </div>
         {times.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {times.map((t) => (
+            {times.map((time) => (
               <span
-                key={t}
+                key={time}
                 className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800"
               >
-                {t}
+                {time}
                 <button
                   type="button"
-                  onClick={() => removeTime(t)}
+                  onClick={() => removeTime(time)}
                   className="rounded-full p-0.5 transition-colors hover:bg-blue-100"
-                  aria-label={`Remove ${t}`}
+                  aria-label={t("form.removeAria", { time })}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -425,7 +423,7 @@ function RequestChatForm({
           className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to list
+          {t("form.back")}
         </Link>
         <button
           type="submit"
@@ -433,7 +431,7 @@ function RequestChatForm({
           className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
         >
           <Send className="h-4 w-4" />
-          Send request
+          {t("form.send")}
         </button>
       </div>
     </form>

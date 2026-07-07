@@ -1,0 +1,90 @@
+{
+  "header": {
+    "eyebrow": "校友网络",
+    "title": "结识在你目标岗位工作的校友",
+    "subtitle": "浏览校友资料并申请 coffee chat。资料以“名 + 姓氏首字母”匿名展示，本平台绝不分享个人联系方式。"
+  },
+  "privacy": {
+    "title": "保护你和他们的隐私。",
+    "body": "姓名仅以“名 + 姓氏首字母”显示。校友会自行选择愿意交流的话题和回复节奏。邮箱从不展示 —— 一旦校友接受你的请求，平台会通过私密渠道为你们牵线。"
+  },
+  "tabs": {
+    "browse": "浏览",
+    "requests": "我的请求"
+  },
+  "browse": {
+    "searchPlaceholder": "搜索职位、公司、话题…",
+    "allIndustries": "所有行业",
+    "empty": "没有匹配你搜索的校友。换个关键词或清除筛选试试。"
+  },
+  "card": {
+    "match": "匹配",
+    "requestSent": "已发送请求",
+    "classOf": "{{year}} 届",
+    "privacy": "隐私保护",
+    "linkedinAria": "查看 {{name}} 的 LinkedIn 资料（在新标签页打开）",
+    "viewProfile": "查看资料"
+  },
+  "requests": {
+    "total": "请求总数",
+    "pending": "待处理",
+    "completed": "已完成",
+    "emptyTitle": "你还没有申请过任何 coffee chat。",
+    "emptyBody": "浏览校友资料，点击“申请 coffee chat”即可开始。",
+    "topic": "话题：",
+    "sent": "发送于 {{time}}",
+    "markCompleted": "标记为已完成",
+    "withdraw": "撤回",
+    "chatCompleted": "交流已完成",
+    "awaitingResponse": "等待回复",
+    "statusCompleted": "已完成"
+  },
+  "notify": {
+    "completedTitle": "与 {{name}} 的 coffee chat 已完成",
+    "completedBody": "干得漂亮 —— 趁热记下要点吧。想再和其他人聊聊吗？",
+    "sentTitle": "已向 {{name}} 发送请求",
+    "sentBody": "{{responseTime}}。有更新时我们会通知你。"
+  },
+  "detail": {
+    "notFoundTitle": "未找到资料",
+    "notFoundBody": "这位校友可能暂停了交流请求。到目录里看看其他人吧。",
+    "backToNetwork": "返回网络",
+    "networkCrumb": "校友网络",
+    "major": "{{major}}，{{year}} 届",
+    "experience": "{{count}} 年经验",
+    "openToChat": "愿意交流的话题",
+    "expertise": "专长",
+    "availability": "可预约时间",
+    "introTitle": "牵线是如何进行的",
+    "introBody": "当 {{name}} 接受后，我们会私密地将联系方式分享给你们双方。在此之前你的邮箱始终保密。"
+  },
+  "sentCard": {
+    "title": "已发送请求",
+    "waiting": "正在等待 {{name}} 的回复。{{responseTime}}。",
+    "topic": "话题：",
+    "sent": "发送时间：",
+    "withdraw": "撤回请求"
+  },
+  "form": {
+    "title": "申请 coffee chat",
+    "hint": "简短一些。{{name}} 更愿意回答具体的问题。",
+    "topicLabel": "话题",
+    "messageLabel": "你的留言",
+    "messagePlaceholder": "你好 {{name}}，我是一名计算机专业的大四学生，很想了解你进入……的经历",
+    "charsHint_other": "建议再输入 {{count}} 个字符",
+    "looksGood": "看起来不错。",
+    "timesLabel": "方便的时间（可选）",
+    "timesPlaceholder": "周二下午、周末晚上…",
+    "add": "添加",
+    "removeAria": "移除 {{time}}",
+    "back": "返回列表",
+    "send": "发送请求"
+  },
+  "relativeTime": {
+    "justNow": "刚刚",
+    "minutes_other": "{{count}} 分钟前",
+    "hours_other": "{{count}} 小时前",
+    "days_other": "{{count}} 天前",
+    "months_other": "{{count}} 个月前"
+  }
+}
