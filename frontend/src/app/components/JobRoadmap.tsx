@@ -1,52 +1,49 @@
 import React from "react";
 import { Calendar, CheckCircle2, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
+// Static demo roadmap; text lives in the `tracking` namespace (roadmap.phases.*).
 type TimelinePhase = {
-  phase: string;
-  duration: string;
+  id: string;
   status: "completed" | "in-progress" | "upcoming";
-  tasks: { name: string; completed: boolean }[];
+  tasks: { id: string; completed: boolean }[];
 };
 
 const TIMELINE: TimelinePhase[] = [
   {
-    phase: "Preparation Phase",
-    duration: "2 weeks",
+    id: "prep",
     status: "completed",
     tasks: [
-      { name: "Update resume and portfolio", completed: true },
-      { name: "Optimize LinkedIn profile", completed: true },
-      { name: "Identify target companies", completed: true },
+      { id: "resume", completed: true },
+      { id: "linkedin", completed: true },
+      { id: "targets", completed: true },
     ],
   },
   {
-    phase: "Application Phase",
-    duration: "3 weeks",
+    id: "application",
     status: "in-progress",
     tasks: [
-      { name: "Apply to 15-20 positions", completed: true },
-      { name: "Network with industry professionals", completed: false },
-      { name: "Customize cover letters", completed: false },
+      { id: "apply", completed: true },
+      { id: "network", completed: false },
+      { id: "coverLetters", completed: false },
     ],
   },
   {
-    phase: "Interview Phase",
-    duration: "4 weeks",
+    id: "interview",
     status: "upcoming",
     tasks: [
-      { name: "Practice technical interviews", completed: false },
-      { name: "Prepare behavioral questions", completed: false },
-      { name: "System design mock interviews", completed: false },
+      { id: "technical", completed: false },
+      { id: "behavioral", completed: false },
+      { id: "systemDesign", completed: false },
     ],
   },
   {
-    phase: "Offer Phase",
-    duration: "2 weeks",
+    id: "offer",
     status: "upcoming",
     tasks: [
-      { name: "Negotiate compensation", completed: false },
-      { name: "Review benefits packages", completed: false },
-      { name: "Make final decision", completed: false },
+      { id: "negotiate", completed: false },
+      { id: "benefits", completed: false },
+      { id: "decision", completed: false },
     ],
   },
 ];
@@ -62,28 +59,24 @@ function getStatusColor(status: string) {
   }
 }
 
-function getStatusText(status: string) {
-  switch (status) {
-    case "completed":
-      return "Completed";
-    case "in-progress":
-      return "In Progress";
-    default:
-      return "Upcoming";
-  }
-}
+const STATUS_KEY: Record<TimelinePhase["status"], string> = {
+  completed: "completed",
+  "in-progress": "inProgress",
+  upcoming: "upcoming",
+};
 
 export function JobRoadmap() {
+  const { t } = useTranslation("tracking");
   return (
     <details className="group rounded-xl border border-slate-200/70 bg-white">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-slate-700 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-blue-600" />
-          Job search timeline
-          <span className="text-xs font-normal text-slate-400">(11 weeks)</span>
+          {t("roadmap.title")}
+          <span className="text-xs font-normal text-slate-400">{t("roadmap.totalWeeks")}</span>
         </span>
-        <span className="text-xs text-slate-400 group-open:hidden">Show</span>
-        <span className="hidden text-xs text-slate-400 group-open:inline">Hide</span>
+        <span className="text-xs text-slate-400 group-open:hidden">{t("roadmap.show")}</span>
+        <span className="hidden text-xs text-slate-400 group-open:inline">{t("roadmap.hide")}</span>
       </summary>
 
       <div className="space-y-6 border-t border-slate-100 p-5">
@@ -106,9 +99,13 @@ export function JobRoadmap() {
               </div>
               <div className="flex-1 pb-6">
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="font-semibold text-slate-950">{phase.phase}</h3>
+                  <h3 className="font-semibold text-slate-950">
+                    {t(`roadmap.phases.${phase.id}.name`)}
+                  </h3>
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-sm text-slate-600">{phase.duration}</span>
+                    <span className="text-sm text-slate-600">
+                      {t(`roadmap.phases.${phase.id}.duration`)}
+                    </span>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-medium ${
                         phase.status === "completed"
@@ -118,13 +115,13 @@ export function JobRoadmap() {
                           : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {getStatusText(phase.status)}
+                      {t(`roadmap.status.${STATUS_KEY[phase.status]}`)}
                     </span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  {phase.tasks.map((task, taskIndex) => (
-                    <div key={taskIndex} className="flex items-center gap-2 text-sm">
+                  {phase.tasks.map((task) => (
+                    <div key={task.id} className="flex items-center gap-2 text-sm">
                       {task.completed ? (
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                       ) : (
@@ -137,7 +134,7 @@ export function JobRoadmap() {
                             : "text-slate-700"
                         }
                       >
-                        {task.name}
+                        {t(`roadmap.phases.${phase.id}.tasks.${task.id}`)}
                       </span>
                     </div>
                   ))}

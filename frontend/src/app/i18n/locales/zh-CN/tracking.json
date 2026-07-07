@@ -1,0 +1,116 @@
+{
+  "confidence": {
+    "1": "刚起步",
+    "2": "略有接触",
+    "3": "较为熟练",
+    "4": "有信心",
+    "5": "精通",
+    "unknown": "未知"
+  },
+  "layout": {
+    "notFoundTitle": "未找到职业目标",
+    "notFoundBody": "你还没有添加这个目标。从目录中选一个，我们会为你生成学习计划。",
+    "backToDashboard": "返回仪表盘",
+    "addGoal": "添加目标",
+    "planTracking": "计划追踪",
+    "explore": "探索你成为「{{title}}」的路径",
+    "overallProgressLabel": "总体进度",
+    "viewJobs": "查看该目标的职位"
+  },
+  "roadmap": {
+    "title": "求职时间线",
+    "totalWeeks": "（11 周）",
+    "show": "展开",
+    "hide": "收起",
+    "status": {
+      "completed": "已完成",
+      "inProgress": "进行中",
+      "upcoming": "即将开始"
+    },
+    "phases": {
+      "prep": {
+        "name": "准备阶段",
+        "duration": "2 周",
+        "tasks": {
+          "resume": "更新简历和作品集",
+          "linkedin": "优化 LinkedIn 资料",
+          "targets": "确定目标公司"
+        }
+      },
+      "application": {
+        "name": "投递阶段",
+        "duration": "3 周",
+        "tasks": {
+          "apply": "投递 15–20 个职位",
+          "network": "与行业人士建立联系",
+          "coverLetters": "定制求职信"
+        }
+      },
+      "interview": {
+        "name": "面试阶段",
+        "duration": "4 周",
+        "tasks": {
+          "technical": "练习技术面试",
+          "behavioral": "准备行为面试问题",
+          "systemDesign": "系统设计模拟面试"
+        }
+      },
+      "offer": {
+        "name": "Offer 阶段",
+        "duration": "2 周",
+        "tasks": {
+          "negotiate": "薪资谈判",
+          "benefits": "了解福利待遇",
+          "decision": "做出最终决定"
+        }
+      }
+    }
+  },
+  "plan": {
+    "notFoundTitle": "暂无学习计划",
+    "notFoundBody": "我们找不到这个目标的目录数据。",
+    "overallProgress": "总体进度",
+    "averagedAcross": "按 {{count}} 个技能模块平均。",
+    "needsFocus": "需重点提升",
+    "ratedLow": "评分 1–2 的技能",
+    "alreadyStrong": "已较强",
+    "ratedHigh": "评分 4–5 的技能",
+    "coreModules": "核心技能模块",
+    "modulesSorted": "{{count}} 个模块 · 按需要排序"
+  },
+  "week": {
+    "allCaughtUpTitle": "全部完成！",
+    "allCaughtUpBody": "本周没有待办。把一些步骤标记为未完成，或添加新目标来保持前进。",
+    "eyebrow": "本周重点",
+    "greatWeek": "这周不错 —— 准备好下一批了吗？",
+    "pickOff": "本周再完成 {{count}} 项",
+    "drawnFrom": "取自你信心最弱的模块。每 7 天重置一次。",
+    "pickDifferent": "换一批重点"
+  },
+  "whereYouAre": {
+    "heading": "你的进度",
+    "noSteps": "这个模块暂无行动步骤。",
+    "notStarted": "你还没有开始这个模块 —— 从下面选一个步骤开始吧。",
+    "complete": "你已完成这个模块的所有步骤。干得漂亮！",
+    "inProgress": "这个模块你已完成 {{progress}}% —— 继续下面的步骤。"
+  },
+  "module": {
+    "stepsDone": "已完成 {{done}}/{{total}} 步",
+    "resources_other": "{{count}} 个资源",
+    "alumni": "{{count}} 位校友",
+    "openJobs_other": "{{count}} 个在招职位",
+    "findAlumni": "寻找 {{count}} 位能帮上忙的校友",
+    "jobsNeedThis_other": "{{count}} 个在招职位需要它",
+    "actionSteps": "行动步骤",
+    "stepsComplete": "已完成 {{done}}/{{total}}",
+    "recommendedResources": "推荐资源",
+    "resourcesDone": "已完成 {{done}}/{{total}}",
+    "markUnread": "标记为未读",
+    "markConsumed": "标记为已学习"
+  },
+  "rerate": {
+    "title": "重新评估你的信心",
+    "body": "你在「{{module}}」上有了进展。当前：{{label}}（{{value}}/5）。",
+    "notNow": "暂不"
+  }
+}

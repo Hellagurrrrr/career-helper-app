@@ -1,0 +1,119 @@
+{
+  "confidence": {
+    "1": "Just starting",
+    "2": "Some exposure",
+    "3": "Comfortable",
+    "4": "Confident",
+    "5": "Expert",
+    "unknown": "Unknown"
+  },
+  "layout": {
+    "notFoundTitle": "Career goal not found",
+    "notFoundBody": "You haven't added this goal yet. Pick one from the catalog and we'll build a learning plan for you.",
+    "backToDashboard": "Back to dashboard",
+    "addGoal": "Add a goal",
+    "planTracking": "Plan Tracking",
+    "explore": "Explore your path to becoming a {{title}}",
+    "overallProgressLabel": "overall progress",
+    "viewJobs": "View jobs for this goal"
+  },
+  "roadmap": {
+    "title": "Job search timeline",
+    "totalWeeks": "(11 weeks)",
+    "show": "Show",
+    "hide": "Hide",
+    "status": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "upcoming": "Upcoming"
+    },
+    "phases": {
+      "prep": {
+        "name": "Preparation Phase",
+        "duration": "2 weeks",
+        "tasks": {
+          "resume": "Update resume and portfolio",
+          "linkedin": "Optimize LinkedIn profile",
+          "targets": "Identify target companies"
+        }
+      },
+      "application": {
+        "name": "Application Phase",
+        "duration": "3 weeks",
+        "tasks": {
+          "apply": "Apply to 15-20 positions",
+          "network": "Network with industry professionals",
+          "coverLetters": "Customize cover letters"
+        }
+      },
+      "interview": {
+        "name": "Interview Phase",
+        "duration": "4 weeks",
+        "tasks": {
+          "technical": "Practice technical interviews",
+          "behavioral": "Prepare behavioral questions",
+          "systemDesign": "System design mock interviews"
+        }
+      },
+      "offer": {
+        "name": "Offer Phase",
+        "duration": "2 weeks",
+        "tasks": {
+          "negotiate": "Negotiate compensation",
+          "benefits": "Review benefits packages",
+          "decision": "Make final decision"
+        }
+      }
+    }
+  },
+  "plan": {
+    "notFoundTitle": "No learning plan available",
+    "notFoundBody": "We couldn't find the catalog data for this goal.",
+    "overallProgress": "Overall progress",
+    "averagedAcross": "Averaged across {{count}} skill modules.",
+    "needsFocus": "Needs focus",
+    "ratedLow": "Skills rated 1-2",
+    "alreadyStrong": "Already strong",
+    "ratedHigh": "Skills rated 4-5",
+    "coreModules": "Core Skill Modules",
+    "modulesSorted": "{{count}} modules · sorted by need"
+  },
+  "week": {
+    "allCaughtUpTitle": "All caught up!",
+    "allCaughtUpBody": "No outstanding actions this week. Mark some steps incomplete or add a new goal to keep moving.",
+    "eyebrow": "This week's focus",
+    "greatWeek": "Great week — ready for the next batch?",
+    "pickOff": "Pick off {{count}} more this week",
+    "drawnFrom": "Drawn from your weakest-confidence modules. Resets every 7 days.",
+    "pickDifferent": "Pick different focus"
+  },
+  "whereYouAre": {
+    "heading": "Where you are",
+    "noSteps": "No action steps yet for this module.",
+    "notStarted": "You haven't started this module yet — pick a step below to begin.",
+    "complete": "You've completed every step in this module. Nice work!",
+    "inProgress": "You're {{progress}}% through this module — keep going on the steps below."
+  },
+  "module": {
+    "stepsDone": "{{done}}/{{total}} steps done",
+    "resources_one": "{{count}} resource",
+    "resources_other": "{{count}} resources",
+    "alumni": "{{count}} alumni",
+    "openJobs_one": "{{count}} open job",
+    "openJobs_other": "{{count}} open jobs",
+    "findAlumni": "Find {{count}} alumni who can help",
+    "jobsNeedThis_one": "{{count}} open job needs this",
+    "jobsNeedThis_other": "{{count}} open jobs need this",
+    "actionSteps": "Action Steps",
+    "stepsComplete": "{{done}}/{{total}} complete",
+    "recommendedResources": "Recommended Resources",
+    "resourcesDone": "{{done}}/{{total}} done",
+    "markUnread": "Mark unread",
+    "markConsumed": "Mark resource as consumed"
+  },
+  "rerate": {
+    "title": "Re-rate your confidence",
+    "body": "You've made progress in {{module}}. Current: {{label}} ({{value}}/5).",
+    "notNow": "Not now"
+  }
+}

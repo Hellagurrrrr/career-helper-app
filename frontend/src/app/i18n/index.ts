@@ -10,7 +10,9 @@ import commonEn from "./locales/en/common.json";
 import dashboardEn from "./locales/en/dashboard.json";
 import jobsEn from "./locales/en/jobs.json";
 import navEn from "./locales/en/nav.json";
+import newGoalEn from "./locales/en/newGoal.json";
 import settingsEn from "./locales/en/settings.json";
+import trackingEn from "./locales/en/tracking.json";
 import alumniZh from "./locales/zh-CN/alumni.json";
 import applicationsZh from "./locales/zh-CN/applications.json";
 import authZh from "./locales/zh-CN/auth.json";
@@ -19,7 +21,9 @@ import commonZh from "./locales/zh-CN/common.json";
 import dashboardZh from "./locales/zh-CN/dashboard.json";
 import jobsZh from "./locales/zh-CN/jobs.json";
 import navZh from "./locales/zh-CN/nav.json";
+import newGoalZh from "./locales/zh-CN/newGoal.json";
 import settingsZh from "./locales/zh-CN/settings.json";
+import trackingZh from "./locales/zh-CN/tracking.json";
 
 export const defaultNS = "common";
 export const supportedLngs = ["en", "zh-CN"] as const;
@@ -43,6 +47,8 @@ export const resources = {
     applications: applicationsEn,
     coaching: coachingEn,
     alumni: alumniEn,
+    newGoal: newGoalEn,
+    tracking: trackingEn,
   },
   "zh-CN": {
     common: commonZh,
@@ -54,6 +60,8 @@ export const resources = {
     applications: applicationsZh,
     coaching: coachingZh,
     alumni: alumniZh,
+    newGoal: newGoalZh,
+    tracking: trackingZh,
   },
 } as const;
 
@@ -75,6 +83,8 @@ i18n
       "applications",
       "coaching",
       "alumni",
+      "newGoal",
+      "tracking",
     ],
     interpolation: { escapeValue: false },
     detection: {

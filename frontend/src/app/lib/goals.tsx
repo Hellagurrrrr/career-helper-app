@@ -192,21 +192,12 @@ export function rankGoalsForProfile(
     .sort((a, b) => b.score - a.score);
 }
 
-export function confidenceLabel(value: number): string {
-  switch (value) {
-    case 1:
-      return "Just starting";
-    case 2:
-      return "Some exposure";
-    case 3:
-      return "Comfortable";
-    case 4:
-      return "Confident";
-    case 5:
-      return "Expert";
-    default:
-      return "Unknown";
-  }
+// Accepts the `tracking`-namespace translator so confidence labels localize.
+type ConfidenceTranslate = (key: string) => string;
+
+export function confidenceLabel(value: number, t: ConfidenceTranslate): string {
+  if (value >= 1 && value <= 5) return t(`confidence.${value}`);
+  return t("confidence.unknown");
 }
 
 export function confidenceTone(value: number): string {
