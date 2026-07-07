@@ -11,6 +11,7 @@ import dashboardEn from "./locales/en/dashboard.json";
 import jobsEn from "./locales/en/jobs.json";
 import navEn from "./locales/en/nav.json";
 import newGoalEn from "./locales/en/newGoal.json";
+import notificationsEn from "./locales/en/notifications.json";
 import onboardingEn from "./locales/en/onboarding.json";
 import profileEn from "./locales/en/profile.json";
 import settingsEn from "./locales/en/settings.json";
@@ -24,6 +25,7 @@ import dashboardZh from "./locales/zh-CN/dashboard.json";
 import jobsZh from "./locales/zh-CN/jobs.json";
 import navZh from "./locales/zh-CN/nav.json";
 import newGoalZh from "./locales/zh-CN/newGoal.json";
+import notificationsZh from "./locales/zh-CN/notifications.json";
 import onboardingZh from "./locales/zh-CN/onboarding.json";
 import profileZh from "./locales/zh-CN/profile.json";
 import settingsZh from "./locales/zh-CN/settings.json";
@@ -55,6 +57,7 @@ export const resources = {
     tracking: trackingEn,
     profile: profileEn,
     onboarding: onboardingEn,
+    notifications: notificationsEn,
   },
   "zh-CN": {
     common: commonZh,
@@ -70,6 +73,7 @@ export const resources = {
     tracking: trackingZh,
     profile: profileZh,
     onboarding: onboardingZh,
+    notifications: notificationsZh,
   },
 } as const;
 
@@ -95,6 +99,7 @@ i18n
       "tracking",
       "profile",
       "onboarding",
+      "notifications",
     ],
     interpolation: { escapeValue: false },
     detection: {

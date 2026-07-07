@@ -1,0 +1,31 @@
+{
+  "title": "Notifications",
+  "ariaWithCount": "Notifications ({{count}} unread)",
+  "aria": "Notifications",
+  "unreadCount": "{{count}} unread",
+  "allCaughtUp": "Nothing new — you're all caught up",
+  "markAllRead": "Mark all read",
+  "emptyTitle": "No notifications yet",
+  "emptyBody": "We'll let you know when there are new job matches, alumni updates, or progress milestones.",
+  "unread": "Unread",
+  "dismiss": "Dismiss",
+  "dismissNotification": "Dismiss notification",
+  "clearAll": "Clear all",
+  "relativeTime": {
+    "justNow": "just now",
+    "minutes": "{{count}} min ago",
+    "hours": "{{count}}h ago",
+    "days": "{{count}}d ago",
+    "weeks": "{{count}}w ago",
+    "months": "{{count}}mo ago"
+  },
+  "orchestrator": {
+    "milestone100Title": "🎉 {{goal}}: 100% complete!",
+    "milestoneTitle": "{{count}}% milestone reached",
+    "milestone100Body": "You've completed every action step in {{goal}}. Consider re-rating your skills or adding a new goal.",
+    "milestoneBody": "You're {{count}}% through {{goal}}. Keep the streak going.",
+    "weekTitle": "Fresh weekly focus for {{goal}}",
+    "weekBody_one": "{{count}} new action picked from your weakest skills. Ready when you are.",
+    "weekBody_other": "{{count}} new actions picked from your weakest skills. Ready when you are."
+  }
+}

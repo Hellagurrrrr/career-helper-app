@@ -104,18 +104,21 @@ export function useNotifications() {
   };
 }
 
-export function formatNotificationTime(ts: number): string {
+// Accepts the `notifications`-namespace translator so relative labels localize.
+type RelativeTimeTranslate = (key: string, options?: { count?: number }) => string;
+
+export function formatNotificationTime(ts: number, t: RelativeTimeTranslate): string {
   const diff = Date.now() - ts;
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "just now";
+  if (sec < 60) return t("relativeTime.justNow");
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} min ago`;
+  if (min < 60) return t("relativeTime.minutes", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t("relativeTime.hours", { count: hr });
   const days = Math.floor(hr / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return t("relativeTime.days", { count: days });
   const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
+  if (weeks < 5) return t("relativeTime.weeks", { count: weeks });
   const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  return t("relativeTime.months", { count: months });
 }

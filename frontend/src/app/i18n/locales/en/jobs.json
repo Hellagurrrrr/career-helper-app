@@ -47,5 +47,25 @@
   },
   "detail": {
     "description": "Job description"
+  },
+  "apply": {
+    "titlePartner": "Tailored CV · Referral application",
+    "titleStandard": "Tailored CV · Review & export",
+    "descPartner": "We generated a CV aimed at <b>{{title}}</b> at {{company}}. Edit the text if needed, confirm you have reviewed it, then submit — your referral application is sent with this version.",
+    "descStandard": "This draft highlights fit for <b>{{title}}</b> at {{company}}. Edit freely, then export as PDF (via print), Word, or PNG. When you are ready, save the application to your tracker.",
+    "companyApplication": "Company application",
+    "companyApplicationBody": "Export your tailored CV below, then complete your application on <b>{{company}}</b>'s careers site.",
+    "openApplicationPage": "Open application page",
+    "cvContent": "CV content",
+    "printTitle": "Tailored CV — {{title}} @ {{company}}",
+    "tip": "Tip: tighten bullets to real metrics before you submit or export.",
+    "exportTitle": "Export tailored CV",
+    "pdfPrint": "PDF (print)",
+    "word": "Word",
+    "png": "PNG",
+    "reviewConfirm": "I have reviewed this tailored CV and confirm it is accurate enough to submit with my referral application.",
+    "cancel": "Cancel",
+    "submitReferral": "Submit referral with this CV",
+    "saveToTracker": "Save to application tracker"
   }
 }

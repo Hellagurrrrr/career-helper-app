@@ -46,5 +46,25 @@
   },
   "detail": {
     "description": "职位描述"
+  },
+  "apply": {
+    "titlePartner": "定制简历 · 内推申请",
+    "titleStandard": "定制简历 · 审核与导出",
+    "descPartner": "我们生成了一份针对 {{company}} <b>{{title}}</b> 的简历。如有需要请修改文本，确认已审核后提交 —— 你的内推申请将以此版本发送。",
+    "descStandard": "这份草稿突出了你与 {{company}} <b>{{title}}</b> 的契合度。可自由编辑，然后导出为 PDF（通过打印）、Word 或 PNG。准备好后，把申请保存到追踪器。",
+    "companyApplication": "公司申请",
+    "companyApplicationBody": "在下方导出你的定制简历，然后到 <b>{{company}}</b> 的招聘页面完成申请。",
+    "openApplicationPage": "打开申请页面",
+    "cvContent": "简历内容",
+    "printTitle": "定制简历 —— {{company}} 的 {{title}}",
+    "tip": "提示：提交或导出前，把要点收紧到真实的量化成果。",
+    "exportTitle": "导出定制简历",
+    "pdfPrint": "PDF（打印）",
+    "word": "Word",
+    "png": "PNG",
+    "reviewConfirm": "我已审核这份定制简历，并确认它足够准确，可随内推申请一起提交。",
+    "cancel": "取消",
+    "submitReferral": "以此简历提交内推",
+    "saveToTracker": "保存到申请追踪器"
   }
 }

@@ -2,6 +2,7 @@
   "appName": "AI Career Helper",
   "loading": "加载中…",
   "you": "你",
+  "imageError": "图片加载失败",
   "language": {
     "label": "语言"
   }
