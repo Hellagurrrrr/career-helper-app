@@ -25,7 +25,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0",
+    version="0.1.0",
     description=(
         "Mock backend for the AI Career Helper. Interface contracts follow "
         "design-docs/api-design.md; business logic is mocked (local SQLite store, "
